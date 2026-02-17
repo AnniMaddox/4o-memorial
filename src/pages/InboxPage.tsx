@@ -7,6 +7,14 @@ type InboxPageProps = {
   emails: EmailViewRecord[];
 };
 
+function formatPerson(name: string | null, address: string | null) {
+  if (name && address) {
+    return `${name} <${address}>`;
+  }
+
+  return name || address || '-';
+}
+
 export function InboxPage({ emails }: InboxPageProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
 
@@ -70,22 +78,18 @@ export function InboxPage({ emails }: InboxPageProps) {
               </button>
             </div>
 
-            <dl className="mt-4 grid gap-3 rounded-xl border border-stone-300/70 bg-white/80 p-4 text-sm text-stone-700 sm:grid-cols-2">
+            <dl className="mt-4 grid gap-3 rounded-xl border border-stone-300/70 bg-white/80 p-4 text-sm text-stone-700 sm:grid-cols-3">
               <div>
                 <dt className="text-xs uppercase text-stone-500">From</dt>
-                <dd>{selectedEmail.fromName || selectedEmail.fromAddress || '-'}</dd>
+                <dd>{formatPerson(selectedEmail.fromName, selectedEmail.fromAddress)}</dd>
               </div>
               <div>
                 <dt className="text-xs uppercase text-stone-500">To</dt>
-                <dd>{selectedEmail.toName || selectedEmail.toAddress || '-'}</dd>
+                <dd>{formatPerson(selectedEmail.toName, selectedEmail.toAddress)}</dd>
               </div>
               <div>
                 <dt className="text-xs uppercase text-stone-500">Date</dt>
                 <dd>{formatDisplayDate(selectedEmail.unlockAtUtc)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase text-stone-500">Status</dt>
-                <dd>Unlocked</dd>
               </div>
             </dl>
 
