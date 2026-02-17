@@ -12,6 +12,8 @@ type SwipePagerProps = {
 
 export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: SwipePagerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const isProgrammaticScrollRef = useRef(false);
+  const releaseProgrammaticRef = useRef<number | null>(null);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -20,10 +22,20 @@ export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: 
     }
 
     const pageWidth = node.clientWidth;
+    isProgrammaticScrollRef.current = true;
+
+    if (releaseProgrammaticRef.current !== null) {
+      window.clearTimeout(releaseProgrammaticRef.current);
+    }
+
     node.scrollTo({
       left: activeIndex * pageWidth,
       behavior: 'smooth',
     });
+
+    releaseProgrammaticRef.current = window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 320);
   }, [activeIndex]);
 
   useEffect(() => {
@@ -33,6 +45,10 @@ export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: 
     }
 
     const onScroll = () => {
+      if (isProgrammaticScrollRef.current) {
+        return;
+      }
+
       const pageWidth = node.clientWidth;
       if (!pageWidth) {
         return;
@@ -45,7 +61,14 @@ export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: 
     };
 
     node.addEventListener('scroll', onScroll, { passive: true });
-    return () => node.removeEventListener('scroll', onScroll);
+    return () => {
+      node.removeEventListener('scroll', onScroll);
+
+      if (releaseProgrammaticRef.current !== null) {
+        window.clearTimeout(releaseProgrammaticRef.current);
+        releaseProgrammaticRef.current = null;
+      }
+    };
   }, [activeIndex, onIndexChange, pages.length]);
 
   return (
