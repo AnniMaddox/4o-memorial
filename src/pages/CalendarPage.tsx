@@ -69,7 +69,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     return cells;
   }, [monthMeta.daysInMonth, monthMeta.firstWeekday, monthMeta.month, monthMeta.year]);
 
-  const selectedMessage = selectedDate ? data[selectedDate] : null;
+  const selectedMessage = selectedDate ? data[selectedDate] ?? null : null;
   const selectedUnlocked = !!selectedDate && (selectedDate <= today || temporaryUnlockDate === selectedDate);
 
   const currentMonthIndex = monthKeys.findIndex((entry) => entry === monthKey);
@@ -87,11 +87,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     onMonthChange(monthKeys[nextIndex]);
   }
 
-  function handleDateTap(dateKey: string, hasMessage: boolean) {
-    if (!hasMessage) {
-      return;
-    }
-
+  function handleDateTap(dateKey: string) {
     const nowMs = Date.now();
     const locked = dateKey > today;
 
@@ -184,11 +180,10 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
             <button
               key={cell.dateKey}
               type="button"
-              onClick={() => handleDateTap(cell.dateKey, hasMessage)}
-              disabled={!hasMessage}
+              onClick={() => handleDateTap(cell.dateKey)}
               className={`min-h-12 rounded-lg border px-2 py-1 text-sm transition ${
                 !hasMessage
-                  ? 'cursor-not-allowed border-stone-200 bg-stone-100/60 text-stone-400'
+                  ? 'border-stone-200 bg-stone-100/70 text-stone-500 hover:border-stone-300'
                   : locked
                     ? 'border-stone-300 bg-stone-100/80 text-stone-500 hover:border-stone-400'
                     : 'border-orange-200 bg-orange-50 text-stone-800 hover:border-orange-300'
@@ -211,7 +206,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
         })}
       </div>
 
-      {selectedDate && selectedMessage && (
+      {selectedDate && (
         <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/45 p-4 sm:items-center">
           <div className="w-full max-w-lg rounded-2xl bg-[#fffaf2] p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
@@ -232,10 +227,14 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
             </div>
 
             <p className="mt-4 whitespace-pre-wrap rounded-xl border border-stone-300/70 bg-white/90 p-4 text-sm leading-relaxed text-stone-800">
-              {selectedUnlocked ? selectedMessage : 'This message is still locked until its date.'}
+              {!selectedMessage
+                ? 'No message is set for this date.'
+                : selectedUnlocked
+                  ? selectedMessage
+                  : 'This message is still locked until its date.'}
             </p>
 
-            {!selectedUnlocked && (
+            {selectedMessage && !selectedUnlocked && (
               <p className="mt-3 text-xs text-stone-500">
                 Tip: tap this same date cell three times quickly to request one-time preview.
               </p>
