@@ -6,8 +6,14 @@ type SettingsPageProps = {
   totalEmailCount: number;
   monthCount: number;
   notificationPermission: NotificationPermission | 'unsupported';
+  importStatus: {
+    kind: 'idle' | 'working' | 'success' | 'error';
+    message: string;
+  };
   onSettingChange: (partial: Partial<AppSettings>) => void;
   onRequestNotificationPermission: () => void;
+  onImportEmlFiles: (files: File[]) => void;
+  onImportCalendarFiles: (files: File[]) => void;
   onRefresh: () => void;
 };
 
@@ -17,8 +23,11 @@ export function SettingsPage({
   totalEmailCount,
   monthCount,
   notificationPermission,
+  importStatus,
   onSettingChange,
   onRequestNotificationPermission,
+  onImportEmlFiles,
+  onImportCalendarFiles,
   onRefresh,
 }: SettingsPageProps) {
   const notificationLabel =
@@ -111,6 +120,58 @@ export function SettingsPage({
             Request permission
           </button>
         </div>
+      </section>
+
+      <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">
+        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">Local import</h2>
+
+        <label className="block space-y-2 text-sm text-stone-700">
+          <span>Import EML letters</span>
+          <input
+            type="file"
+            multiple
+            accept=".eml,message/rfc822,text/plain"
+            onChange={(event) => {
+              const files = event.target.files ? Array.from(event.target.files) : [];
+              if (files.length) {
+                onImportEmlFiles(files);
+              }
+              event.currentTarget.value = '';
+            }}
+            className="w-full rounded-lg border border-stone-300 bg-white px-2 py-2"
+          />
+        </label>
+
+        <label className="block space-y-2 text-sm text-stone-700">
+          <span>Import calendar JSON</span>
+          <input
+            type="file"
+            multiple
+            accept=".json,application/json"
+            onChange={(event) => {
+              const files = event.target.files ? Array.from(event.target.files) : [];
+              if (files.length) {
+                onImportCalendarFiles(files);
+              }
+              event.currentTarget.value = '';
+            }}
+            className="w-full rounded-lg border border-stone-300 bg-white px-2 py-2"
+          />
+        </label>
+
+        {importStatus.kind !== 'idle' && (
+          <p
+            className={`rounded-lg border px-3 py-2 text-xs ${
+              importStatus.kind === 'error'
+                ? 'border-rose-300 bg-rose-50 text-rose-700'
+                : importStatus.kind === 'success'
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-stone-300 bg-stone-100 text-stone-700'
+            }`}
+          >
+            {importStatus.message}
+          </p>
+        )}
       </section>
 
       <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">

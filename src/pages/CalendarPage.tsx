@@ -1,31 +1,97 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { monthLabel, todayDateKey } from '../lib/date';
 import type { CalendarMonth } from '../types/content';
 
 type CalendarPageProps = {
   monthKey: string;
+  monthKeys: string[];
   data: CalendarMonth;
+  onMonthChange: (monthKey: string) => void;
 };
 
-export function CalendarPage({ monthKey, data }: CalendarPageProps) {
+type TapState = {
+  date: string | null;
+  count: number;
+  atMs: number;
+};
+
+function getMonthMeta(monthKey: string) {
+  const [year, month] = monthKey.split('-').map(Number);
+  const safeYear = Number.isFinite(year) ? year : new Date().getFullYear();
+  const safeMonth = Number.isFinite(month) ? month : 1;
+
+  const firstWeekday = new Date(safeYear, safeMonth - 1, 1).getDay();
+  const daysInMonth = new Date(safeYear, safeMonth, 0).getDate();
+
+  return {
+    year: safeYear,
+    month: safeMonth,
+    firstWeekday,
+    daysInMonth,
+  };
+}
+
+export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: CalendarPageProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [temporaryUnlockDate, setTemporaryUnlockDate] = useState<string | null>(null);
-  const [tapState, setTapState] = useState<{ date: string | null; count: number; atMs: number }>({
-    date: null,
-    count: 0,
-    atMs: 0,
-  });
+  const [tapState, setTapState] = useState<TapState>({ date: null, count: 0, atMs: 0 });
 
   const today = todayDateKey();
 
-  const allDates = useMemo(() => Object.keys(data).sort((a, b) => a.localeCompare(b)), [data]);
+  useEffect(() => {
+    setSelectedDate(null);
+    setTemporaryUnlockDate(null);
+    setTapState({ date: null, count: 0, atMs: 0 });
+  }, [monthKey]);
+
+  const monthMeta = useMemo(() => getMonthMeta(monthKey), [monthKey]);
+
+  const dayCells = useMemo(() => {
+    const cells: Array<{ dateKey: string; day: number } | null> = [];
+
+    for (let i = 0; i < monthMeta.firstWeekday; i += 1) {
+      cells.push(null);
+    }
+
+    for (let day = 1; day <= monthMeta.daysInMonth; day += 1) {
+      const dateKey = `${monthMeta.year}-${String(monthMeta.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      cells.push({ dateKey, day });
+    }
+
+    const remainder = cells.length % 7;
+    if (remainder > 0) {
+      for (let i = 0; i < 7 - remainder; i += 1) {
+        cells.push(null);
+      }
+    }
+
+    return cells;
+  }, [monthMeta.daysInMonth, monthMeta.firstWeekday, monthMeta.month, monthMeta.year]);
 
   const selectedMessage = selectedDate ? data[selectedDate] : null;
-  const selectedUnlocked =
-    !!selectedDate && (selectedDate <= today || temporaryUnlockDate === selectedDate);
+  const selectedUnlocked = !!selectedDate && (selectedDate <= today || temporaryUnlockDate === selectedDate);
 
-  function handleDateTap(dateKey: string) {
+  const currentMonthIndex = monthKeys.findIndex((entry) => entry === monthKey);
+
+  function goToNeighborMonth(offset: -1 | 1) {
+    if (currentMonthIndex < 0) {
+      return;
+    }
+
+    const nextIndex = currentMonthIndex + offset;
+    if (nextIndex < 0 || nextIndex >= monthKeys.length) {
+      return;
+    }
+
+    onMonthChange(monthKeys[nextIndex]);
+  }
+
+  function handleDateTap(dateKey: string, hasMessage: boolean) {
+    if (!hasMessage) {
+      return;
+    }
+
     const nowMs = Date.now();
     const locked = dateKey > today;
 
@@ -58,7 +124,44 @@ export function CalendarPage({ monthKey, data }: CalendarPageProps) {
     <div className="mx-auto w-full max-w-xl space-y-4">
       <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Calendar</p>
-        <h1 className="mt-1 text-2xl text-stone-900">{monthLabel(monthKey)}</h1>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => goToNeighborMonth(-1)}
+            disabled={currentMonthIndex <= 0}
+            className="rounded-lg border border-stone-300 px-3 py-1 text-sm text-stone-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Prev
+          </button>
+          <h1 className="text-2xl text-stone-900">{monthLabel(monthKey)}</h1>
+          <button
+            type="button"
+            onClick={() => goToNeighborMonth(1)}
+            disabled={currentMonthIndex < 0 || currentMonthIndex >= monthKeys.length - 1}
+            className="rounded-lg border border-stone-300 px-3 py-1 text-sm text-stone-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <label htmlFor="month-select" className="text-xs uppercase tracking-[0.18em] text-stone-500">
+            Month
+          </label>
+          <select
+            id="month-select"
+            value={monthKey}
+            onChange={(event) => onMonthChange(event.target.value)}
+            className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm text-stone-700"
+          >
+            {monthKeys.map((entry) => (
+              <option key={entry} value={entry}>
+                {monthLabel(entry)}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <p className="mt-2 text-sm text-stone-600">Locked days require triple tap for one-time early preview.</p>
       </header>
 
@@ -69,25 +172,39 @@ export function CalendarPage({ monthKey, data }: CalendarPageProps) {
           </p>
         ))}
 
-        {allDates.map((dateKey) => {
-          const day = Number(dateKey.slice(-2));
-          const locked = dateKey > today;
+        {dayCells.map((cell, index) => {
+          if (!cell) {
+            return <div key={`blank-${index}`} className="min-h-12 rounded-lg bg-transparent" />;
+          }
+
+          const hasMessage = !!data[cell.dateKey];
+          const locked = cell.dateKey > today;
 
           return (
             <button
-              key={dateKey}
+              key={cell.dateKey}
               type="button"
-              onClick={() => handleDateTap(dateKey)}
+              onClick={() => handleDateTap(cell.dateKey, hasMessage)}
+              disabled={!hasMessage}
               className={`min-h-12 rounded-lg border px-2 py-1 text-sm transition ${
-                locked
-                  ? 'border-stone-300 bg-stone-100/80 text-stone-500 hover:border-stone-400'
-                  : 'border-orange-200 bg-orange-50 text-stone-800 hover:border-orange-300'
+                !hasMessage
+                  ? 'cursor-not-allowed border-stone-200 bg-stone-100/60 text-stone-400'
+                  : locked
+                    ? 'border-stone-300 bg-stone-100/80 text-stone-500 hover:border-stone-400'
+                    : 'border-orange-200 bg-orange-50 text-stone-800 hover:border-orange-300'
               }`}
-              title={locked ? 'Locked day (tap 3x for preview)' : 'Open message'}
+              title={
+                !hasMessage
+                  ? 'No message for this day'
+                  : locked
+                    ? 'Locked day (tap 3x for preview)'
+                    : 'Open message'
+              }
             >
               <div className="flex items-center justify-between">
-                <span>{day}</span>
-                {locked && <span className="text-xs">lock</span>}
+                <span>{cell.day}</span>
+                {!hasMessage && <span className="text-xs">-</span>}
+                {hasMessage && locked && <span className="text-xs">lock</span>}
               </div>
             </button>
           );
@@ -119,7 +236,9 @@ export function CalendarPage({ monthKey, data }: CalendarPageProps) {
             </p>
 
             {!selectedUnlocked && (
-              <p className="mt-3 text-xs text-stone-500">Tip: tap this same date cell three times quickly to request one-time preview.</p>
+              <p className="mt-3 text-xs text-stone-500">
+                Tip: tap this same date cell three times quickly to request one-time preview.
+              </p>
             )}
           </div>
         </div>

@@ -31,3 +31,16 @@ export async function addNotifiedEmailId(id: string) {
   ids.add(id);
   await setNotifiedEmailIds(ids);
 }
+
+export async function addNotifiedEmailIds(nextIds: string[]) {
+  if (!nextIds.length) {
+    return;
+  }
+
+  const ids = await getNotifiedEmailIds();
+  for (const id of nextIds) {
+    ids.add(id);
+  }
+
+  await setNotifiedEmailIds(ids);
+}

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BottomTabs } from './components/BottomTabs';
 import { SwipePager } from './components/SwipePager';
 import { seedDatabaseIfNeeded } from './lib/bootstrapSeed';
+import { importCalendarFiles, importEmlFiles } from './lib/importers';
 import { toMonthKey } from './lib/date';
 import { getCalendarMonth, listCalendarMonths } from './lib/repositories/calendarRepo';
 import { listEmails } from './lib/repositories/emailRepo';
@@ -17,6 +18,10 @@ import { DEFAULT_SETTINGS } from './types/settings';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type BrowserNotificationPermission = NotificationPermission | 'unsupported';
+type ImportStatus = {
+  kind: 'idle' | 'working' | 'success' | 'error';
+  message: string;
+};
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 
@@ -63,6 +68,28 @@ async function notifyUnlockedEmail(email: EmailViewRecord) {
   }
 }
 
+function summarizeImport(
+  label: 'EML' | 'Calendar',
+  result: { imported: number; failed: number; messages: string[] },
+): ImportStatus {
+  if (result.imported === 0 && result.failed > 0) {
+    return {
+      kind: 'error',
+      message: `${label} import failed (${result.failed} file${result.failed > 1 ? 's' : ''}). ${result.messages[0] ?? ''}`,
+    };
+  }
+
+  const kind: ImportStatus['kind'] = result.failed > 0 ? 'error' : 'success';
+  const message = `${label} import complete: ${result.imported} imported, ${result.failed} failed${
+    result.messages.length ? ` (${result.messages[0]})` : ''
+  }`;
+
+  return {
+    kind,
+    message,
+  };
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -71,10 +98,12 @@ function App() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [emails, setEmails] = useState<EmailViewRecord[]>([]);
   const [calendarMonthKey, setCalendarMonthKey] = useState<string>(toMonthKey());
+  const [calendarMonthKeys, setCalendarMonthKeys] = useState<string[]>([]);
   const [calendarData, setCalendarData] = useState<CalendarMonth>({});
   const [visibleEmailCount, setVisibleEmailCount] = useState(0);
   const [totalEmailCount, setTotalEmailCount] = useState(0);
   const [monthCount, setMonthCount] = useState(0);
+  const [importStatus, setImportStatus] = useState<ImportStatus>({ kind: 'idle', message: '' });
   const [notificationPermission, setNotificationPermission] = useState<BrowserNotificationPermission>(
     getNotificationPermission,
   );
@@ -91,12 +120,14 @@ function App() {
       listCalendarMonths(),
     ]);
 
-    const preferredMonth = months.find((entry) => entry.monthKey === calendarMonthKey)?.monthKey;
-    const activeMonth = preferredMonth ?? months.at(-1)?.monthKey ?? calendarMonthKey;
+    const monthKeys = months.map((entry) => entry.monthKey);
+    const preferredMonth = monthKeys.includes(calendarMonthKey) ? calendarMonthKey : null;
+    const activeMonth = preferredMonth ?? monthKeys.at(-1) ?? calendarMonthKey;
     const activeCalendar = await getCalendarMonth(activeMonth);
 
     setSettings(loadedSettings);
     setEmails(visibleEmails);
+    setCalendarMonthKeys(monthKeys);
     setCalendarMonthKey(activeMonth);
     setCalendarData(activeCalendar ?? {});
     setVisibleEmailCount(visibleEmails.length);
@@ -168,8 +199,8 @@ function App() {
       return;
     }
 
-    const unlockedEmails = await listEmails({ includeLocked: true, nowMs: Date.now() });
-    const pending = unlockedEmails.filter((email) => !notifiedIdsRef.current.has(email.id));
+    const allEmails = await listEmails({ includeLocked: true, nowMs: Date.now() });
+    const pending = allEmails.filter((email) => email.isUnlocked && !notifiedIdsRef.current.has(email.id));
 
     if (!pending.length) {
       return;
@@ -216,6 +247,54 @@ function App() {
     setNotificationPermission(result);
   }, []);
 
+  const onImportEmlFiles = useCallback(
+    async (files: File[]) => {
+      setImportStatus({ kind: 'working', message: `Importing ${files.length} EML file(s)...` });
+
+      try {
+        const result = await importEmlFiles(files);
+        const syncAt = new Date().toISOString();
+        const nextSettings = await saveSettings({ lastSyncAt: syncAt });
+        setSettings(nextSettings);
+        await refreshData();
+        setImportStatus(summarizeImport('EML', result));
+      } catch (error) {
+        setImportStatus({
+          kind: 'error',
+          message: `EML import failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+        });
+      }
+    },
+    [refreshData],
+  );
+
+  const onImportCalendarFiles = useCallback(
+    async (files: File[]) => {
+      setImportStatus({ kind: 'working', message: `Importing ${files.length} calendar JSON file(s)...` });
+
+      try {
+        const result = await importCalendarFiles(files);
+        const syncAt = new Date().toISOString();
+        const nextSettings = await saveSettings({ lastSyncAt: syncAt });
+        setSettings(nextSettings);
+        await refreshData();
+        setImportStatus(summarizeImport('Calendar', result));
+      } catch (error) {
+        setImportStatus({
+          kind: 'error',
+          message: `Calendar import failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+        });
+      }
+    },
+    [refreshData],
+  );
+
+  const onMonthChange = useCallback(async (nextMonthKey: string) => {
+    setCalendarMonthKey(nextMonthKey);
+    const nextData = await getCalendarMonth(nextMonthKey);
+    setCalendarData(nextData ?? {});
+  }, []);
+
   const pages = useMemo(
     () => [
       {
@@ -226,7 +305,14 @@ function App() {
       {
         id: 'calendar',
         label: 'Calendar',
-        node: <CalendarPage monthKey={calendarMonthKey} data={calendarData} />,
+        node: (
+          <CalendarPage
+            monthKey={calendarMonthKey}
+            monthKeys={calendarMonthKeys}
+            data={calendarData}
+            onMonthChange={onMonthChange}
+          />
+        ),
       },
       {
         id: 'settings',
@@ -238,8 +324,11 @@ function App() {
             totalEmailCount={totalEmailCount}
             monthCount={monthCount}
             notificationPermission={notificationPermission}
+            importStatus={importStatus}
             onSettingChange={onSettingChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
+            onImportEmlFiles={onImportEmlFiles}
+            onImportCalendarFiles={onImportCalendarFiles}
             onRefresh={() => {
               void saveSettings({ lastSyncAt: new Date().toISOString() }).then((next) => {
                 setSettings(next);
@@ -253,9 +342,14 @@ function App() {
     [
       calendarData,
       calendarMonthKey,
+      calendarMonthKeys,
       emails,
+      importStatus,
       monthCount,
       notificationPermission,
+      onImportCalendarFiles,
+      onImportEmlFiles,
+      onMonthChange,
       onRequestNotificationPermission,
       onSettingChange,
       refreshData,
