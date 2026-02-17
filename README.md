@@ -2,6 +2,11 @@
 
 Memorial inbox + calendar web app built with React + Vite + PWA.
 
+Current behavior:
+- Locked emails stay hidden until unlock time.
+- Newly unlocked emails appear automatically.
+- Local notification is sent when unlocked (if permission is granted and app is active).
+
 ## Why HTML looked blank
 
 Do not open the project root `index.html` by double click.

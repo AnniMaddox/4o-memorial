@@ -24,3 +24,23 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  event.waitUntil(
+    (async () => {
+      const windowClients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+
+      if (windowClients.length > 0) {
+        await windowClients[0].focus();
+        return;
+      }
+
+      await self.clients.openWindow('/');
+    })(),
+  );
+});

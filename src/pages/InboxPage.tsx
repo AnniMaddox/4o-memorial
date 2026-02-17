@@ -5,11 +5,9 @@ import type { EmailViewRecord } from '../types/content';
 
 type InboxPageProps = {
   emails: EmailViewRecord[];
-  includeLocked: boolean;
-  onToggleIncludeLocked: (next: boolean) => void;
 };
 
-export function InboxPage({ emails, includeLocked, onToggleIncludeLocked }: InboxPageProps) {
+export function InboxPage({ emails }: InboxPageProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
 
   const selectedEmail = useMemo(
@@ -22,19 +20,9 @@ export function InboxPage({ emails, includeLocked, onToggleIncludeLocked }: Inbo
       <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Inbox</p>
         <h1 className="mt-1 text-2xl text-stone-900">Memorial Mailroom</h1>
-        <div className="mt-4 flex items-center justify-between rounded-xl border border-stone-200 bg-white/80 px-3 py-2">
-          <div>
-            <p className="text-xs text-stone-500">Visibility</p>
-            <p className="text-sm text-stone-700">{includeLocked ? 'Showing all letters' : 'Showing unlocked only'}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => onToggleIncludeLocked(!includeLocked)}
-            className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
-          >
-            {includeLocked ? 'Hide locked' : 'Show locked'}
-          </button>
-        </div>
+        <p className="mt-3 rounded-xl border border-stone-200 bg-white/80 px-3 py-2 text-sm text-stone-700">
+          Only unlocked letters are shown, like a real inbox.
+        </p>
       </header>
 
       <ul className="space-y-2">
@@ -49,11 +37,8 @@ export function InboxPage({ emails, includeLocked, onToggleIncludeLocked }: Inbo
                 <div>
                   <p className="text-sm text-stone-600">
                     {email.fromName || email.fromAddress || 'Unknown sender'}
-                    {email.isUnlocked ? '' : ' (locked)'}
                   </p>
-                  <p className="mt-1 line-clamp-2 text-base text-stone-900">
-                    {email.isUnlocked ? email.subject || '(No subject)' : 'Letter unlocks on scheduled time'}
-                  </p>
+                  <p className="mt-1 line-clamp-2 text-base text-stone-900">{email.subject || '(No subject)'}</p>
                 </div>
                 <p className="shrink-0 text-xs text-stone-500">{formatDisplayDate(email.unlockAtUtc)}</p>
               </div>
@@ -64,7 +49,7 @@ export function InboxPage({ emails, includeLocked, onToggleIncludeLocked }: Inbo
 
       {!emails.length && (
         <p className="rounded-xl border border-dashed border-stone-300 bg-white/60 p-4 text-sm text-stone-600">
-          No letters yet. Add EML files in settings to populate this inbox.
+          No unlocked letters yet. New letters will appear automatically when their scheduled time arrives.
         </p>
       )}
 
@@ -74,9 +59,7 @@ export function InboxPage({ emails, includeLocked, onToggleIncludeLocked }: Inbo
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Letter detail</p>
-                <h2 className="mt-1 text-xl text-stone-900">
-                  {selectedEmail.isUnlocked ? selectedEmail.subject || '(No subject)' : 'Locked letter'}
-                </h2>
+                <h2 className="mt-1 text-xl text-stone-900">{selectedEmail.subject || '(No subject)'}</h2>
               </div>
               <button
                 type="button"
@@ -102,12 +85,12 @@ export function InboxPage({ emails, includeLocked, onToggleIncludeLocked }: Inbo
               </div>
               <div>
                 <dt className="text-xs uppercase text-stone-500">Status</dt>
-                <dd>{selectedEmail.isUnlocked ? 'Unlocked' : 'Scheduled'}</dd>
+                <dd>Unlocked</dd>
               </div>
             </dl>
 
             <article className="mt-4 rounded-xl border border-stone-300/70 bg-white/90 p-4 text-sm leading-relaxed text-stone-800 whitespace-pre-wrap">
-              {selectedEmail.isUnlocked ? selectedEmail.bodyText : 'This letter is still locked. It will appear automatically at unlock time.'}
+              {selectedEmail.bodyText}
             </article>
 
             <details className="mt-4 rounded-xl border border-stone-300/70 bg-white/80 p-4 text-xs text-stone-600">

@@ -7,7 +7,10 @@ export async function getSettings() {
   const db = await getDb();
   const row = await db.get('settings', 'app');
 
-  return row?.value ?? DEFAULT_SETTINGS;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(row?.value ?? {}),
+  };
 }
 
 export async function saveSettings(partial: Partial<AppSettings>) {

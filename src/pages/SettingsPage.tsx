@@ -2,19 +2,34 @@ import type { AppSettings } from '../types/settings';
 
 type SettingsPageProps = {
   settings: AppSettings;
-  emailCount: number;
+  visibleEmailCount: number;
+  totalEmailCount: number;
   monthCount: number;
+  notificationPermission: NotificationPermission | 'unsupported';
   onSettingChange: (partial: Partial<AppSettings>) => void;
+  onRequestNotificationPermission: () => void;
   onRefresh: () => void;
 };
 
 export function SettingsPage({
   settings,
-  emailCount,
+  visibleEmailCount,
+  totalEmailCount,
   monthCount,
+  notificationPermission,
   onSettingChange,
+  onRequestNotificationPermission,
   onRefresh,
 }: SettingsPageProps) {
+  const notificationLabel =
+    notificationPermission === 'unsupported'
+      ? 'Not supported by this browser'
+      : notificationPermission === 'granted'
+        ? 'Allowed'
+        : notificationPermission === 'denied'
+          ? 'Blocked'
+          : 'Not decided';
+
   return (
     <div className="mx-auto w-full max-w-xl space-y-4">
       <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
@@ -27,8 +42,12 @@ export function SettingsPage({
         <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">Local data snapshot</h2>
         <dl className="mt-3 grid grid-cols-2 gap-3 text-sm text-stone-700">
           <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
-            <dt className="text-xs text-stone-500">Letters</dt>
-            <dd className="text-lg text-stone-900">{emailCount}</dd>
+            <dt className="text-xs text-stone-500">Visible letters</dt>
+            <dd className="text-lg text-stone-900">{visibleEmailCount}</dd>
+          </div>
+          <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+            <dt className="text-xs text-stone-500">Total letters</dt>
+            <dd className="text-lg text-stone-900">{totalEmailCount}</dd>
           </div>
           <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
             <dt className="text-xs text-stone-500">Calendar months</dt>
@@ -71,6 +90,27 @@ export function SettingsPage({
             onChange={(event) => onSettingChange({ swipeEnabled: event.target.checked })}
           />
         </label>
+
+        <label className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
+          <span>Enable unlock notifications</span>
+          <input
+            type="checkbox"
+            checked={settings.localNotificationsEnabled}
+            onChange={(event) => onSettingChange({ localNotificationsEnabled: event.target.checked })}
+          />
+        </label>
+
+        <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
+          <p>Notification permission: {notificationLabel}</p>
+          <button
+            type="button"
+            onClick={onRequestNotificationPermission}
+            disabled={notificationPermission === 'unsupported' || notificationPermission === 'granted'}
+            className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:bg-stone-400"
+          >
+            Request permission
+          </button>
+        </div>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">

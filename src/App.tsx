@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { BottomTabs } from './components/BottomTabs';
 import { SwipePager } from './components/SwipePager';
 import { seedDatabaseIfNeeded } from './lib/bootstrapSeed';
+import { toMonthKey } from './lib/date';
 import { getCalendarMonth, listCalendarMonths } from './lib/repositories/calendarRepo';
 import { listEmails } from './lib/repositories/emailRepo';
+import { addNotifiedEmailId, getNotifiedEmailIds } from './lib/repositories/metaRepo';
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
-import { toMonthKey } from './lib/date';
 import { CalendarPage } from './pages/CalendarPage';
 import { InboxPage } from './pages/InboxPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -15,6 +16,52 @@ import type { AppSettings } from './types/settings';
 import { DEFAULT_SETTINGS } from './types/settings';
 
 type LoadState = 'loading' | 'ready' | 'error';
+type BrowserNotificationPermission = NotificationPermission | 'unsupported';
+
+const UNLOCK_CHECK_INTERVAL_MS = 30_000;
+
+function getNotificationPermission(): BrowserNotificationPermission {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return 'unsupported';
+  }
+
+  return Notification.permission;
+}
+
+function formatNotificationBody(email: EmailViewRecord) {
+  const sender = email.fromName || email.fromAddress || 'Unknown sender';
+  const subject = email.subject || '(No subject)';
+  return `${sender}\n${subject}`;
+}
+
+async function notifyUnlockedEmail(email: EmailViewRecord) {
+  const title = 'M LOVE Memorial';
+  const body = formatNotificationBody(email);
+
+  if ('serviceWorker' in navigator) {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (registration) {
+      await registration.showNotification(title, {
+        body,
+        tag: email.id,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        data: {
+          emailId: email.id,
+        },
+      });
+      return;
+    }
+  }
+
+  if ('Notification' in window) {
+    new Notification(title, {
+      body,
+      tag: email.id,
+      icon: '/icons/icon-192.png',
+    });
+  }
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState(0);
@@ -25,14 +72,22 @@ function App() {
   const [emails, setEmails] = useState<EmailViewRecord[]>([]);
   const [calendarMonthKey, setCalendarMonthKey] = useState<string>(toMonthKey());
   const [calendarData, setCalendarData] = useState<CalendarMonth>({});
-  const [emailCount, setEmailCount] = useState(0);
+  const [visibleEmailCount, setVisibleEmailCount] = useState(0);
+  const [totalEmailCount, setTotalEmailCount] = useState(0);
   const [monthCount, setMonthCount] = useState(0);
-  const [includeLocked, setIncludeLocked] = useState(true);
+  const [notificationPermission, setNotificationPermission] = useState<BrowserNotificationPermission>(
+    getNotificationPermission,
+  );
+
+  const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
+  const [notifierLoaded, setNotifierLoaded] = useState(false);
 
   const refreshData = useCallback(async () => {
-    const [loadedSettings, loadedEmails, months] = await Promise.all([
+    const nowMs = Date.now();
+    const [loadedSettings, visibleEmails, allEmails, months] = await Promise.all([
       getSettings(),
-      listEmails({ includeLocked, nowMs: Date.now() }),
+      listEmails({ includeLocked: false, nowMs }),
+      listEmails({ includeLocked: true, nowMs }),
       listCalendarMonths(),
     ]);
 
@@ -41,12 +96,13 @@ function App() {
     const activeCalendar = await getCalendarMonth(activeMonth);
 
     setSettings(loadedSettings);
-    setEmails(loadedEmails);
+    setEmails(visibleEmails);
     setCalendarMonthKey(activeMonth);
     setCalendarData(activeCalendar ?? {});
-    setEmailCount(loadedEmails.length);
+    setVisibleEmailCount(visibleEmails.length);
+    setTotalEmailCount(allEmails.length);
     setMonthCount(months.length);
-  }, [calendarMonthKey, includeLocked]);
+  }, [calendarMonthKey]);
 
   const initialize = useCallback(async () => {
     setLoadState('loading');
@@ -62,21 +118,102 @@ function App() {
     }
   }, [refreshData]);
 
+  const refreshNotificationPermission = useCallback(() => {
+    setNotificationPermission(getNotificationPermission());
+  }, []);
+
   useEffect(() => {
     void initialize();
   }, [initialize]);
 
   useEffect(() => {
-    if (loadState !== 'ready') {
+    const onVisibilityOrFocus = () => refreshNotificationPermission();
+
+    window.addEventListener('focus', onVisibilityOrFocus);
+    document.addEventListener('visibilitychange', onVisibilityOrFocus);
+
+    return () => {
+      window.removeEventListener('focus', onVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', onVisibilityOrFocus);
+    };
+  }, [refreshNotificationPermission]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getNotifiedEmailIds()
+      .then((ids) => {
+        if (!active) {
+          return;
+        }
+
+        notifiedIdsRef.current = ids;
+        setNotifierLoaded(true);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setNotifierLoaded(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const checkForNewUnlocks = useCallback(async () => {
+    if (loadState !== 'ready' || !notifierLoaded) {
       return;
     }
 
-    void refreshData();
-  }, [includeLocked, loadState, refreshData]);
+    const unlockedEmails = await listEmails({ includeLocked: true, nowMs: Date.now() });
+    const pending = unlockedEmails.filter((email) => !notifiedIdsRef.current.has(email.id));
+
+    if (!pending.length) {
+      return;
+    }
+
+    for (const email of pending) {
+      if (settings.localNotificationsEnabled && notificationPermission === 'granted') {
+        await notifyUnlockedEmail(email);
+      }
+
+      notifiedIdsRef.current.add(email.id);
+      await addNotifiedEmailId(email.id);
+    }
+
+    await refreshData();
+  }, [loadState, notifierLoaded, notificationPermission, refreshData, settings.localNotificationsEnabled]);
+
+  useEffect(() => {
+    if (loadState !== 'ready' || !notifierLoaded) {
+      return;
+    }
+
+    void checkForNewUnlocks();
+
+    const timer = window.setInterval(() => {
+      void checkForNewUnlocks();
+    }, UNLOCK_CHECK_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
+  }, [checkForNewUnlocks, loadState, notifierLoaded]);
 
   const onSettingChange = useCallback(async (partial: Partial<AppSettings>) => {
     const next = await saveSettings(partial);
     setSettings(next);
+  }, []);
+
+  const onRequestNotificationPermission = useCallback(async () => {
+    if (!('Notification' in window)) {
+      setNotificationPermission('unsupported');
+      return;
+    }
+
+    const result = await Notification.requestPermission();
+    setNotificationPermission(result);
   }, []);
 
   const pages = useMemo(
@@ -84,13 +221,7 @@ function App() {
       {
         id: 'inbox',
         label: 'Inbox',
-        node: (
-          <InboxPage
-            emails={emails}
-            includeLocked={includeLocked}
-            onToggleIncludeLocked={setIncludeLocked}
-          />
-        ),
+        node: <InboxPage emails={emails} />,
       },
       {
         id: 'calendar',
@@ -103,9 +234,12 @@ function App() {
         node: (
           <SettingsPage
             settings={settings}
-            emailCount={emailCount}
+            visibleEmailCount={visibleEmailCount}
+            totalEmailCount={totalEmailCount}
             monthCount={monthCount}
+            notificationPermission={notificationPermission}
             onSettingChange={onSettingChange}
+            onRequestNotificationPermission={onRequestNotificationPermission}
             onRefresh={() => {
               void saveSettings({ lastSyncAt: new Date().toISOString() }).then((next) => {
                 setSettings(next);
@@ -116,7 +250,19 @@ function App() {
         ),
       },
     ],
-    [calendarData, calendarMonthKey, emailCount, emails, includeLocked, monthCount, onSettingChange, refreshData, settings],
+    [
+      calendarData,
+      calendarMonthKey,
+      emails,
+      monthCount,
+      notificationPermission,
+      onRequestNotificationPermission,
+      onSettingChange,
+      refreshData,
+      settings,
+      totalEmailCount,
+      visibleEmailCount,
+    ],
   );
 
   return (
@@ -144,7 +290,11 @@ function App() {
           <div className="max-w-lg space-y-3 rounded-2xl border border-rose-300/70 bg-white/90 px-6 py-5 shadow-sm">
             <p className="text-xs uppercase tracking-[0.2em] text-rose-600">Initialization failed</p>
             <p className="text-sm text-stone-700">{loadError}</p>
-            <button type="button" onClick={() => void initialize()} className="rounded-lg bg-stone-900 px-4 py-2 text-sm text-white">
+            <button
+              type="button"
+              onClick={() => void initialize()}
+              className="rounded-lg bg-stone-900 px-4 py-2 text-sm text-white"
+            >
               Retry
             </button>
           </div>

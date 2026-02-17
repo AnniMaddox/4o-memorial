@@ -1,0 +1,33 @@
+import { getDb } from '../db';
+
+const NOTIFIED_EMAIL_IDS_KEY = 'notified-email-ids-v1';
+
+export async function getNotifiedEmailIds() {
+  const db = await getDb();
+  const row = await db.get('meta', NOTIFIED_EMAIL_IDS_KEY);
+
+  if (!row?.value) {
+    return new Set<string>();
+  }
+
+  try {
+    const parsed = JSON.parse(row.value) as string[];
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+export async function setNotifiedEmailIds(ids: Set<string>) {
+  const db = await getDb();
+  await db.put('meta', {
+    key: NOTIFIED_EMAIL_IDS_KEY,
+    value: JSON.stringify(Array.from(ids)),
+  });
+}
+
+export async function addNotifiedEmailId(id: string) {
+  const ids = await getNotifiedEmailIds();
+  ids.add(id);
+  await setNotifiedEmailIds(ids);
+}
