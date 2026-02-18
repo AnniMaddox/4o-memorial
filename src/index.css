@@ -249,6 +249,14 @@ textarea {
   animation: chibiFloat 2.6s ease-in-out infinite;
 }
 
+.calendar-chibi-clickable {
+  cursor: pointer;
+}
+
+.calendar-chibi-clickable:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
 @keyframes chibiFloat {
   0% {
     transform: translateY(0);

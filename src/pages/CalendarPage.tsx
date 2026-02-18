@@ -21,6 +21,13 @@ type HoverPreview = {
 };
 
 const DEFAULT_HOVER_PHRASES = ['來，我在', '今天也選妳', '等妳', '想妳了', '抱緊一下', '妳回頭就有我'];
+const CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+const CHIBI_IMAGE_SOURCES = Object.entries(CHIBI_MODULES)
+  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+  .map(([, src]) => src);
 
 function getMonthMeta(monthKey: string) {
   const [year, month] = monthKey.split('-').map(Number);
@@ -46,11 +53,13 @@ export function CalendarPage({
   hoverResetSeed,
   onMonthChange,
 }: CalendarPageProps) {
-  const chibiSrc = `${import.meta.env.BASE_URL}chibi.png`;
+  const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi.png`;
+  const chibiSources = CHIBI_IMAGE_SOURCES.length ? CHIBI_IMAGE_SOURCES : [fallbackChibiSrc];
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [temporaryUnlockDate, setTemporaryUnlockDate] = useState<string | null>(null);
   const [primedDateKey, setPrimedDateKey] = useState<string | null>(null);
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
+  const [chibiIndex, setChibiIndex] = useState(0);
   const [showChibi, setShowChibi] = useState(true);
   const [hoverPhraseByDate, setHoverPhraseByDate] = useState<Record<string, string>>({});
   const [monthFadeSeed, setMonthFadeSeed] = useState(0);
@@ -245,6 +254,14 @@ export function CalendarPage({
     clearCalendarSelection();
   }
 
+  function cycleChibi() {
+    if (chibiSources.length <= 1) {
+      return;
+    }
+
+    setChibiIndex((current) => (current + 1) % chibiSources.length);
+  }
+
   return (
     <div className="mx-auto w-full max-w-xl space-y-4">
       <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
@@ -376,11 +393,23 @@ export function CalendarPage({
         ) : (
           showChibi && (
             <img
-              src={chibiSrc}
+              src={chibiSources[chibiIndex]}
               alt="Q版角色"
-              className="calendar-chibi pointer-events-none ml-auto mr-2 h-20 w-20 object-contain opacity-85 select-none"
+              className={`calendar-chibi ml-auto mr-2 h-20 w-20 object-contain opacity-85 select-none ${
+                chibiSources.length > 1 ? 'calendar-chibi-clickable' : 'pointer-events-none'
+              }`}
               loading="lazy"
+              onClick={cycleChibi}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  cycleChibi();
+                }
+              }}
               onError={() => setShowChibi(false)}
+              role={chibiSources.length > 1 ? 'button' : undefined}
+              tabIndex={chibiSources.length > 1 ? 0 : undefined}
+              title={chibiSources.length > 1 ? '點我換下一張' : undefined}
             />
           )
         )}
