@@ -207,7 +207,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
       </div>
 
       {selectedDate && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/45 p-4 sm:items-center">
+        <div className="fixed inset-0 z-30 flex items-start justify-center bg-black/45 px-4 pb-4 pt-[10vh] sm:pt-16">
           <div className="w-full max-w-lg rounded-2xl bg-[#fffaf2] p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -226,7 +226,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
               </button>
             </div>
 
-            <p className="mt-4 whitespace-pre-wrap rounded-xl border border-stone-300/70 bg-white/90 p-4 text-sm leading-relaxed text-stone-800">
+            <p className="mt-4 max-h-[58vh] overflow-y-auto whitespace-pre-wrap rounded-xl border border-stone-300/70 bg-white/90 p-4 text-sm leading-relaxed text-stone-800">
               {!selectedMessage
                 ? 'No message is set for this date.'
                 : selectedUnlocked
