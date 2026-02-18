@@ -390,7 +390,7 @@ function App() {
       setHoverResetSeed((prev) => prev + 1);
       setImportStatus({
         kind: 'success',
-        message: 'Hover 語句已重抽，回月曆長按任一天就會抽新語句。',
+        message: 'Hover 語句已重抽，回月曆點日期就會抽新語句。',
       });
     } catch (error) {
       setImportStatus({
@@ -480,6 +480,9 @@ function App() {
         fontSize: `${settings.fontScale}rem`,
         ['--theme-accent' as string]: settings.themeMonthColor,
         ['--theme-accent-rgb' as string]: themeAccentRgb,
+        ['--calendar-cell-radius' as string]: `${settings.calendarCellRadius}px`,
+        ['--calendar-cell-shadow' as string]: settings.calendarCellShadow,
+        ['--calendar-cell-depth' as string]: settings.calendarCellDepth,
       }}
     >
       <div className="pointer-events-none absolute -left-24 top-[-5rem] h-72 w-72 rounded-full bg-orange-200/40 blur-3xl" />

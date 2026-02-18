@@ -7,6 +7,9 @@
   background-color: #f6f1e8;
   --theme-accent: #c25b3c;
   --theme-accent-rgb: 194 91 60;
+  --calendar-cell-radius: 16px;
+  --calendar-cell-shadow: 68;
+  --calendar-cell-depth: 70;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -85,49 +88,76 @@ textarea {
 .calendar-day-glass {
   position: relative;
   isolation: isolate;
+  border-radius: var(--calendar-cell-radius);
   backdrop-filter: blur(10px) saturate(1.12);
   box-shadow:
-    0 10px 18px rgb(120 113 108 / 0.2),
-    0 1px 0 rgb(255 255 255 / 0.66) inset,
-    0 -1px 0 rgb(0 0 0 / 0.05) inset;
+    0 calc(8px + var(--calendar-cell-shadow) * 0.08px) calc(14px + var(--calendar-cell-shadow) * 0.14px)
+      rgb(120 113 108 / calc(0.13 + var(--calendar-cell-shadow) * 0.0017)),
+    0 1px 0 rgb(255 255 255 / calc(0.58 + var(--calendar-cell-depth) * 0.0024)) inset,
+    0 -1px 0 rgb(0 0 0 / calc(0.04 + var(--calendar-cell-depth) * 0.0012)) inset;
   transform: translateY(0);
+  transition:
+    transform 160ms ease,
+    box-shadow 170ms ease,
+    border-color 170ms ease,
+    background-color 170ms ease;
 }
 
 .calendar-day-glass::before {
   content: '';
   position: absolute;
-  inset: 1px 1px 45% 1px;
-  border-radius: 0.5rem;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.38), rgb(255 255 255 / 0));
+  inset: 1px 1px 42% 1px;
+  border-radius: calc(var(--calendar-cell-radius) - 1px);
+  background: linear-gradient(
+    180deg,
+    rgb(255 255 255 / calc(0.26 + var(--calendar-cell-depth) * 0.0023)),
+    rgb(255 255 255 / 0)
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+.calendar-day-glass::after {
+  content: '';
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 6px;
+  height: 20%;
+  border-radius: 999px;
+  background: rgb(255 255 255 / calc(0.1 + var(--calendar-cell-depth) * 0.0017));
+  filter: blur(calc(4px + var(--calendar-cell-depth) * 0.03px));
   pointer-events: none;
   z-index: -1;
 }
 
 .calendar-day-glass:hover {
-  transform: translateY(-2px);
+  transform: translateY(calc(-1px - var(--calendar-cell-depth) * 0.03px));
   box-shadow:
-    0 14px 22px rgb(120 113 108 / 0.24),
-    0 1px 0 rgb(255 255 255 / 0.72) inset,
-    0 -1px 0 rgb(0 0 0 / 0.06) inset;
+    0 calc(11px + var(--calendar-cell-shadow) * 0.1px) calc(18px + var(--calendar-cell-shadow) * 0.16px)
+      rgb(120 113 108 / calc(0.17 + var(--calendar-cell-shadow) * 0.0018)),
+    0 1px 0 rgb(255 255 255 / calc(0.64 + var(--calendar-cell-depth) * 0.0026)) inset,
+    0 -1px 0 rgb(0 0 0 / calc(0.05 + var(--calendar-cell-depth) * 0.0013)) inset;
 }
 
 .calendar-day-glass:active {
   transform: translateY(0);
 }
 
+.calendar-day-armed {
+  transform: translateY(calc(-2px - var(--calendar-cell-depth) * 0.04px)) scale(1.015);
+  box-shadow:
+    0 calc(14px + var(--calendar-cell-shadow) * 0.12px) calc(23px + var(--calendar-cell-shadow) * 0.17px)
+      rgb(120 113 108 / calc(0.2 + var(--calendar-cell-shadow) * 0.002)),
+    0 1px 0 rgb(255 255 255 / calc(0.66 + var(--calendar-cell-depth) * 0.0028)) inset,
+    0 -1px 0 rgb(0 0 0 / calc(0.06 + var(--calendar-cell-depth) * 0.0015)) inset;
+}
+
 .calendar-hover-bubble {
   backdrop-filter: blur(6px);
   box-shadow:
-    0 10px 20px rgb(71 65 59 / 0.22),
-    0 1px 0 rgb(255 255 255 / 0.8) inset;
-}
-
-.calendar-hover-dock {
-  border-radius: 1rem;
-  border: 1px dashed rgb(var(--theme-accent-rgb) / 0.22);
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.36), rgb(255 255 255 / 0.2));
-  display: grid;
-  align-items: center;
+    0 14px 25px rgb(71 65 59 / 0.26),
+    0 1px 0 rgb(255 255 255 / 0.85) inset;
 }
 
 .calendar-chat-bubble {

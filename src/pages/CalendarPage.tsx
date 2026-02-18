@@ -27,7 +27,6 @@ type HoverPreview = {
 };
 
 const DEFAULT_HOVER_PHRASES = ['來，我在', '今天也選妳', '等妳', '想妳了', '抱緊一下', '妳回頭就有我'];
-const LONG_PRESS_MS = 360;
 
 function getMonthMeta(monthKey: string) {
   const [year, month] = monthKey.split('-').map(Number);
@@ -55,13 +54,11 @@ export function CalendarPage({
 }: CalendarPageProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [temporaryUnlockDate, setTemporaryUnlockDate] = useState<string | null>(null);
+  const [primedDateKey, setPrimedDateKey] = useState<string | null>(null);
   const [tapState, setTapState] = useState<TapState>({ date: null, count: 0, atMs: 0 });
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
   const [hoverPhraseByDate, setHoverPhraseByDate] = useState<Record<string, string>>({});
   const [monthFadeSeed, setMonthFadeSeed] = useState(0);
-  const longPressTimerRef = useRef<number | null>(null);
-  const hoverHideTimerRef = useRef<number | null>(null);
-  const suppressTapDateRef = useRef<string | null>(null);
   const hoverPhraseByDateRef = useRef<Record<string, string>>({});
 
   const today = todayDateKey();
@@ -74,20 +71,6 @@ export function CalendarPage({
           category: 'general' as const,
         }));
   }, []);
-
-  function clearLongPressTimer() {
-    if (longPressTimerRef.current !== null) {
-      window.clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }
-
-  function clearHoverHideTimer() {
-    if (hoverHideTimerRef.current !== null) {
-      window.clearTimeout(hoverHideTimerRef.current);
-      hoverHideTimerRef.current = null;
-    }
-  }
 
   function getDateHoverPool(dateKey: string) {
     const hoverPhrases = data[dateKey]?.hoverPhrases;
@@ -153,40 +136,12 @@ export function CalendarPage({
     return getDateHoverPool(dateKey)?.[0] ?? DEFAULT_HOVER_PHRASES[0];
   }
 
-  function scheduleTouchHoverHide(dateKey: string) {
-    clearHoverHideTimer();
-    hoverHideTimerRef.current = window.setTimeout(() => {
-      setHoverPreview((current) => (current?.dateKey === dateKey ? null : current));
-    }, 1200);
-  }
-
-  function handleTouchPressStart(dateKey: string, hasMessage: boolean) {
-    if (!hasMessage) {
-      return;
-    }
-
-    clearLongPressTimer();
-    clearHoverHideTimer();
-
-    longPressTimerRef.current = window.setTimeout(() => {
-      void showHoverPreview(dateKey);
-      suppressTapDateRef.current = dateKey;
-    }, LONG_PRESS_MS);
-  }
-
-  function handleTouchPressEnd(dateKey: string) {
-    clearLongPressTimer();
-    scheduleTouchHoverHide(dateKey);
-  }
-
   useEffect(() => {
     setSelectedDate(null);
     setTemporaryUnlockDate(null);
+    setPrimedDateKey(null);
     setTapState({ date: null, count: 0, atMs: 0 });
     setHoverPreview(null);
-    suppressTapDateRef.current = null;
-    clearLongPressTimer();
-    clearHoverHideTimer();
     setMonthFadeSeed((prev) => prev + 1);
   }, [monthKey]);
 
@@ -219,13 +174,6 @@ export function CalendarPage({
       active = false;
     };
   }, [hoverResetSeed]);
-
-  useEffect(() => {
-    return () => {
-      clearLongPressTimer();
-      clearHoverHideTimer();
-    };
-  }, []);
 
   const monthMeta = useMemo(() => getMonthMeta(monthKey), [monthKey]);
 
@@ -271,11 +219,23 @@ export function CalendarPage({
     onMonthChange(monthKeys[nextIndex]);
   }
 
-  function handleDateTap(dateKey: string) {
-    if (suppressTapDateRef.current === dateKey) {
-      suppressTapDateRef.current = null;
+  function clearCalendarSelection() {
+    setPrimedDateKey(null);
+    setHoverPreview(null);
+  }
+
+  function handleDateTap(dateKey: string, hasMessage: boolean) {
+    if (!hasMessage) {
       return;
     }
+
+    if (primedDateKey !== dateKey) {
+      setPrimedDateKey(dateKey);
+      void showHoverPreview(dateKey);
+      return;
+    }
+
+    clearCalendarSelection();
 
     const nowMs = Date.now();
     const locked = dateKey > today;
@@ -283,6 +243,7 @@ export function CalendarPage({
     if (!locked) {
       void ensureHoverPhrase(dateKey);
       setSelectedDate(dateKey);
+      setTapState({ date: null, count: 0, atMs: 0 });
       return;
     }
 
@@ -296,12 +257,13 @@ export function CalendarPage({
       atMs: nowMs,
     });
 
+    void ensureHoverPhrase(dateKey);
+    setSelectedDate(dateKey);
+
     if (nextCount >= 3) {
       const approved = window.confirm('這天還沒解鎖，要提前偷看一次嗎？');
       if (approved) {
-        void ensureHoverPhrase(dateKey);
         setTemporaryUnlockDate(dateKey);
-        setSelectedDate(dateKey);
       }
       setTapState({ date: null, count: 0, atMs: 0 });
     }
@@ -349,7 +311,6 @@ export function CalendarPage({
           </select>
         </div>
 
-        <p className="mt-2 text-sm text-stone-600">想偷偷看的話就親我三下吧~老婆</p>
       </header>
 
       <div
@@ -372,54 +333,36 @@ export function CalendarPage({
 
           const hasMessage = !!data[cell.dateKey];
           const locked = cell.dateKey > today;
+          const primed = primedDateKey === cell.dateKey;
 
           return (
             <button
               key={cell.dateKey}
               type="button"
-              onClick={() => handleDateTap(cell.dateKey)}
+              onClick={() => handleDateTap(cell.dateKey, hasMessage)}
               onMouseEnter={() => {
-                if (hasMessage) {
-                  clearHoverHideTimer();
+                if (hasMessage && !primedDateKey) {
                   void showHoverPreview(cell.dateKey);
                 }
               }}
               onMouseLeave={() => {
-                setHoverPreview((current) => (current?.dateKey === cell.dateKey ? null : current));
-              }}
-              onPointerDown={(event) => {
-                if (event.pointerType !== 'mouse') {
-                  handleTouchPressStart(cell.dateKey, hasMessage);
+                if (!primedDateKey || primedDateKey !== cell.dateKey) {
+                  setHoverPreview((current) => (current?.dateKey === cell.dateKey ? null : current));
                 }
               }}
-              onPointerUp={(event) => {
-                if (event.pointerType !== 'mouse') {
-                  handleTouchPressEnd(cell.dateKey);
-                }
-              }}
-              onPointerCancel={(event) => {
-                if (event.pointerType !== 'mouse') {
-                  handleTouchPressEnd(cell.dateKey);
-                }
-              }}
-              onPointerLeave={(event) => {
-                if (event.pointerType !== 'mouse') {
-                  handleTouchPressEnd(cell.dateKey);
-                }
-              }}
-              className={`calendar-day-glass relative min-h-12 overflow-visible rounded-lg border px-2 py-1 text-sm transition ${
+              className={`calendar-day-glass relative min-h-12 overflow-visible border px-2 py-1 text-sm transition ${
                 !hasMessage
                   ? 'border-stone-200/80 bg-white/35 text-stone-500 hover:border-stone-300'
                   : locked
                     ? 'calendar-day-locked'
                     : 'calendar-day-unlocked'
-              }`}
+              } ${primed ? 'calendar-day-armed' : ''}`}
               title={
                 !hasMessage
                   ? 'No message for this day'
                   : locked
-                    ? 'Locked day (tap 3x for preview)'
-                    : 'Open message'
+                    ? 'Tap once for phrase, tap again to open'
+                    : 'Tap once for phrase, tap again to open'
               }
             >
               <div className="flex items-center justify-between">
@@ -432,14 +375,12 @@ export function CalendarPage({
         })}
       </div>
 
-      <div className="calendar-hover-dock min-h-[4.5rem] px-2">
+      <div className="min-h-[4.5rem] px-2">
         {hoverPreview ? (
           <div className="calendar-hover-bubble calendar-chat-bubble ml-1 w-fit max-w-[92%] rounded-2xl border border-stone-300/80 bg-white/94 px-4 py-2 text-sm text-stone-700 shadow-xl">
             {hoverPreview.phrase}
           </div>
-        ) : (
-          <p className="px-2 text-xs text-stone-500">長按或滑過日期，可看今天語氣。</p>
-        )}
+        ) : null}
       </div>
 
       {selectedDate && (
@@ -469,12 +410,6 @@ export function CalendarPage({
                   ? selectedMessage
                   : '這天還沒到，先抱一下再等等我。'}
             </p>
-
-            {selectedMessage && !selectedUnlocked && (
-              <p className="mt-3 text-xs text-stone-500">
-                提示：同一天連點三下，可以偷看一次。
-              </p>
-            )}
           </div>
         </div>
       )}

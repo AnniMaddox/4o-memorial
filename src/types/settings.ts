@@ -14,6 +14,9 @@ export type AppSettings = {
   lastSyncAt: string | null;
   installHintDismissed: boolean;
   hoverToneWeights: HoverToneWeights;
+  calendarCellRadius: number;
+  calendarCellShadow: number;
+  calendarCellDepth: number;
 };
 
 export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
@@ -32,4 +35,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   lastSyncAt: null,
   installHintDismissed: false,
   hoverToneWeights: DEFAULT_HOVER_TONE_WEIGHTS,
+  calendarCellRadius: 16,
+  calendarCellShadow: 68,
+  calendarCellDepth: 70,
 };

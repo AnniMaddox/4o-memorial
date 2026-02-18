@@ -95,6 +95,58 @@ export function SettingsPage({
           />
         </label>
 
+        <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3 text-sm text-stone-700">
+          <p className="text-sm text-stone-800">月曆立體外觀</p>
+
+          <label className="block space-y-1">
+            <span className="flex items-center justify-between">
+              <span>圓角</span>
+              <span className="text-xs text-stone-500">{settings.calendarCellRadius}px</span>
+            </span>
+            <input
+              type="range"
+              min={8}
+              max={28}
+              step={1}
+              value={settings.calendarCellRadius}
+              onChange={(event) => onSettingChange({ calendarCellRadius: Number(event.target.value) })}
+              className="w-full"
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="flex items-center justify-between">
+              <span>陰影強度</span>
+              <span className="text-xs text-stone-500">{settings.calendarCellShadow}</span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={settings.calendarCellShadow}
+              onChange={(event) => onSettingChange({ calendarCellShadow: Number(event.target.value) })}
+              className="w-full"
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="flex items-center justify-between">
+              <span>立體感</span>
+              <span className="text-xs text-stone-500">{settings.calendarCellDepth}</span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={settings.calendarCellDepth}
+              onChange={(event) => onSettingChange({ calendarCellDepth: Number(event.target.value) })}
+              className="w-full"
+            />
+          </label>
+        </div>
+
         <label className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
           <span>啟用左右滑分頁</span>
           <input

@@ -3,6 +3,14 @@ import { getDb } from '../db';
 import type { AppSettings } from '../../types/settings';
 import { DEFAULT_SETTINGS } from '../../types/settings';
 
+function clampNumber(value: unknown, min: number, max: number, fallback: number) {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, value));
+}
+
 export async function getSettings() {
   const db = await getDb();
   const row = await db.get('settings', 'app');
@@ -16,6 +24,24 @@ export async function getSettings() {
       ...DEFAULT_SETTINGS.hoverToneWeights,
       ...(persisted.hoverToneWeights ?? {}),
     },
+    calendarCellRadius: clampNumber(
+      persisted.calendarCellRadius,
+      8,
+      28,
+      DEFAULT_SETTINGS.calendarCellRadius,
+    ),
+    calendarCellShadow: clampNumber(
+      persisted.calendarCellShadow,
+      0,
+      100,
+      DEFAULT_SETTINGS.calendarCellShadow,
+    ),
+    calendarCellDepth: clampNumber(
+      persisted.calendarCellDepth,
+      0,
+      100,
+      DEFAULT_SETTINGS.calendarCellDepth,
+    ),
   };
 }
 
