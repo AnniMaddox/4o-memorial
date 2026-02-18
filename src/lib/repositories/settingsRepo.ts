@@ -24,7 +24,7 @@ function normalizeBackgroundMode(value: unknown, fallback: BackgroundMode): Back
 }
 
 function normalizeChatBubbleStyle(value: unknown, fallback: ChatBubbleStyle): ChatBubbleStyle {
-  return value === 'jelly' || value === 'imessage' ? value : fallback;
+  return value === 'jelly' || value === 'imessage' || value === 'imessageClassic' ? value : fallback;
 }
 
 function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrls {
@@ -36,6 +36,7 @@ function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrl
     tarot: normalizeString(input.tarot, fallback.tarot),
     letters: normalizeString(input.letters, fallback.letters),
     heart: normalizeString(input.heart, fallback.heart),
+    list: normalizeString(input.list, fallback.list),
     settings: normalizeString(input.settings, fallback.settings),
   };
 }
@@ -89,6 +90,12 @@ export async function getSettings() {
     chatAiBubbleColor: normalizeString(persisted.chatAiBubbleColor, DEFAULT_SETTINGS.chatAiBubbleColor),
     chatAiBubbleBorderColor: normalizeString(persisted.chatAiBubbleBorderColor, DEFAULT_SETTINGS.chatAiBubbleBorderColor),
     chatAiBubbleTextColor: normalizeString(persisted.chatAiBubbleTextColor, DEFAULT_SETTINGS.chatAiBubbleTextColor),
+    chatBubbleRadius: clampNumber(
+      persisted.chatBubbleRadius,
+      10,
+      36,
+      DEFAULT_SETTINGS.chatBubbleRadius,
+    ),
     homeWidgetTitle: normalizeString(persisted.homeWidgetTitle, DEFAULT_SETTINGS.homeWidgetTitle),
     homeWidgetSubtitle: normalizeString(persisted.homeWidgetSubtitle, DEFAULT_SETTINGS.homeWidgetSubtitle),
     homeWidgetBadgeText: normalizeString(persisted.homeWidgetBadgeText, DEFAULT_SETTINGS.homeWidgetBadgeText),

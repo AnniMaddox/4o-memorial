@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { TabIconUrls } from '../types/settings';
 
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -138,6 +138,13 @@ export function HomePage({
       icon: '💬',
       launch: 'chat',
     };
+    const listSlot: HomeAppSlot = {
+      id: 'list',
+      label: '清單',
+      icon: '🎴',
+      iconUrl: tabIconUrls.list.trim() || undefined,
+      launch: 'list',
+    };
 
     const placeholder = (id: string): HomeAppSlot => ({
       id,
@@ -152,10 +159,10 @@ export function HomePage({
       lettersSlot,
       heartSlot,
       chatSlot,
+      listSlot,
       placeholder('slot-1-5'),
       placeholder('slot-1-6'),
       placeholder('slot-1-7'),
-      placeholder('slot-1-8'),
     ];
 
     // Screen 2: reserved for future apps.
@@ -171,7 +178,7 @@ export function HomePage({
     ];
 
     return [screen1, screen2];
-  }, [tabIconUrls.heart, tabIconUrls.letters, tabIconUrls.tarot]);
+  }, [tabIconUrls.heart, tabIconUrls.letters, tabIconUrls.list, tabIconUrls.tarot]);
 
   useEffect(() => {
     const node = pagerRef.current;

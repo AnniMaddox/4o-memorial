@@ -8,8 +8,8 @@ export type HoverToneWeights = {
 
 export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image';
-export type ChatBubbleStyle = 'jelly' | 'imessage';
-export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'settings';
+export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
+export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
 
 export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
@@ -19,6 +19,7 @@ export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   tarot: '',
   letters: '',
   heart: '',
+  list: '',
   settings: '',
 };
 
@@ -33,6 +34,7 @@ export type AppSettings = {
   chatAiBubbleColor: string;
   chatAiBubbleBorderColor: string;
   chatAiBubbleTextColor: string;
+  chatBubbleRadius: number;
   customFontCssUrl: string;
   customFontFileUrl: string;
   customFontFamily: string;
@@ -79,6 +81,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   chatAiBubbleColor: '#D2F0FF',
   chatAiBubbleBorderColor: '#A8C0CC',
   chatAiBubbleTextColor: '#000000',
+  chatBubbleRadius: 24,
   customFontCssUrl: '',
   customFontFileUrl: '',
   customFontFamily: '',

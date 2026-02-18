@@ -31,6 +31,7 @@ import { APP_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } 
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import type { ChatProfile } from './lib/chatDB';
 import { HeartWallPage } from './pages/HeartWallPage';
+import { ListPage } from './pages/ListPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
@@ -43,7 +44,7 @@ type ImportStatus = {
   kind: 'idle' | 'working' | 'success' | 'error';
   message: string;
 };
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -68,6 +69,7 @@ const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
   tarot: '🔮',
   letters: '💌',
   heart: '💗',
+  list: '🎴',
   settings: '⚙️',
 };
 
@@ -849,6 +851,7 @@ function App() {
         ['--chat-ai-border-rgb' as string]: chatAiBorderRgb,
         ['--chat-user-text' as string]: settings.chatUserBubbleTextColor,
         ['--chat-ai-text' as string]: settings.chatAiBubbleTextColor,
+        ['--chat-bubble-radius' as string]: `${settings.chatBubbleRadius}px`,
         ['--app-font-scale' as string]: settings.fontScale,
         ['--app-font-family' as string]: appFontFamily,
         ['--app-heading-family' as string]: appHeadingFamily,
@@ -988,6 +991,27 @@ function App() {
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden pt-3">
                   <HeartWallPage />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'list' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ← 返回
+                  </button>
+                  <p className="text-sm text-white/85">清單</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+                  <ListPage />
                 </div>
               </div>
             </div>

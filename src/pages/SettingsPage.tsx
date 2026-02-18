@@ -55,6 +55,7 @@ const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   tarot: '🔮',
   letters: '💌',
   heart: '💗',
+  list: '🎴',
   settings: '⚙️',
 };
 
@@ -65,6 +66,7 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'tarot', label: 'Tarot' },
   { key: 'letters', label: 'Letters' },
   { key: 'heart', label: 'MY LOVE' },
+  { key: 'list', label: 'List 清單' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -82,6 +84,7 @@ type AppearancePresetPayload = {
     chatAiBubbleColor: string;
     chatAiBubbleBorderColor: string;
     chatAiBubbleTextColor: string;
+    chatBubbleRadius: number;
     customFontFileUrl: string;
     customFontFamily: string;
     fontScale: number;
@@ -265,6 +268,7 @@ export function SettingsPage({
       tarot: tabIconDrafts.tarot.trim(),
       letters: tabIconDrafts.letters.trim(),
       heart: tabIconDrafts.heart.trim(),
+      list: tabIconDrafts.list.trim(),
       settings: tabIconDrafts.settings.trim(),
     };
 
@@ -292,6 +296,7 @@ export function SettingsPage({
         chatAiBubbleColor: settings.chatAiBubbleColor,
         chatAiBubbleBorderColor: settings.chatAiBubbleBorderColor,
         chatAiBubbleTextColor: settings.chatAiBubbleTextColor,
+        chatBubbleRadius: settings.chatBubbleRadius,
         customFontFileUrl: settings.customFontFileUrl,
         customFontFamily: settings.customFontFamily,
         fontScale: settings.fontScale,
@@ -338,7 +343,11 @@ export function SettingsPage({
       if (typeof source.lockedBubbleColor === 'string') {
         next.lockedBubbleColor = source.lockedBubbleColor;
       }
-      if (source.chatBubbleStyle === 'jelly' || source.chatBubbleStyle === 'imessage') {
+      if (
+        source.chatBubbleStyle === 'jelly' ||
+        source.chatBubbleStyle === 'imessage' ||
+        source.chatBubbleStyle === 'imessageClassic'
+      ) {
         next.chatBubbleStyle = source.chatBubbleStyle;
       }
       if (typeof source.chatUserBubbleColor === 'string') {
@@ -359,6 +368,9 @@ export function SettingsPage({
       if (typeof source.chatAiBubbleTextColor === 'string') {
         next.chatAiBubbleTextColor = source.chatAiBubbleTextColor;
       }
+      if (typeof source.chatBubbleRadius === 'number' && Number.isFinite(source.chatBubbleRadius)) {
+        next.chatBubbleRadius = source.chatBubbleRadius;
+      }
       if (typeof source.customFontFileUrl === 'string') {
         next.customFontFileUrl = source.customFontFileUrl;
       }
@@ -377,6 +389,7 @@ export function SettingsPage({
           tarot: typeof input.tarot === 'string' ? input.tarot.trim() : '',
           letters: typeof input.letters === 'string' ? input.letters.trim() : '',
           heart: typeof input.heart === 'string' ? input.heart.trim() : '',
+          list: typeof input.list === 'string' ? input.list.trim() : '',
           settings: typeof input.settings === 'string' ? input.settings.trim() : '',
         };
       }
@@ -943,7 +956,7 @@ export function SettingsPage({
         <SettingPanel
           icon="🧩"
           title="自訂圖標"
-          subtitle="底部分頁改成圖示（可用圖片網址）"
+          subtitle="底部分頁與首頁入口圖示（可用圖片網址）"
           isOpen={openPanel === 'tabIcons'}
           onToggle={() => togglePanel('tabIcons')}
         >
@@ -1287,7 +1300,7 @@ export function SettingsPage({
 
             <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
               <p className="text-sm text-stone-800">泡泡外觀</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => onSettingChange({ chatBubbleStyle: 'jelly' })}
@@ -1310,7 +1323,34 @@ export function SettingsPage({
                 >
                   iMessage
                 </button>
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ chatBubbleStyle: 'imessageClassic' })}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    settings.chatBubbleStyle === 'imessageClassic'
+                      ? 'border-stone-900 bg-stone-900 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  iMessage+
+                </button>
               </div>
+
+              <label className="block space-y-1">
+                <span className="flex items-center justify-between text-xs text-stone-600">
+                  <span>泡泡圓角（只影響對話紀錄）</span>
+                  <span>{settings.chatBubbleRadius}px</span>
+                </span>
+                <input
+                  type="range"
+                  min={10}
+                  max={36}
+                  step={1}
+                  value={settings.chatBubbleRadius}
+                  onChange={(e) => onSettingChange({ chatBubbleRadius: Number(e.target.value) })}
+                  className="w-full accent-stone-800"
+                />
+              </label>
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="block space-y-1">
@@ -1375,9 +1415,7 @@ export function SettingsPage({
                 </label>
               </div>
 
-              <p className="text-xs text-stone-500">
-                iMessage 風格會自動取消亮面與抖動效果。
-              </p>
+              <p className="text-xs text-stone-500">iMessage / iMessage+ 會自動取消果凍亮面與抖動效果。</p>
             </div>
 
             <div className="space-y-2">
