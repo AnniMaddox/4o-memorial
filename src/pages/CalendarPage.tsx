@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { monthLabel, todayDateKey } from '../lib/date';
+import { getGlobalHoverPhrases } from '../lib/hoverPool';
+import { getHoverPhraseMap, setHoverPhraseMap } from '../lib/repositories/metaRepo';
 import type { CalendarMonth } from '../types/content';
 
 type CalendarPageProps = {
@@ -50,9 +52,13 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
   const longPressTimerRef = useRef<number | null>(null);
   const hoverHideTimerRef = useRef<number | null>(null);
   const suppressTapDateRef = useRef<string | null>(null);
-  const hoverCursorRef = useRef<Record<string, number>>({});
+  const hoverPhraseByDateRef = useRef<Record<string, string>>({});
 
   const today = todayDateKey();
+  const globalHoverPool = useMemo(() => {
+    const pool = getGlobalHoverPhrases();
+    return pool.length ? pool : DEFAULT_HOVER_PHRASES;
+  }, []);
 
   function clearLongPressTimer() {
     if (longPressTimerRef.current !== null) {
@@ -74,39 +80,50 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
       return hoverPhrases;
     }
 
-    return DEFAULT_HOVER_PHRASES;
+    return globalHoverPool;
   }
 
-  function rememberHoverPhrase(dateKey: string, phrase: string) {
-    setHoverPhraseByDate((prev) => {
-      if (prev[dateKey] === phrase) {
-        return prev;
-      }
+  async function ensureHoverPhrase(dateKey: string) {
+    const existing = hoverPhraseByDateRef.current[dateKey];
+    if (existing) {
+      return existing;
+    }
 
-      return {
-        ...prev,
-        [dateKey]: phrase,
-      };
-    });
-  }
-
-  function showRotatingHoverPhrase(dateKey: string) {
     const day = data[dateKey];
     if (!day?.text) {
-      return;
+      return '';
     }
 
     const pool = getHoverPool(dateKey);
-    const nextIndex = hoverCursorRef.current[dateKey] ?? 0;
-    const phrase = pool[nextIndex % pool.length];
-    hoverCursorRef.current[dateKey] = nextIndex + 1;
+    const phrase = pool[Math.floor(Math.random() * pool.length)] ?? DEFAULT_HOVER_PHRASES[0];
+    const nextMap = {
+      ...hoverPhraseByDateRef.current,
+      [dateKey]: phrase,
+    };
 
-    rememberHoverPhrase(dateKey, phrase);
+    hoverPhraseByDateRef.current = nextMap;
+    setHoverPhraseByDate(nextMap);
+
+    try {
+      await setHoverPhraseMap(nextMap);
+    } catch {
+      // Keep optimistic local assignment if persistence fails.
+    }
+
+    return phrase;
+  }
+
+  async function showHoverPreview(dateKey: string) {
+    const phrase = await ensureHoverPhrase(dateKey);
+    if (!phrase) {
+      return;
+    }
+
     setHoverPreview({ dateKey, phrase });
   }
 
   function getPinnedHoverPhrase(dateKey: string) {
-    const existing = hoverPhraseByDate[dateKey];
+    const existing = hoverPhraseByDateRef.current[dateKey];
     if (existing) {
       return existing;
     }
@@ -130,7 +147,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     clearHoverHideTimer();
 
     longPressTimerRef.current = window.setTimeout(() => {
-      showRotatingHoverPhrase(dateKey);
+      void showHoverPreview(dateKey);
       suppressTapDateRef.current = dateKey;
     }, LONG_PRESS_MS);
   }
@@ -145,13 +162,41 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     setTemporaryUnlockDate(null);
     setTapState({ date: null, count: 0, atMs: 0 });
     setHoverPreview(null);
-    setHoverPhraseByDate({});
-    hoverCursorRef.current = {};
     suppressTapDateRef.current = null;
     clearLongPressTimer();
     clearHoverHideTimer();
     setMonthFadeSeed((prev) => prev + 1);
   }, [monthKey]);
+
+  useEffect(() => {
+    hoverPhraseByDateRef.current = hoverPhraseByDate;
+  }, [hoverPhraseByDate]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getHoverPhraseMap()
+      .then((savedMap) => {
+        if (!active) {
+          return;
+        }
+
+        hoverPhraseByDateRef.current = savedMap;
+        setHoverPhraseByDate(savedMap);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        hoverPhraseByDateRef.current = {};
+        setHoverPhraseByDate({});
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -214,6 +259,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     const locked = dateKey > today;
 
     if (!locked) {
+      void ensureHoverPhrase(dateKey);
       setSelectedDate(dateKey);
       return;
     }
@@ -231,6 +277,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     if (nextCount >= 3) {
       const approved = window.confirm('這天還沒解鎖，要提前偷看一次嗎？');
       if (approved) {
+        void ensureHoverPhrase(dateKey);
         setTemporaryUnlockDate(dateKey);
         setSelectedDate(dateKey);
       }
@@ -309,7 +356,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
               onMouseEnter={() => {
                 if (hasMessage) {
                   clearHoverHideTimer();
-                  showRotatingHoverPhrase(cell.dateKey);
+                  void showHoverPreview(cell.dateKey);
                 }
               }}
               onMouseLeave={() => {
