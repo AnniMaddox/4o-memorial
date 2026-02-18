@@ -117,6 +117,7 @@ export function HomePage({
   const [screenIndex, setScreenIndex] = useState(0);
   const pagerRef = useRef<HTMLDivElement | null>(null);
   const widgetIconInputRef = useRef<HTMLInputElement | null>(null);
+  const cornerChibiUrl = `${import.meta.env.BASE_URL}chibi/chibi-00.png`;
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -386,6 +387,14 @@ export function HomePage({
           ))}
         </div>
       )}
+
+      <img
+        src={cornerChibiUrl}
+        alt=""
+        draggable={false}
+        className="pointer-events-none absolute bottom-2 right-1 z-10 w-[7.25rem] select-none opacity-95"
+        loading="lazy"
+      />
     </div>
   );
 }
