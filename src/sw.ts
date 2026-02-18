@@ -16,7 +16,8 @@ clientsClaim();
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
-const navigationHandler = createHandlerBoundToURL('/index.html');
+const appBase = import.meta.env.BASE_URL;
+const navigationHandler = createHandlerBoundToURL(`${appBase}index.html`);
 registerRoute(new NavigationRoute(navigationHandler));
 
 self.addEventListener('message', (event) => {
@@ -40,7 +41,7 @@ self.addEventListener('notificationclick', (event) => {
         return;
       }
 
-      await self.clients.openWindow('/');
+      await self.clients.openWindow(appBase);
     })(),
   );
 });

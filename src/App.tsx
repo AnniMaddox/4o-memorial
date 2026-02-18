@@ -24,6 +24,7 @@ type ImportStatus = {
 };
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
+const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
 
 function getNotificationPermission(): BrowserNotificationPermission {
   if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -49,8 +50,8 @@ async function notifyUnlockedEmail(email: EmailViewRecord) {
       await registration.showNotification(title, {
         body,
         tag: email.id,
-        icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
+        icon: notificationIconUrl,
+        badge: notificationIconUrl,
         data: {
           emailId: email.id,
         },
@@ -63,7 +64,7 @@ async function notifyUnlockedEmail(email: EmailViewRecord) {
     new Notification(title, {
       body,
       tag: email.id,
-      icon: '/icons/icon-192.png',
+      icon: notificationIconUrl,
     });
   }
 }
