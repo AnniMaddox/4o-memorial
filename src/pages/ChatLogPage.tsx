@@ -14,7 +14,74 @@ type ChatMessage = {
   time?: string; // displayed below bubble
 };
 
+function normalizeSpeakerToken(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function splitNickAliases(raw: string | undefined, fallback: string) {
+  const source = raw?.trim() || fallback;
+  const chunks = source
+    .split(/[|/,，、\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (!chunks.length) return [fallback];
+  return Array.from(new Set(chunks));
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function mapSpeakerToRole(
+  speaker: string | undefined,
+  rightAliases: string[],
+  leftAliases: string[],
+): 'user' | 'assistant' | null {
+  if (!speaker) return null;
+  const normalized = normalizeSpeakerToken(speaker);
+  if (!normalized) return null;
+  if (rightAliases.some((alias) => normalizeSpeakerToken(alias) === normalized)) return 'user';
+  if (leftAliases.some((alias) => normalizeSpeakerToken(alias) === normalized)) return 'assistant';
+  return null;
+}
+
+function extractMessageText(item: Record<string, unknown>) {
+  const contentKeys = ['content', 'message', 'text', 'body'] as const;
+  for (const key of contentKeys) {
+    const value = item[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function extractMessageTime(item: Record<string, unknown>) {
+  const timeKeys = ['timestamp', 'time', 'datetime', 'date'] as const;
+  for (const key of timeKeys) {
+    const value = item[key];
+    if (typeof value !== 'string') continue;
+    const raw = value.trim();
+    if (!raw) continue;
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+      return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')} ${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
+    }
+    return raw.replace('T', ' ').slice(0, 16);
+  }
+  return undefined;
+}
+
+function stripAliasPrefix(line: string, aliases: string[]) {
+  for (const alias of aliases) {
+    const match = line.match(new RegExp(`^${escapeRegExp(alias)}\\s*[：:]\\s*(.*)$`, 'i'));
+    if (match) return (match[1] ?? '').trim();
+  }
+  return null;
+}
+
 function parseChatContent(text: string, profile: ChatProfile | null): ChatMessage[] {
+  const leftAliases = splitNickAliases(profile?.leftNick, 'M');
+  const rightAliases = splitNickAliases(profile?.rightNick, '你');
+
   // Try JSON array format first
   const trimmed = text.trim();
   if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
@@ -23,28 +90,26 @@ function parseChatContent(text: string, profile: ChatProfile | null): ChatMessag
       const arr = Array.isArray(parsed) ? parsed : [parsed];
       const msgs: ChatMessage[] = [];
       for (const item of arr) {
-        if (
-          item &&
-          typeof item === 'object' &&
-          'role' in item &&
-          'content' in item &&
-          (item.role === 'user' || item.role === 'assistant') &&
-          typeof item.content === 'string' &&
-          item.content.trim()
-        ) {
-          let time: string | undefined;
-          if ('timestamp' in item && typeof item.timestamp === 'string') {
-            try {
-              const d = new Date(item.timestamp);
-              if (!Number.isNaN(d.getTime())) {
-                time = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-              }
-            } catch {
-              // ignore
-            }
-          }
-          msgs.push({ role: item.role as 'user' | 'assistant', content: item.content.trim(), time });
+        if (!item || typeof item !== 'object') continue;
+        const record = item as Record<string, unknown>;
+        const content = extractMessageText(record);
+        if (!content) continue;
+
+        let role: 'user' | 'assistant' | null = null;
+        const roleField = record.role;
+        if (roleField === 'user' || roleField === 'assistant') {
+          role = roleField;
+        } else {
+          const speaker =
+            (typeof record.speaker === 'string' ? record.speaker : undefined) ??
+            (typeof record.name === 'string' ? record.name : undefined) ??
+            (typeof record.author === 'string' ? record.author : undefined) ??
+            (typeof record.from === 'string' ? record.from : undefined);
+          role = mapSpeakerToRole(speaker, rightAliases, leftAliases);
         }
+        if (!role) continue;
+
+        msgs.push({ role, content, time: extractMessageTime(record) });
       }
       if (msgs.length > 0) return msgs;
     } catch {
@@ -53,9 +118,6 @@ function parseChatContent(text: string, profile: ChatProfile | null): ChatMessag
   }
 
   // TXT line-by-line format
-  const leftNick = profile?.leftNick?.trim() || 'M';
-  const rightNick = profile?.rightNick?.trim() || '你';
-
   const lines = text.split('\n');
   const msgs: ChatMessage[] = [];
   let currentRole: 'user' | 'assistant' | null = null;
@@ -94,22 +156,31 @@ function parseChatContent(text: string, profile: ChatProfile | null): ChatMessag
       continue;
     }
 
-    // Custom nickname markers: "你：" / "M：" (using profile nicks)
-    const rightPrefix = `${rightNick}：`;
-    const rightPrefixAlt = `${rightNick}:`;
-    const leftPrefix = `${leftNick}：`;
-    const leftPrefixAlt = `${leftNick}:`;
-
-    if (line.startsWith(rightPrefix) || line.startsWith(rightPrefixAlt)) {
+    // "你：" / "M：" / alias list (profile nicks can be "你/Anni")
+    const rightContent = stripAliasPrefix(line, rightAliases);
+    if (rightContent !== null) {
       flush();
       currentRole = 'user';
-      currentContent = line.substring(rightNick.length + 1).trim();
+      currentContent = rightContent;
       continue;
     }
-    if (line.startsWith(leftPrefix) || line.startsWith(leftPrefixAlt)) {
+    const leftContent = stripAliasPrefix(line, leftAliases);
+    if (leftContent !== null) {
       flush();
       currentRole = 'assistant';
-      currentContent = line.substring(leftNick.length + 1).trim();
+      currentContent = leftContent;
+      continue;
+    }
+
+    // Bracket name markers: 【Anni】message / 【Michael】message
+    const namedTagMatch = line.match(/^【([^】]+)】\s*(.*)$/);
+    if (namedTagMatch) {
+      const role = mapSpeakerToRole(namedTagMatch[1], rightAliases, leftAliases);
+      if (role) {
+        flush();
+        currentRole = role;
+        currentContent = (namedTagMatch[2] ?? '').trim();
+      }
       continue;
     }
 
@@ -311,8 +382,6 @@ function ChatReadView({
 }
 
 function ChatBubbles({ messages, profile }: { messages: ChatMessage[]; profile: ChatProfile | null }) {
-  let lastDate = '';
-
   return (
     <div className="flex flex-col gap-1.5">
       {messages.map((msg, i) => {
@@ -320,14 +389,10 @@ function ChatBubbles({ messages, profile }: { messages: ChatMessage[]; profile: 
         const avatarUrl = isUser ? profile?.rightAvatarDataUrl : profile?.leftAvatarDataUrl;
 
         // Date divider
-        let dateDivider: string | null = null;
-        if (msg.time) {
-          const date = msg.time.slice(0, 10);
-          if (date !== lastDate) {
-            lastDate = date;
-            dateDivider = date;
-          }
-        }
+        const dateDivider =
+          msg.time && (i === 0 || messages[i - 1]?.time?.slice(0, 10) !== msg.time.slice(0, 10))
+            ? msg.time.slice(0, 10)
+            : null;
 
         return (
           <div key={`${i}-${msg.time ?? ''}`}>

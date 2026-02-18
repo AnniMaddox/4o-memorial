@@ -1629,19 +1629,20 @@ export function SettingsPage({
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="右側暱稱（你）"
+                      placeholder="右側暱稱（你，可用 / 填多個）"
                       value={newProfileDraft.rightNick}
                       onChange={(e) => setNewProfileDraft((d) => ({ ...d, rightNick: e.target.value }))}
                       className="flex-1 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
                     />
                     <input
                       type="text"
-                      placeholder="左側暱稱（M）"
+                      placeholder="左側暱稱（M，可用 / 填多個）"
                       value={newProfileDraft.leftNick}
                       onChange={(e) => setNewProfileDraft((d) => ({ ...d, leftNick: e.target.value }))}
                       className="flex-1 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
                     />
                   </div>
+                  <p className="text-[11px] text-stone-500">可用「/」分隔多個名稱，例如：你/Anni、M/Michael</p>
                   <div className="flex gap-2">
                     <label className="flex-1 space-y-1">
                       <span className="text-xs text-stone-500">右側頭像</span>
