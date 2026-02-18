@@ -11,6 +11,8 @@ export type BackgroundMode = 'gradient' | 'image';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
+export type AppLabelKey = 'home' | 'inbox' | 'calendar' | 'settings' | 'tarot' | 'letters' | 'heart' | 'chat' | 'list';
+export type AppLabels = Record<AppLabelKey, string>;
 
 export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   home: '',
@@ -21,6 +23,18 @@ export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   heart: '',
   list: '',
   settings: '',
+};
+
+export const DEFAULT_APP_LABELS: AppLabels = {
+  home: 'Home',
+  inbox: 'Inbox',
+  calendar: 'Calendar',
+  settings: '設定',
+  tarot: '塔羅',
+  letters: '情書',
+  heart: '心牆',
+  chat: '對話',
+  list: '清單',
 };
 
 export type AppSettings = {
@@ -49,6 +63,7 @@ export type AppSettings = {
   backgroundImageUrl: string;
   backgroundImageOverlay: number;
   tabIconUrls: TabIconUrls;
+  appLabels: AppLabels;
   fontScale: number;
   swipeEnabled: boolean;
   localNotificationsEnabled: boolean;
@@ -96,6 +111,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   backgroundImageUrl: '',
   backgroundImageOverlay: 36,
   tabIconUrls: DEFAULT_TAB_ICON_URLS,
+  appLabels: DEFAULT_APP_LABELS,
   fontScale: 1,
   swipeEnabled: true,
   localNotificationsEnabled: true,

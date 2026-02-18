@@ -1,6 +1,6 @@
 import { getDb } from '../db';
 
-import type { AppSettings, BackgroundMode, CalendarColorMode, ChatBubbleStyle, TabIconUrls } from '../../types/settings';
+import type { AppLabels, AppSettings, BackgroundMode, CalendarColorMode, ChatBubbleStyle, TabIconUrls } from '../../types/settings';
 import { DEFAULT_SETTINGS } from '../../types/settings';
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
@@ -41,6 +41,21 @@ function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrl
   };
 }
 
+function normalizeAppLabels(value: unknown, fallback: AppLabels): AppLabels {
+  const input = (value && typeof value === 'object' ? value : {}) as Partial<AppLabels>;
+  return {
+    home: normalizeString(input.home, fallback.home),
+    inbox: normalizeString(input.inbox, fallback.inbox),
+    calendar: normalizeString(input.calendar, fallback.calendar),
+    settings: normalizeString(input.settings, fallback.settings),
+    tarot: normalizeString(input.tarot, fallback.tarot),
+    letters: normalizeString(input.letters, fallback.letters),
+    heart: normalizeString(input.heart, fallback.heart),
+    chat: normalizeString(input.chat, fallback.chat),
+    list: normalizeString(input.list, fallback.list),
+  };
+}
+
 export async function getSettings() {
   const db = await getDb();
   const row = await db.get('settings', 'app');
@@ -59,6 +74,7 @@ export async function getSettings() {
       DEFAULT_SETTINGS.chatBubbleStyle,
     ),
     tabIconUrls: normalizeTabIconUrls(persisted.tabIconUrls, DEFAULT_SETTINGS.tabIconUrls),
+    appLabels: normalizeAppLabels(persisted.appLabels, DEFAULT_SETTINGS.appLabels),
     hoverToneWeights: {
       ...DEFAULT_SETTINGS.hoverToneWeights,
       ...(persisted.hoverToneWeights ?? {}),

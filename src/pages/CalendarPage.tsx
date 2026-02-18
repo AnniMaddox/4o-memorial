@@ -565,12 +565,13 @@ export function CalendarPage({
         })}
       </div>
 
-      <div className="calendar-hover-stage min-h-[8.5rem] px-2">
+      <div className="calendar-hover-stage min-h-[11rem] px-2">
         {hoverPreview ? (
           <div
-            className={`calendar-hover-bubble calendar-chat-bubble w-fit max-w-[92%] rounded-2xl border px-4 py-2 text-sm text-stone-700 shadow-xl ${
+            className={`calendar-hover-bubble calendar-chat-bubble w-fit max-w-[92%] rounded-2xl border px-5 py-3 text-stone-700 shadow-xl ${
               hoverPreviewLocked ? 'calendar-hover-bubble-locked calendar-hover-bubble-clickable' : 'calendar-hover-bubble-unlocked'
             }`}
+            style={{ fontSize: 'calc(1.32rem * var(--app-font-scale, 1))', lineHeight: 1.45 }}
             onClick={hoverPreviewLocked ? handleHoverBubbleTap : undefined}
             onKeyDown={
               hoverPreviewLocked
@@ -596,7 +597,8 @@ export function CalendarPage({
           <img
             src={chibiSources[chibiIndex]}
             alt="Q版角色"
-            className="calendar-chibi mt-2 h-28 w-28 object-contain opacity-90 select-none"
+            className="calendar-chibi mt-2 object-contain opacity-90 select-none"
+            style={{ width: 'calc(10.5rem * var(--app-font-scale, 1))', height: 'calc(10.5rem * var(--app-font-scale, 1))' }}
             loading="lazy"
             onError={() => setShowChibi(false)}
           />

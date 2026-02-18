@@ -11,12 +11,31 @@ export type LetterPageProps = {
   letterFontFamily: string;
 };
 
-const CHIBI_COUNT = 63;
-const BASE = import.meta.env.BASE_URL as string;
+const CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+const CHIBI_SOURCES = Object.entries(CHIBI_MODULES)
+  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+  .map(([, src]) => src);
 
-function randomChibiSrc() {
-  const idx = Math.floor(Math.random() * CHIBI_COUNT) + 1;
-  return `${BASE}chibi/chibi-${String(idx).padStart(2, '0')}.png`;
+function randomChibiSrc(except?: string) {
+  if (!CHIBI_SOURCES.length) {
+    return '';
+  }
+
+  if (CHIBI_SOURCES.length === 1) {
+    return CHIBI_SOURCES[0];
+  }
+
+  for (let retries = 0; retries < 6; retries += 1) {
+    const candidate = CHIBI_SOURCES[Math.floor(Math.random() * CHIBI_SOURCES.length)];
+    if (!except || candidate !== except) {
+      return candidate;
+    }
+  }
+
+  return CHIBI_SOURCES.find((src) => src !== except) ?? CHIBI_SOURCES[0];
 }
 
 // ─── LetterPage ───────────────────────────────────────────────────────────────
@@ -27,13 +46,16 @@ export function LetterPage({ letters, letterFontFamily }: LetterPageProps) {
   const [isReading, setIsReading] = useState(false);
   const [animKey, setAnimKey] = useState(0);
   const [chibiSrc, setChibiSrc] = useState('');
+  const [rerollChibiSrc, setRerollChibiSrc] = useState('');
 
   function openLetter(letter: StoredLetter) {
     setContent(letter.content);
     setFileName(letter.name);
     setIsReading(true);
     setAnimKey((k) => k + 1);
-    setChibiSrc(randomChibiSrc());
+    const nextChibiSrc = randomChibiSrc();
+    setChibiSrc(nextChibiSrc);
+    setRerollChibiSrc(randomChibiSrc(nextChibiSrc));
   }
 
   const pickRandom = useCallback(() => {
@@ -51,10 +73,12 @@ export function LetterPage({ letters, letterFontFamily }: LetterPageProps) {
         hasMultiple={letters.length > 1}
         letterFontFamily={letterFontFamily}
         chibiSrc={chibiSrc}
+        rerollChibiSrc={rerollChibiSrc}
         onPickRandom={pickRandom}
         onClose={() => {
           setIsReading(false);
           setChibiSrc('');
+          setRerollChibiSrc('');
         }}
       />
     );
@@ -118,6 +142,7 @@ function LetterReadView({
   hasMultiple,
   letterFontFamily,
   chibiSrc,
+  rerollChibiSrc,
   onPickRandom,
   onClose,
 }: {
@@ -127,6 +152,7 @@ function LetterReadView({
   hasMultiple: boolean;
   letterFontFamily: string;
   chibiSrc: string;
+  rerollChibiSrc: string;
   onPickRandom: () => void;
   onClose: () => void;
 }) {
@@ -183,15 +209,18 @@ function LetterReadView({
 
       {/* Action bar */}
       <div className="flex shrink-0 items-end justify-center gap-3 pt-3">
-        {hasMultiple && (
+        {hasMultiple && rerollChibiSrc ? (
           <button
             type="button"
             onClick={onPickRandom}
-            className="rounded-xl border border-amber-300 bg-amber-50 px-6 py-3 text-sm text-amber-900 transition active:scale-95"
+            draggable={false}
+            className="flex flex-col items-center gap-0.5 transition active:scale-90"
+            title="再抽一封"
           >
-            再抽一封
+            <img src={rerollChibiSrc} alt="再抽一封" draggable={false} className="w-24 select-none drop-shadow" />
+            <span className="text-[10px] text-stone-400">再抽一封</span>
           </button>
-        )}
+        ) : null}
 
         {/* Chibi as close button */}
         {chibiSrc ? (
@@ -218,4 +247,3 @@ function LetterReadView({
     </div>
   );
 }
-

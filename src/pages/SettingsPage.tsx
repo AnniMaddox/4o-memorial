@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import { APP_CUSTOM_FONT_FAMILY, SETTINGS_PREVIEW_FONT_FAMILY, buildFontFaceRule } from '../lib/font';
 import type { ChatProfile } from '../lib/chatDB';
-import type { AppSettings, BackgroundMode, TabIconKey, TabIconUrls } from '../types/settings';
+import type { AppLabelKey, AppLabels, AppSettings, BackgroundMode, TabIconKey, TabIconUrls } from '../types/settings';
 
 type SettingsPageProps = {
   settings: AppSettings;
@@ -39,6 +39,7 @@ type PanelKey =
   | 'overview'
   | 'appearance'
   | 'home'
+  | 'labels'
   | 'tabIcons'
   | 'notification'
   | 'imports'
@@ -68,6 +69,18 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'heart', label: 'MY LOVE' },
   { key: 'list', label: 'List 清單' },
   { key: 'settings', label: 'Settings' },
+];
+
+const APP_LABEL_FIELDS: Array<{ key: AppLabelKey; label: string }> = [
+  { key: 'home', label: '底部分頁：Home' },
+  { key: 'inbox', label: '底部分頁：Inbox' },
+  { key: 'calendar', label: '底部分頁：Calendar' },
+  { key: 'settings', label: '底部分頁：Settings' },
+  { key: 'tarot', label: '首頁入口：塔羅' },
+  { key: 'letters', label: '首頁入口：情書' },
+  { key: 'heart', label: '首頁入口：心牆' },
+  { key: 'chat', label: '首頁入口：對話' },
+  { key: 'list', label: '首頁入口：清單' },
 ];
 
 type AppearancePresetPayload = {
@@ -102,6 +115,7 @@ type AppearancePresetPayload = {
     homeWidgetBadgeText: string;
     homeWidgetIconDataUrl: string;
     inboxTitle: string;
+    appLabels: AppLabels;
   };
 };
 
@@ -184,15 +198,18 @@ export function SettingsPage({
   const [fontFamilyDraft, setFontFamilyDraft] = useState(settings.customFontFamily);
   const [backgroundImageUrlDraft, setBackgroundImageUrlDraft] = useState(settings.backgroundImageUrl);
   const [tabIconDrafts, setTabIconDrafts] = useState<TabIconUrls>(settings.tabIconUrls);
+  const [labelDrafts, setLabelDrafts] = useState<AppLabels>(settings.appLabels);
   const [tabIconStatus, setTabIconStatus] = useState('');
   const [appearancePresetStatus, setAppearancePresetStatus] = useState('');
   const [homeTextStatus, setHomeTextStatus] = useState('');
+  const [labelStatus, setLabelStatus] = useState('');
 
   useEffect(() => {
     setFontFileUrlDraft(settings.customFontFileUrl);
     setFontFamilyDraft(settings.customFontFamily);
     setBackgroundImageUrlDraft(settings.backgroundImageUrl);
     setTabIconDrafts(settings.tabIconUrls);
+    setLabelDrafts(settings.appLabels);
     setLetterFontUrlDraft(settings.letterFontUrl);
     setTarotGalleryUrlDraft(settings.tarotGalleryImageUrl);
     setHomeWidgetTitleDraft(settings.homeWidgetTitle);
@@ -204,6 +221,7 @@ export function SettingsPage({
     settings.customFontFamily,
     settings.backgroundImageUrl,
     settings.tabIconUrls,
+    settings.appLabels,
     settings.letterFontUrl,
     settings.tarotGalleryImageUrl,
     settings.homeWidgetTitle,
@@ -260,6 +278,14 @@ export function SettingsPage({
     setTabIconStatus('');
   }
 
+  function setLabelDraft(key: AppLabelKey, value: string) {
+    setLabelDrafts((current) => ({
+      ...current,
+      [key]: value,
+    }));
+    setLabelStatus('');
+  }
+
   function saveTabIcons() {
     const next: TabIconUrls = {
       home: tabIconDrafts.home.trim(),
@@ -279,6 +305,28 @@ export function SettingsPage({
   function restoreSavedTabIcons() {
     setTabIconDrafts(settings.tabIconUrls);
     setTabIconStatus('已還原成目前儲存值');
+  }
+
+  function saveAppLabels() {
+    const next: AppLabels = {
+      home: labelDrafts.home.trim(),
+      inbox: labelDrafts.inbox.trim(),
+      calendar: labelDrafts.calendar.trim(),
+      settings: labelDrafts.settings.trim(),
+      tarot: labelDrafts.tarot.trim(),
+      letters: labelDrafts.letters.trim(),
+      heart: labelDrafts.heart.trim(),
+      chat: labelDrafts.chat.trim(),
+      list: labelDrafts.list.trim(),
+    };
+
+    onSettingChange({ appLabels: next });
+    setLabelStatus('入口名稱已儲存');
+  }
+
+  function restoreSavedAppLabels() {
+    setLabelDrafts(settings.appLabels);
+    setLabelStatus('已還原成目前儲存值');
   }
 
   function exportAppearancePreset() {
@@ -314,6 +362,7 @@ export function SettingsPage({
         homeWidgetBadgeText: settings.homeWidgetBadgeText,
         homeWidgetIconDataUrl: settings.homeWidgetIconDataUrl,
         inboxTitle: settings.inboxTitle,
+        appLabels: settings.appLabels,
       },
     };
 
@@ -431,6 +480,20 @@ export function SettingsPage({
       }
       if (typeof source.inboxTitle === 'string') {
         next.inboxTitle = source.inboxTitle;
+      }
+      if (source.appLabels && typeof source.appLabels === 'object') {
+        const input = source.appLabels as Partial<AppLabels>;
+        next.appLabels = {
+          home: typeof input.home === 'string' ? input.home.trim() : '',
+          inbox: typeof input.inbox === 'string' ? input.inbox.trim() : '',
+          calendar: typeof input.calendar === 'string' ? input.calendar.trim() : '',
+          settings: typeof input.settings === 'string' ? input.settings.trim() : '',
+          tarot: typeof input.tarot === 'string' ? input.tarot.trim() : '',
+          letters: typeof input.letters === 'string' ? input.letters.trim() : '',
+          heart: typeof input.heart === 'string' ? input.heart.trim() : '',
+          chat: typeof input.chat === 'string' ? input.chat.trim() : '',
+          list: typeof input.list === 'string' ? input.list.trim() : '',
+        };
       }
 
       onSettingChange(next);
@@ -950,6 +1013,46 @@ export function SettingsPage({
               儲存
             </button>
             {homeTextStatus && <p className="text-xs text-stone-500">{homeTextStatus}</p>}
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
+          icon="🏷️"
+          title="入口名稱"
+          subtitle="底部分頁與首頁入口可自訂"
+          isOpen={openPanel === 'labels'}
+          onToggle={() => togglePanel('labels')}
+        >
+          <div className="space-y-3">
+            {APP_LABEL_FIELDS.map((field) => (
+              <label key={field.key} className="block space-y-1">
+                <span className="text-xs text-stone-600">{field.label}</span>
+                <input
+                  type="text"
+                  value={labelDrafts[field.key]}
+                  onChange={(event) => setLabelDraft(field.key, event.target.value)}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+            ))}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={saveAppLabels}
+                className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+              >
+                儲存名稱
+              </button>
+              <button
+                type="button"
+                onClick={restoreSavedAppLabels}
+                className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+              >
+                還原草稿
+              </button>
+            </div>
+            {labelStatus && <p className="text-xs text-stone-600">{labelStatus}</p>}
+            <p className="text-xs text-stone-500">留空會套用預設名稱。</p>
           </div>
         </SettingPanel>
 

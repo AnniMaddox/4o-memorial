@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { TabIconUrls } from '../types/settings';
+import type { AppLabels, TabIconUrls } from '../types/settings';
 
 type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
+  launcherLabels: AppLabels;
   widgetTitle: string;
   widgetSubtitle: string;
   widgetBadgeText: string;
@@ -91,6 +92,7 @@ function HomePlaceholderTile() {
 
 export function HomePage({
   tabIconUrls,
+  launcherLabels,
   widgetTitle,
   widgetSubtitle,
   widgetBadgeText,
@@ -113,34 +115,34 @@ export function HomePage({
   const screens = useMemo(() => {
     const tarotSlot: HomeAppSlot = {
       id: 'tarot',
-      label: '塔羅',
+      label: launcherLabels.tarot,
       icon: '🔮',
       iconUrl: tabIconUrls.tarot.trim() || undefined,
       launch: 'tarot',
     };
     const lettersSlot: HomeAppSlot = {
       id: 'letters',
-      label: '情書',
+      label: launcherLabels.letters,
       icon: '💌',
       iconUrl: tabIconUrls.letters.trim() || undefined,
       launch: 'letters',
     };
     const heartSlot: HomeAppSlot = {
       id: 'heart',
-      label: '心牆',
+      label: launcherLabels.heart,
       icon: '💗',
       iconUrl: tabIconUrls.heart.trim() || undefined,
       launch: 'heart',
     };
     const chatSlot: HomeAppSlot = {
       id: 'chat',
-      label: '對話',
+      label: launcherLabels.chat,
       icon: '💬',
       launch: 'chat',
     };
     const listSlot: HomeAppSlot = {
       id: 'list',
-      label: '清單',
+      label: launcherLabels.list,
       icon: '🎴',
       iconUrl: tabIconUrls.list.trim() || undefined,
       launch: 'list',
@@ -178,7 +180,17 @@ export function HomePage({
     ];
 
     return [screen1, screen2];
-  }, [tabIconUrls.heart, tabIconUrls.letters, tabIconUrls.list, tabIconUrls.tarot]);
+  }, [
+    launcherLabels.chat,
+    launcherLabels.heart,
+    launcherLabels.letters,
+    launcherLabels.list,
+    launcherLabels.tarot,
+    tabIconUrls.heart,
+    tabIconUrls.letters,
+    tabIconUrls.list,
+    tabIconUrls.tarot,
+  ]);
 
   useEffect(() => {
     const node = pagerRef.current;

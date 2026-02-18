@@ -86,6 +86,11 @@ function toSafeCssUrl(url: string) {
   return url.replaceAll('"', '%22').replaceAll('\n', '');
 }
 
+function fallbackLabel(value: string, fallback: string) {
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
+
 function getMonthAccentColor(monthKey: string) {
   const month = Number(monthKey.split('-')[1]);
   if (!Number.isInteger(month) || month < 1 || month > 12) {
@@ -184,6 +189,20 @@ function App() {
   const appAccentColor = settings.themeMonthColor;
   const calendarHeaderColor = monthAccentColor ?? appAccentColor;
   const calendarAccentColor = settings.calendarColorMode === 'month' ? calendarHeaderColor : appAccentColor;
+  const appLabels = useMemo(
+    () => ({
+      home: fallbackLabel(settings.appLabels.home, 'Home'),
+      inbox: fallbackLabel(settings.appLabels.inbox, 'Inbox'),
+      calendar: fallbackLabel(settings.appLabels.calendar, 'Calendar'),
+      settings: fallbackLabel(settings.appLabels.settings, '設定'),
+      tarot: fallbackLabel(settings.appLabels.tarot, '塔羅'),
+      letters: fallbackLabel(settings.appLabels.letters, '情書'),
+      heart: fallbackLabel(settings.appLabels.heart, '心牆'),
+      chat: fallbackLabel(settings.appLabels.chat, '對話'),
+      list: fallbackLabel(settings.appLabels.list, '清單'),
+    }),
+    [settings.appLabels],
+  );
   const themeAccentRgb = useMemo(() => toRgbTriplet(appAccentColor), [appAccentColor]);
   const calendarAccentRgb = useMemo(() => toRgbTriplet(calendarAccentColor), [calendarAccentColor]);
   const calendarHeaderAccentRgb = useMemo(() => toRgbTriplet(calendarHeaderColor), [calendarHeaderColor]);
@@ -704,10 +723,11 @@ function App() {
     () => [
       {
         id: 'home',
-        label: 'Home',
+        label: appLabels.home,
         node: (
           <HomePage
             tabIconUrls={settings.tabIconUrls}
+            launcherLabels={appLabels}
             widgetTitle={settings.homeWidgetTitle}
             widgetSubtitle={settings.homeWidgetSubtitle}
             widgetBadgeText={settings.homeWidgetBadgeText}
@@ -721,7 +741,7 @@ function App() {
       },
       {
         id: 'inbox',
-        label: 'Inbox',
+        label: appLabels.inbox,
         node: (
           <InboxPage
             emails={emails}
@@ -735,7 +755,7 @@ function App() {
       },
       {
         id: 'calendar',
-        label: 'Calendar',
+        label: appLabels.calendar,
         node: (
           <CalendarPage
             monthKey={calendarMonthKey}
@@ -752,7 +772,7 @@ function App() {
       },
       {
         id: 'settings',
-        label: '設定',
+        label: appLabels.settings,
         node: (
           <SettingsPage
             settings={settings}
@@ -793,6 +813,7 @@ function App() {
       calendarMonthKey,
       calendarMonthKeys,
       emails,
+      appLabels,
       importStatus,
       monthCount,
       monthAccentColor,
@@ -923,7 +944,7 @@ function App() {
                   >
                     ← 返回
                   </button>
-                  <p className="text-sm text-white/85">塔羅</p>
+                  <p className="text-sm text-white/85">{appLabels.tarot}</p>
                   <span className="w-16" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
@@ -944,7 +965,7 @@ function App() {
                   >
                     ← 返回
                   </button>
-                  <p className="text-sm text-white/85">情書</p>
+                  <p className="text-sm text-white/85">{appLabels.letters}</p>
                   <span className="w-16" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
@@ -965,7 +986,7 @@ function App() {
                   >
                     ← 返回
                   </button>
-                  <p className="text-sm text-white/85">對話</p>
+                  <p className="text-sm text-white/85">{appLabels.chat}</p>
                   <span className="w-16" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
@@ -986,7 +1007,7 @@ function App() {
                   >
                     ← 返回
                   </button>
-                  <p className="text-sm text-white/85">心牆</p>
+                  <p className="text-sm text-white/85">{appLabels.heart}</p>
                   <span className="w-16" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden pt-3">
@@ -1007,7 +1028,7 @@ function App() {
                   >
                     ← 返回
                   </button>
-                  <p className="text-sm text-white/85">清單</p>
+                  <p className="text-sm text-white/85">{appLabels.list}</p>
                   <span className="w-16" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
