@@ -28,10 +28,51 @@ const CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,
   eager: true,
   import: 'default',
 }) as Record<string, string>;
+const CALENDAR_FALLBACK_MODULES = import.meta.glob('../../data/calendar/**/*.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, unknown>;
 const CHIBI_IMAGE_SOURCES = Object.entries(CHIBI_MODULES)
   .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
   .map(([, src]) => src);
 const MESSAGE_PREVIEW_LENGTH = 6;
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function extractUndatedFallbackMessage(payload: unknown) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const row = payload as Record<string, unknown>;
+  const dateValue = row.date ?? row.dateKey;
+  if (typeof dateValue === 'string' && DATE_KEY_PATTERN.test(dateValue)) {
+    return null;
+  }
+
+  const rawText = row.content ?? row.text ?? row.message ?? row.body ?? row.entry ?? row.note;
+  if (typeof rawText !== 'string') {
+    return null;
+  }
+
+  const text = rawText.trim();
+  return text ? text : null;
+}
+
+const EMPTY_MONTH_FALLBACK_MESSAGE = (() => {
+  const modules = Object.entries(CALENDAR_FALLBACK_MODULES).sort(([a], [b]) => a.localeCompare(b));
+  const undatedFirst = modules
+    .filter(([path]) => path.toLowerCase().includes('undated'))
+    .concat(modules.filter(([path]) => !path.toLowerCase().includes('undated')));
+
+  for (const [, payload] of undatedFirst) {
+    const text = extractUndatedFallbackMessage(payload);
+    if (text) {
+      return text;
+    }
+  }
+
+  return null;
+})();
 
 function getMonthMeta(monthKey: string) {
   const [year, month] = monthKey.split('-').map(Number);
@@ -97,6 +138,7 @@ export function CalendarPage({
   const hoverPhraseByDateRef = useRef<Record<string, string>>({});
 
   const today = todayDateKey();
+  const hasMonthContent = useMemo(() => Object.keys(data).length > 0, [data]);
   const globalHoverPool = useMemo(() => {
     const pool = getGlobalHoverPoolEntries();
     return pool.length
@@ -114,6 +156,19 @@ export function CalendarPage({
     }
 
     return null;
+  }
+
+  function getMessagesForDate(dateKey: string) {
+    const messages = getDayMessages(data[dateKey] ?? null);
+    if (messages.length > 0) {
+      return messages;
+    }
+
+    if (!hasMonthContent && EMPTY_MONTH_FALLBACK_MESSAGE) {
+      return [EMPTY_MONTH_FALLBACK_MESSAGE];
+    }
+
+    return [];
   }
 
   async function ensureHoverPhrase(dateKey: string) {
@@ -231,13 +286,11 @@ export function CalendarPage({
     return cells;
   }, [monthMeta.daysInMonth, monthMeta.firstWeekday, monthMeta.month, monthMeta.year]);
 
-  const selectedDay = selectedDate ? data[selectedDate] ?? null : null;
-  const selectedMessages = getDayMessages(selectedDay);
+  const selectedMessages = selectedDate ? getMessagesForDate(selectedDate) : [];
   const selectedMessage = selectedMessages[selectedMessageIndex] ?? null;
   const selectedHoverPhrase = selectedDate ? getPinnedHoverPhrase(selectedDate) : null;
   const selectedUnlocked = !!selectedDate && (selectedDate <= today || temporaryUnlockDate === selectedDate);
-  const listDay = messageListDate ? data[messageListDate] ?? null : null;
-  const listMessages = getDayMessages(listDay);
+  const listMessages = messageListDate ? getMessagesForDate(messageListDate) : [];
   const listUnlocked = !!messageListDate && (messageListDate <= today || temporaryUnlockDate === messageListDate);
   const hoverPreviewLocked = !!hoverPreview && hoverPreview.dateKey > today && temporaryUnlockDate !== hoverPreview.dateKey;
   const monthColorAvailable = !!monthAccentColor;
@@ -289,7 +342,7 @@ export function CalendarPage({
   }
 
   function openDateContent(dateKey: string, forceUnlocked = false) {
-    const messages = getDayMessages(data[dateKey] ?? null);
+    const messages = getMessagesForDate(dateKey);
     if (!messages.length) {
       return;
     }
@@ -461,7 +514,7 @@ export function CalendarPage({
             return <div key={`blank-${index}`} className="min-h-12 rounded-lg bg-transparent" />;
           }
 
-          const messageCount = getDayMessages(data[cell.dateKey] ?? null).length;
+          const messageCount = getMessagesForDate(cell.dateKey).length;
           const hasMessage = messageCount > 0;
           const locked = cell.dateKey > today;
           const primed = primedDateKey === cell.dateKey;

@@ -137,6 +137,31 @@ function parseAddress(raw: string | undefined) {
   };
 }
 
+function inferUnlockDateFromSourcePath(sourcePath: string) {
+  const match = sourcePath.match(/(\d{4})[-_](\d{2})[-_](\d{2})(?:[T_ -]?(\d{2})[:\-]?(\d{2})?)?/);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = match[4] ? Number(match[4]) : 0;
+  const minute = match[5] ? Number(match[5]) : 0;
+
+  const inferred = new Date(year, month - 1, day, hour, minute, 0, 0);
+  if (
+    inferred.getFullYear() !== year ||
+    inferred.getMonth() !== month - 1 ||
+    inferred.getDate() !== day ||
+    Number.isNaN(inferred.getTime())
+  ) {
+    return null;
+  }
+
+  return inferred;
+}
+
 export function parseEml(raw: string, sourcePath: string): EmailRecord {
   const splitIndex = raw.search(/\r?\n\r?\n/);
   const headerText = splitIndex >= 0 ? raw.slice(0, splitIndex) : raw;
@@ -151,8 +176,10 @@ export function parseEml(raw: string, sourcePath: string): EmailRecord {
   const to = parseAddress(headers.to);
 
   const dateHeaderRaw = headers.date ?? null;
-  const unlockDate = dateHeaderRaw ? new Date(dateHeaderRaw) : new Date();
-  const unlockAtUtc = Number.isNaN(unlockDate.getTime()) ? new Date().toISOString() : unlockDate.toISOString();
+  const headerDate = dateHeaderRaw ? new Date(dateHeaderRaw) : null;
+  const inferredDate = inferUnlockDateFromSourcePath(sourcePath);
+  const unlockDate = headerDate && !Number.isNaN(headerDate.getTime()) ? headerDate : inferredDate ?? new Date();
+  const unlockAtUtc = unlockDate.toISOString();
 
   const bodyText = decodeBody(bodyTextRaw, headers['content-transfer-encoding']);
 

@@ -37,6 +37,15 @@ function normalizeMessageList(value: unknown) {
   return messages.length ? messages : undefined;
 }
 
+function normalizeCalendarDayFromLooseRow(row: Record<string, unknown>) {
+  const textCandidate = row.text ?? row.message ?? row.body ?? row.entry ?? row.content ?? row.note;
+
+  return normalizeCalendarDay({
+    ...row,
+    ...(typeof textCandidate === 'string' ? { text: textCandidate } : {}),
+  });
+}
+
 function normalizeCalendarDay(rawValue: unknown): CalendarDay | null {
   if (typeof rawValue === 'string') {
     return {
@@ -83,9 +92,10 @@ export function normalizeCalendarPayload(payload: unknown): CalendarMonth {
     return {};
   }
 
+  const rawObject = payload as Record<string, unknown>;
   const result: CalendarMonth = {};
 
-  for (const [key, rawValue] of Object.entries(payload as Record<string, unknown>)) {
+  for (const [key, rawValue] of Object.entries(rawObject)) {
     if (!isDateKey(key)) {
       continue;
     }
@@ -93,6 +103,42 @@ export function normalizeCalendarPayload(payload: unknown): CalendarMonth {
     const normalized = normalizeCalendarDay(rawValue);
     if (normalized) {
       result[key] = normalized;
+    }
+  }
+
+  if (Object.keys(result).length > 0) {
+    return result;
+  }
+
+  const days = rawObject.days;
+  if (Array.isArray(days)) {
+    for (const rawDay of days) {
+      if (!rawDay || typeof rawDay !== 'object') {
+        continue;
+      }
+
+      const dayRow = rawDay as Record<string, unknown>;
+      const dateKey = dayRow.date ?? dayRow.dateKey;
+      if (typeof dateKey !== 'string' || !isDateKey(dateKey)) {
+        continue;
+      }
+
+      const normalized = normalizeCalendarDayFromLooseRow(dayRow);
+      if (normalized) {
+        result[dateKey] = normalized;
+      }
+    }
+
+    if (Object.keys(result).length > 0) {
+      return result;
+    }
+  }
+
+  const singleDateKey = rawObject.date ?? rawObject.dateKey;
+  if (typeof singleDateKey === 'string' && isDateKey(singleDateKey)) {
+    const normalized = normalizeCalendarDayFromLooseRow(rawObject);
+    if (normalized) {
+      result[singleDateKey] = normalized;
     }
   }
 
