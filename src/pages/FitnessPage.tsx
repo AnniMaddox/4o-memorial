@@ -117,16 +117,26 @@ export function FitnessPage() {
       </header>
 
       {/* ── Week selector ──────────────────────────────────────────────── */}
-      <div className="mb-3 shrink-0 rounded-2xl border border-white/55 bg-white/60 p-3 shadow-sm backdrop-blur">
-        <label className="text-xs tracking-[0.14em] text-stone-500" htmlFor="fitness-week-select">
-          選擇週數
-        </label>
-        <div className="relative mt-2">
+      <div
+        className="mb-3 shrink-0 rounded-2xl border p-2.5 shadow-sm backdrop-blur"
+        style={{
+          borderColor: 'rgb(var(--theme-accent-rgb) / 0.48)',
+          background:
+            'linear-gradient(150deg, rgb(255 255 255 / 0.84) 0%, rgb(var(--theme-accent-rgb) / 0.24) 100%)',
+        }}
+      >
+        <div className="relative">
           <select
             id="fitness-week-select"
             value={activeWeek}
             onChange={(event) => setActiveWeek(Number(event.target.value))}
-            className="w-full appearance-none rounded-xl border border-stone-200 bg-white/90 px-3 py-2 text-sm text-stone-700 shadow-sm outline-none transition focus:border-stone-400 focus:ring-2 focus:ring-stone-200"
+            aria-label="選擇週數"
+            className="w-full appearance-none rounded-xl border px-3 py-2 text-sm text-stone-700 shadow-sm outline-none transition focus:ring-2"
+            style={{
+              borderColor: 'rgb(var(--theme-accent-rgb) / 0.52)',
+              background: 'rgb(255 255 255 / 0.86)',
+              boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.75)',
+            }}
           >
             {weekOptions.map((weekNumber) => (
               <option key={weekNumber} value={weekNumber}>
@@ -134,7 +144,7 @@ export function FitnessPage() {
               </option>
             ))}
           </select>
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-stone-500">
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-stone-600">
             ▾
           </span>
         </div>
