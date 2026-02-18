@@ -12,7 +12,9 @@ import {
   addReadEmailId,
   getNotifiedEmailIds,
   getReadEmailIds,
+  getStarredEmailIds,
   setHoverPhraseMap,
+  setStarredEmailIds as persistStarredEmailIds,
 } from './lib/repositories/metaRepo';
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
@@ -66,6 +68,10 @@ function toRgbTriplet(hex: string) {
   }
 
   return `${Number.parseInt(matched[1], 16)} ${Number.parseInt(matched[2], 16)} ${Number.parseInt(matched[3], 16)}`;
+}
+
+function toSafeCssUrl(url: string) {
+  return url.replaceAll('"', '%22').replaceAll('\n', '');
 }
 
 function getMonthAccentColor(monthKey: string) {
@@ -177,9 +183,19 @@ function App() {
   const appHeadingFamily =
     preferredCustomFontFamily || "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
+  const [starredEmailIds, setStarredEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
   const [hoverResetSeed, setHoverResetSeed] = useState(0);
   const [letters, setLetters] = useState<StoredLetter[]>([]);
+  const backgroundImageUrl = settings.backgroundImageUrl.trim();
+  const backgroundOverlay = Math.min(0.9, Math.max(0, settings.backgroundImageOverlay / 100));
+  const appBackgroundImage =
+    settings.backgroundMode === 'image' && backgroundImageUrl
+      ? `linear-gradient(160deg, rgb(17 24 39 / ${backgroundOverlay}), rgb(17 24 39 / ${Math.max(
+          0,
+          backgroundOverlay - 0.12,
+        )})), url("${toSafeCssUrl(backgroundImageUrl)}")`
+      : `radial-gradient(circle at 20% 10%, ${settings.backgroundGradientStart} 0%, ${settings.backgroundGradientEnd} 72%), linear-gradient(160deg, ${settings.backgroundGradientStart} 0%, ${settings.backgroundGradientEnd} 100%)`;
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
@@ -276,28 +292,6 @@ function App() {
   }, [refreshNotificationPermission]);
 
   useEffect(() => {
-    const href = settings.customFontCssUrl.trim();
-    const linkId = 'custom-font-css-link';
-    let link = document.getElementById(linkId) as HTMLLinkElement | null;
-
-    if (!href) {
-      if (link) {
-        link.remove();
-      }
-      return;
-    }
-
-    if (!link) {
-      link = document.createElement('link');
-      link.id = linkId;
-      link.rel = 'stylesheet';
-      document.head.appendChild(link);
-    }
-
-    link.href = href;
-  }, [settings.customFontCssUrl]);
-
-  useEffect(() => {
     const href = settings.customFontFileUrl.trim();
     const styleId = 'custom-font-file-style';
     let style = document.getElementById(styleId) as HTMLStyleElement | null;
@@ -336,6 +330,30 @@ function App() {
         }
 
         setNotifierLoaded(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    void getStarredEmailIds()
+      .then((ids) => {
+        if (!active) {
+          return;
+        }
+
+        setStarredEmailIds(ids);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setStarredEmailIds(new Set<string>());
       });
 
     return () => {
@@ -497,6 +515,20 @@ function App() {
     }
   }, []);
 
+  const onToggleEmailStar = useCallback((emailId: string) => {
+    setStarredEmailIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(emailId)) {
+        next.delete(emailId);
+      } else {
+        next.add(emailId);
+      }
+
+      void persistStarredEmailIds(next);
+      return next;
+    });
+  }, []);
+
   const onHoverToneWeightChange = useCallback(
     async (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => {
       const nextWeights = {
@@ -538,7 +570,15 @@ function App() {
       {
         id: 'inbox',
         label: 'Inbox',
-        node: <InboxPage emails={emails} unreadEmailIds={unreadEmailIds} onOpenEmail={onOpenEmail} />,
+        node: (
+          <InboxPage
+            emails={emails}
+            unreadEmailIds={unreadEmailIds}
+            starredEmailIds={starredEmailIds}
+            onOpenEmail={onOpenEmail}
+            onToggleEmailStar={onToggleEmailStar}
+          />
+        ),
       },
       {
         id: 'calendar',
@@ -604,8 +644,10 @@ function App() {
       emails,
       importStatus,
       monthCount,
+      monthAccentColor,
       notificationPermission,
       onOpenEmail,
+      onToggleEmailStar,
       onHoverToneWeightChange,
       onImportCalendarFiles,
       onImportEmlFiles,
@@ -616,6 +658,7 @@ function App() {
       onSettingChange,
       refreshData,
       settings,
+      starredEmailIds,
       totalEmailCount,
       hoverResetSeed,
       unreadEmailIds,
@@ -628,8 +671,12 @@ function App() {
 
   return (
     <div
-      className="relative h-dvh w-full overflow-hidden bg-[radial-gradient(circle_at_20%_10%,#fde9d7_0,#f6f1e8_40%,#ece4d5_100%)]"
+      className="relative h-dvh w-full overflow-hidden"
       style={{
+        backgroundImage: appBackgroundImage,
+        backgroundSize: settings.backgroundMode === 'image' && backgroundImageUrl ? 'cover' : undefined,
+        backgroundPosition: settings.backgroundMode === 'image' && backgroundImageUrl ? 'center' : undefined,
+        backgroundRepeat: settings.backgroundMode === 'image' && backgroundImageUrl ? 'no-repeat' : undefined,
         fontSize: `${settings.fontScale}rem`,
         ['--theme-accent' as string]: appAccentColor,
         ['--theme-accent-rgb' as string]: themeAccentRgb,

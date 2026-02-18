@@ -2,6 +2,7 @@ import { getDb } from '../db';
 
 const NOTIFIED_EMAIL_IDS_KEY = 'notified-email-ids-v1';
 const READ_EMAIL_IDS_KEY = 'read-email-ids-v1';
+const STARRED_EMAIL_IDS_KEY = 'starred-email-ids-v1';
 const HOVER_PHRASE_MAP_KEY = 'hover-phrase-map-v1';
 
 export async function getNotifiedEmailIds() {
@@ -75,6 +76,30 @@ export async function addReadEmailId(id: string) {
   const ids = await getReadEmailIds();
   ids.add(id);
   await setReadEmailIds(ids);
+}
+
+export async function getStarredEmailIds() {
+  const db = await getDb();
+  const row = await db.get('meta', STARRED_EMAIL_IDS_KEY);
+
+  if (!row?.value) {
+    return new Set<string>();
+  }
+
+  try {
+    const parsed = JSON.parse(row.value) as string[];
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+export async function setStarredEmailIds(ids: Set<string>) {
+  const db = await getDb();
+  await db.put('meta', {
+    key: STARRED_EMAIL_IDS_KEY,
+    value: JSON.stringify(Array.from(ids)),
+  });
 }
 
 export async function getHoverPhraseMap() {

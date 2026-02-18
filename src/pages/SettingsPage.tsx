@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { APP_CUSTOM_FONT_FAMILY, SETTINGS_PREVIEW_FONT_FAMILY, buildFontFaceRule } from '../lib/font';
-import type { AppSettings, TabIconKey } from '../types/settings';
+import type { AppSettings, BackgroundMode, TabIconKey, TabIconUrls } from '../types/settings';
 
 type SettingsPageProps = {
   settings: AppSettings;
@@ -43,6 +43,28 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'letters', label: 'Letters' },
   { key: 'settings', label: 'Settings' },
 ];
+
+type AppearancePresetPayload = {
+  version: 1;
+  savedAt: string;
+  appearance: {
+    themeMonthColor: string;
+    calendarColorMode: AppSettings['calendarColorMode'];
+    lockedBubbleColor: string;
+    customFontFileUrl: string;
+    customFontFamily: string;
+    fontScale: number;
+    tabIconUrls: TabIconUrls;
+    calendarCellRadius: number;
+    calendarCellShadow: number;
+    calendarCellDepth: number;
+    backgroundMode: BackgroundMode;
+    backgroundGradientStart: string;
+    backgroundGradientEnd: string;
+    backgroundImageUrl: string;
+    backgroundImageOverlay: number;
+  };
+};
 
 type SettingPanelProps = {
   icon: string;
@@ -97,15 +119,19 @@ export function SettingsPage({
   onRefresh,
 }: SettingsPageProps) {
   const [openPanel, setOpenPanel] = useState<PanelKey | null>('appearance');
-  const [fontUrlDraft, setFontUrlDraft] = useState(settings.customFontCssUrl);
   const [fontFileUrlDraft, setFontFileUrlDraft] = useState(settings.customFontFileUrl);
   const [fontFamilyDraft, setFontFamilyDraft] = useState(settings.customFontFamily);
+  const [backgroundImageUrlDraft, setBackgroundImageUrlDraft] = useState(settings.backgroundImageUrl);
+  const [tabIconDrafts, setTabIconDrafts] = useState<TabIconUrls>(settings.tabIconUrls);
+  const [tabIconStatus, setTabIconStatus] = useState('');
+  const [appearancePresetStatus, setAppearancePresetStatus] = useState('');
 
   useEffect(() => {
-    setFontUrlDraft(settings.customFontCssUrl);
     setFontFileUrlDraft(settings.customFontFileUrl);
     setFontFamilyDraft(settings.customFontFamily);
-  }, [settings.customFontCssUrl, settings.customFontFileUrl, settings.customFontFamily]);
+    setBackgroundImageUrlDraft(settings.backgroundImageUrl);
+    setTabIconDrafts(settings.tabIconUrls);
+  }, [settings.customFontFileUrl, settings.customFontFamily, settings.backgroundImageUrl, settings.tabIconUrls]);
 
   useEffect(() => {
     const styleId = 'settings-preview-font-file-style';
@@ -141,19 +167,172 @@ export function SettingsPage({
 
   function applyFontSettings() {
     onSettingChange({
-      customFontCssUrl: fontUrlDraft.trim(),
+      customFontCssUrl: '',
       customFontFileUrl: fontFileUrlDraft.trim(),
       customFontFamily: fontFamilyDraft.trim(),
     });
   }
 
-  function setTabIconUrl(tab: TabIconKey, value: string) {
-    onSettingChange({
-      tabIconUrls: {
-        ...settings.tabIconUrls,
-        [tab]: value.trim(),
+  function setTabIconDraft(tab: TabIconKey, value: string) {
+    setTabIconDrafts((current) => ({
+      ...current,
+      [tab]: value,
+    }));
+    setTabIconStatus('');
+  }
+
+  function saveTabIcons() {
+    const next: TabIconUrls = {
+      inbox: tabIconDrafts.inbox.trim(),
+      calendar: tabIconDrafts.calendar.trim(),
+      tarot: tabIconDrafts.tarot.trim(),
+      letters: tabIconDrafts.letters.trim(),
+      settings: tabIconDrafts.settings.trim(),
+    };
+
+    onSettingChange({ tabIconUrls: next });
+    setTabIconStatus('圖標設定已儲存');
+  }
+
+  function restoreSavedTabIcons() {
+    setTabIconDrafts(settings.tabIconUrls);
+    setTabIconStatus('已還原成目前儲存值');
+  }
+
+  function exportAppearancePreset() {
+    const payload: AppearancePresetPayload = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      appearance: {
+        themeMonthColor: settings.themeMonthColor,
+        calendarColorMode: settings.calendarColorMode,
+        lockedBubbleColor: settings.lockedBubbleColor,
+        customFontFileUrl: settings.customFontFileUrl,
+        customFontFamily: settings.customFontFamily,
+        fontScale: settings.fontScale,
+        tabIconUrls: settings.tabIconUrls,
+        calendarCellRadius: settings.calendarCellRadius,
+        calendarCellShadow: settings.calendarCellShadow,
+        calendarCellDepth: settings.calendarCellDepth,
+        backgroundMode: settings.backgroundMode,
+        backgroundGradientStart: settings.backgroundGradientStart,
+        backgroundGradientEnd: settings.backgroundGradientEnd,
+        backgroundImageUrl: settings.backgroundImageUrl,
+        backgroundImageOverlay: settings.backgroundImageOverlay,
       },
-    });
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = `memorial-style-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(href);
+    setAppearancePresetStatus('已匯出美化設定 JSON');
+  }
+
+  async function importAppearancePreset(file: File) {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as Partial<AppearancePresetPayload> & { appearance?: Partial<AppSettings> };
+      const source = (parsed.appearance ?? parsed) as Partial<AppSettings>;
+      const next: Partial<AppSettings> = {};
+
+      if (typeof source.themeMonthColor === 'string') {
+        next.themeMonthColor = source.themeMonthColor;
+      }
+      if (source.calendarColorMode === 'month' || source.calendarColorMode === 'custom') {
+        next.calendarColorMode = source.calendarColorMode;
+      }
+      if (typeof source.lockedBubbleColor === 'string') {
+        next.lockedBubbleColor = source.lockedBubbleColor;
+      }
+      if (typeof source.customFontFileUrl === 'string') {
+        next.customFontFileUrl = source.customFontFileUrl;
+      }
+      if (typeof source.customFontFamily === 'string') {
+        next.customFontFamily = source.customFontFamily;
+      }
+      if (typeof source.fontScale === 'number' && Number.isFinite(source.fontScale)) {
+        next.fontScale = source.fontScale;
+      }
+      if (source.tabIconUrls && typeof source.tabIconUrls === 'object') {
+        const input = source.tabIconUrls as Partial<TabIconUrls>;
+        next.tabIconUrls = {
+          inbox: typeof input.inbox === 'string' ? input.inbox.trim() : '',
+          calendar: typeof input.calendar === 'string' ? input.calendar.trim() : '',
+          tarot: typeof input.tarot === 'string' ? input.tarot.trim() : '',
+          letters: typeof input.letters === 'string' ? input.letters.trim() : '',
+          settings: typeof input.settings === 'string' ? input.settings.trim() : '',
+        };
+      }
+      if (typeof source.calendarCellRadius === 'number' && Number.isFinite(source.calendarCellRadius)) {
+        next.calendarCellRadius = source.calendarCellRadius;
+      }
+      if (typeof source.calendarCellShadow === 'number' && Number.isFinite(source.calendarCellShadow)) {
+        next.calendarCellShadow = source.calendarCellShadow;
+      }
+      if (typeof source.calendarCellDepth === 'number' && Number.isFinite(source.calendarCellDepth)) {
+        next.calendarCellDepth = source.calendarCellDepth;
+      }
+      if (source.backgroundMode === 'gradient' || source.backgroundMode === 'image') {
+        next.backgroundMode = source.backgroundMode;
+      }
+      if (typeof source.backgroundGradientStart === 'string') {
+        next.backgroundGradientStart = source.backgroundGradientStart;
+      }
+      if (typeof source.backgroundGradientEnd === 'string') {
+        next.backgroundGradientEnd = source.backgroundGradientEnd;
+      }
+      if (typeof source.backgroundImageUrl === 'string') {
+        next.backgroundImageUrl = source.backgroundImageUrl;
+      }
+      if (typeof source.backgroundImageOverlay === 'number' && Number.isFinite(source.backgroundImageOverlay)) {
+        next.backgroundImageOverlay = source.backgroundImageOverlay;
+      }
+
+      onSettingChange(next);
+      setAppearancePresetStatus('已匯入美化設定');
+    } catch {
+      setAppearancePresetStatus('匯入失敗：檔案不是有效的 JSON');
+    }
+  }
+
+  function handleBackgroundImageUpload(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        return;
+      }
+
+      setBackgroundImageUrlDraft(reader.result);
+      onSettingChange({
+        backgroundMode: 'image',
+        backgroundImageUrl: reader.result,
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleFontFileUpload(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        return;
+      }
+
+      setFontFileUrlDraft(reader.result);
+    };
+    reader.readAsDataURL(file);
   }
 
   const previewFontFamily = useMemo(() => {
@@ -262,16 +441,6 @@ export function SettingsPage({
             <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
               <p className="text-sm text-stone-800">字體替換（整站）</p>
               <label className="block space-y-1">
-                <span className="text-xs text-stone-600">字體 CSS 網址</span>
-                <input
-                  type="url"
-                  value={fontUrlDraft}
-                  onChange={(event) => setFontUrlDraft(event.target.value)}
-                  placeholder="https://fonts.googleapis.com/css2?family=..."
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
-                />
-              </label>
-              <label className="block space-y-1">
                 <span className="text-xs text-stone-600">字體檔網址（ttf / otf / woff / woff2）</span>
                 <input
                   type="url"
@@ -279,6 +448,18 @@ export function SettingsPage({
                   onChange={(event) => setFontFileUrlDraft(event.target.value)}
                   placeholder="https://example.com/custom.ttf"
                   className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">或直接上傳字體檔</span>
+                <input
+                  type="file"
+                  accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2"
+                  onChange={(event) => {
+                    handleFontFileUpload(event.target.files?.[0] ?? null);
+                    event.currentTarget.value = '';
+                  }}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs"
                 />
               </label>
               <label className="block space-y-1">
@@ -314,7 +495,6 @@ export function SettingsPage({
                 <button
                   type="button"
                   onClick={() => {
-                    setFontUrlDraft('');
                     setFontFileUrlDraft('');
                     setFontFamilyDraft('');
                     onSettingChange({
@@ -328,6 +508,106 @@ export function SettingsPage({
                   還原預設
                 </button>
               </div>
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">背景樣式</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ backgroundMode: 'gradient' })}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    settings.backgroundMode === 'gradient'
+                      ? 'border-stone-900 bg-stone-900 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  漸層背景
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ backgroundMode: 'image' })}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    settings.backgroundMode === 'image'
+                      ? 'border-stone-900 bg-stone-900 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  圖片背景
+                </button>
+              </div>
+
+              {settings.backgroundMode === 'gradient' ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">漸層起始色</span>
+                    <input
+                      type="color"
+                      value={settings.backgroundGradientStart}
+                      onChange={(event) => onSettingChange({ backgroundGradientStart: event.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">漸層結束色</span>
+                    <input
+                      type="color"
+                      value={settings.backgroundGradientEnd}
+                      onChange={(event) => onSettingChange({ backgroundGradientEnd: event.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">背景圖片網址</span>
+                    <input
+                      type="url"
+                      value={backgroundImageUrlDraft}
+                      onChange={(event) => setBackgroundImageUrlDraft(event.target.value)}
+                      placeholder="https://example.com/background.jpg"
+                      className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
+                    />
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSettingChange({ backgroundImageUrl: backgroundImageUrlDraft.trim() })}
+                      className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+                    >
+                      套用圖片網址
+                    </button>
+                    <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700">
+                      上傳背景圖
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => {
+                          handleBackgroundImageUpload(event.target.files?.[0] ?? null);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <label className="block space-y-1">
+                    <span className="flex items-center justify-between text-xs text-stone-600">
+                      <span>圖片遮罩深度</span>
+                      <span>{settings.backgroundImageOverlay}%</span>
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={90}
+                      step={1}
+                      value={settings.backgroundImageOverlay}
+                      onChange={(event) => onSettingChange({ backgroundImageOverlay: Number(event.target.value) })}
+                      className="w-full"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
@@ -378,6 +658,35 @@ export function SettingsPage({
                 />
               </label>
             </div>
+
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">美化設定備份</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={exportAppearancePreset}
+                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+                >
+                  匯出美化 JSON
+                </button>
+                <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700">
+                  匯入美化 JSON
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) {
+                        void importAppearancePreset(file);
+                      }
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              {appearancePresetStatus && <p className="text-xs text-stone-600">{appearancePresetStatus}</p>}
+            </div>
           </div>
         </SettingPanel>
 
@@ -390,7 +699,7 @@ export function SettingsPage({
         >
           <div className="space-y-3">
             {TAB_ICON_LABELS.map((tab) => {
-              const iconUrl = settings.tabIconUrls[tab.key];
+              const iconUrl = tabIconDrafts[tab.key];
               return (
                 <label key={tab.key} className="block space-y-1">
                   <span className="text-xs text-stone-600">{tab.label} 圖示網址</span>
@@ -405,7 +714,7 @@ export function SettingsPage({
                     <input
                       type="url"
                       value={iconUrl}
-                      onChange={(event) => setTabIconUrl(tab.key, event.target.value)}
+                      onChange={(event) => setTabIconDraft(tab.key, event.target.value)}
                       placeholder="https://example.com/icon.png"
                       className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
                     />
@@ -413,6 +722,23 @@ export function SettingsPage({
                 </label>
               );
             })}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={saveTabIcons}
+                className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+              >
+                儲存圖標設定
+              </button>
+              <button
+                type="button"
+                onClick={restoreSavedTabIcons}
+                className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+              >
+                還原草稿
+              </button>
+            </div>
+            {tabIconStatus && <p className="text-xs text-stone-600">{tabIconStatus}</p>}
             <p className="text-xs text-stone-500">
               留空就用預設圖示。圖片建議正方形（PNG/JPG/WebP），網址需可直接存取。
             </p>

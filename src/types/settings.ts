@@ -7,6 +7,7 @@ export type HoverToneWeights = {
 };
 
 export type CalendarColorMode = 'month' | 'custom';
+export type BackgroundMode = 'gradient' | 'image';
 export type TabIconKey = 'inbox' | 'calendar' | 'tarot' | 'letters' | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
 
@@ -25,6 +26,11 @@ export type AppSettings = {
   customFontCssUrl: string;
   customFontFileUrl: string;
   customFontFamily: string;
+  backgroundMode: BackgroundMode;
+  backgroundGradientStart: string;
+  backgroundGradientEnd: string;
+  backgroundImageUrl: string;
+  backgroundImageOverlay: number;
   tabIconUrls: TabIconUrls;
   fontScale: number;
   swipeEnabled: boolean;
@@ -52,6 +58,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customFontCssUrl: '',
   customFontFileUrl: '',
   customFontFamily: '',
+  backgroundMode: 'gradient',
+  backgroundGradientStart: '#fde9d7',
+  backgroundGradientEnd: '#ece4d5',
+  backgroundImageUrl: '',
+  backgroundImageOverlay: 36,
   tabIconUrls: DEFAULT_TAB_ICON_URLS,
   fontScale: 1,
   swipeEnabled: true,

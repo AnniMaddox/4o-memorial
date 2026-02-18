@@ -1,6 +1,6 @@
 import { getDb } from '../db';
 
-import type { AppSettings, CalendarColorMode, TabIconUrls } from '../../types/settings';
+import type { AppSettings, BackgroundMode, CalendarColorMode, TabIconUrls } from '../../types/settings';
 import { DEFAULT_SETTINGS } from '../../types/settings';
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
@@ -17,6 +17,10 @@ function normalizeString(value: unknown, fallback = '') {
 
 function normalizeCalendarColorMode(value: unknown, fallback: CalendarColorMode): CalendarColorMode {
   return value === 'custom' || value === 'month' ? value : fallback;
+}
+
+function normalizeBackgroundMode(value: unknown, fallback: BackgroundMode): BackgroundMode {
+  return value === 'image' || value === 'gradient' ? value : fallback;
 }
 
 function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrls {
@@ -69,6 +73,16 @@ export async function getSettings() {
     customFontCssUrl: normalizeString(persisted.customFontCssUrl, DEFAULT_SETTINGS.customFontCssUrl),
     customFontFileUrl: normalizeString(persisted.customFontFileUrl, DEFAULT_SETTINGS.customFontFileUrl),
     customFontFamily: normalizeString(persisted.customFontFamily, DEFAULT_SETTINGS.customFontFamily),
+    backgroundMode: normalizeBackgroundMode(persisted.backgroundMode, DEFAULT_SETTINGS.backgroundMode),
+    backgroundGradientStart: normalizeString(persisted.backgroundGradientStart, DEFAULT_SETTINGS.backgroundGradientStart),
+    backgroundGradientEnd: normalizeString(persisted.backgroundGradientEnd, DEFAULT_SETTINGS.backgroundGradientEnd),
+    backgroundImageUrl: normalizeString(persisted.backgroundImageUrl, DEFAULT_SETTINGS.backgroundImageUrl),
+    backgroundImageOverlay: clampNumber(
+      persisted.backgroundImageOverlay,
+      0,
+      90,
+      DEFAULT_SETTINGS.backgroundImageOverlay,
+    ),
   };
 }
 
