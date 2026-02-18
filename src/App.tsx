@@ -26,6 +26,7 @@ import { readLetterContent } from './lib/letterReader';
 import { APP_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import type { ChatProfile } from './lib/chatDB';
+import { HeartWallPage } from './pages/HeartWallPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
@@ -60,6 +61,7 @@ const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
   calendar: '📅',
   tarot: '🔮',
   letters: '💌',
+  heart: '💗',
   settings: '⚙️',
 };
 
@@ -671,6 +673,11 @@ function App() {
             letterFontFamily={letterFontFamily}
           />
         ),
+      },
+      {
+        id: 'heart',
+        label: 'MY LOVE',
+        node: <HeartWallPage />,
       },
       {
         id: 'settings',

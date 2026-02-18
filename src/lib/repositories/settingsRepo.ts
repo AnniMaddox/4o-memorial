@@ -30,6 +30,7 @@ function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrl
     calendar: normalizeString(input.calendar, fallback.calendar),
     tarot: normalizeString(input.tarot, fallback.tarot),
     letters: normalizeString(input.letters, fallback.letters),
+    heart: normalizeString(input.heart, fallback.heart),
     settings: normalizeString(input.settings, fallback.settings),
   };
 }

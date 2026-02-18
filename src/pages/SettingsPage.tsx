@@ -38,6 +38,7 @@ const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   calendar: '📅',
   tarot: '🔮',
   letters: '💌',
+  heart: '💗',
   settings: '⚙️',
 };
 
@@ -46,6 +47,7 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'calendar', label: 'Calendar' },
   { key: 'tarot', label: 'Tarot' },
   { key: 'letters', label: 'Letters' },
+  { key: 'heart', label: 'MY LOVE' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -208,6 +210,7 @@ export function SettingsPage({
       calendar: tabIconDrafts.calendar.trim(),
       tarot: tabIconDrafts.tarot.trim(),
       letters: tabIconDrafts.letters.trim(),
+      heart: tabIconDrafts.heart.trim(),
       settings: tabIconDrafts.settings.trim(),
     };
 
@@ -285,6 +288,7 @@ export function SettingsPage({
           calendar: typeof input.calendar === 'string' ? input.calendar.trim() : '',
           tarot: typeof input.tarot === 'string' ? input.tarot.trim() : '',
           letters: typeof input.letters === 'string' ? input.letters.trim() : '',
+          heart: typeof input.heart === 'string' ? input.heart.trim() : '',
           settings: typeof input.settings === 'string' ? input.settings.trim() : '',
         };
       }

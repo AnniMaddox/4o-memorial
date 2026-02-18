@@ -8,7 +8,7 @@ export type HoverToneWeights = {
 
 export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image';
-export type TabIconKey = 'inbox' | 'calendar' | 'tarot' | 'letters' | 'settings';
+export type TabIconKey = 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
 
 export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
@@ -16,6 +16,7 @@ export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   calendar: '',
   tarot: '',
   letters: '',
+  heart: '',
   settings: '',
 };
 
