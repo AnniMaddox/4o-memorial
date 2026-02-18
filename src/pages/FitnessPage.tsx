@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,11 +27,25 @@ interface WeekData {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const BASE = import.meta.env.BASE_URL as string;
-const CHIBI_COUNT = 35;
+const CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+const CHIBI_IMAGE_SOURCES = Object.entries(CHIBI_MODULES)
+  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+  .map(([, src]) => src);
 
-function randomChibiSrc() {
-  const idx = Math.floor(Math.random() * CHIBI_COUNT) + 1;
-  return `${BASE}chibi/chibi-${String(idx).padStart(2, '0')}.png`;
+function pickRandomIndex(length: number, current?: number) {
+  if (length <= 1) {
+    return 0;
+  }
+
+  const next = Math.floor(Math.random() * length);
+  if (typeof current === 'number' && next === current) {
+    return (current + 1) % length;
+  }
+
+  return next;
 }
 
 const MEAL_LABELS = [
@@ -48,8 +62,13 @@ export function FitnessPage() {
   const [weeks, setWeeks] = useState<WeekData[]>([]);
   const [activeWeek, setActiveWeek] = useState(1);
   const [section, setSection] = useState<SectionKey>('meals');
-  const [chibiSrc] = useState(randomChibiSrc);
-  const weekRowRef = useRef<HTMLDivElement>(null);
+  const fallbackChibiSrc = `${BASE}chibi.png`;
+  const chibiSources = useMemo(
+    () => (CHIBI_IMAGE_SOURCES.length ? CHIBI_IMAGE_SOURCES : [fallbackChibiSrc]),
+    [fallbackChibiSrc],
+  );
+  const [chibiIndex, setChibiIndex] = useState(() => pickRandomIndex(chibiSources.length));
+  const [showChibi, setShowChibi] = useState(true);
 
   useEffect(() => {
     void fetch(`${BASE}data/fitness-weeks.json`)
@@ -57,14 +76,19 @@ export function FitnessPage() {
       .then((d: WeekData[]) => setWeeks(d));
   }, []);
 
-  useEffect(() => {
-    const row = weekRowRef.current;
-    if (!row) return;
-    const chip = row.querySelector<HTMLElement>(`[data-week="${activeWeek}"]`);
-    chip?.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
-  }, [activeWeek]);
-
+  const weekOptions = useMemo(
+    () =>
+      weeks.length
+        ? Array.from(new Set(weeks.map((entry) => entry.week))).sort((a, b) => a - b)
+        : Array.from({ length: 26 }, (_, index) => index + 1),
+    [weeks],
+  );
   const week = weeks.find((w) => w.week === activeWeek) ?? null;
+
+  function rotateChibi() {
+    setChibiIndex((current) => pickRandomIndex(chibiSources.length, current));
+    setShowChibi(true);
+  }
 
   return (
     <div
@@ -93,26 +117,27 @@ export function FitnessPage() {
       </header>
 
       {/* ── Week selector ──────────────────────────────────────────────── */}
-      <div
-        ref={weekRowRef}
-        className="mb-3 flex shrink-0 gap-2 overflow-x-auto pb-1"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {Array.from({ length: 26 }, (_, i) => i + 1).map((w) => (
-          <button
-            key={w}
-            type="button"
-            data-week={w}
-            onClick={() => setActiveWeek(w)}
-            className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-medium transition active:scale-95 ${
-              w === activeWeek
-                ? 'bg-rose-400 text-white shadow-sm'
-                : 'border border-stone-200 bg-white/80 text-stone-500'
-            }`}
+      <div className="mb-3 shrink-0 rounded-2xl border border-white/55 bg-white/60 p-3 shadow-sm backdrop-blur">
+        <label className="text-xs tracking-[0.14em] text-stone-500" htmlFor="fitness-week-select">
+          選擇週數
+        </label>
+        <div className="relative mt-2">
+          <select
+            id="fitness-week-select"
+            value={activeWeek}
+            onChange={(event) => setActiveWeek(Number(event.target.value))}
+            className="w-full appearance-none rounded-xl border border-stone-200 bg-white/90 px-3 py-2 text-sm text-stone-700 shadow-sm outline-none transition focus:border-stone-400 focus:ring-2 focus:ring-stone-200"
           >
-            W{w}
-          </button>
-        ))}
+            {weekOptions.map((weekNumber) => (
+              <option key={weekNumber} value={weekNumber}>
+                Week {weekNumber}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-stone-500">
+            ▾
+          </span>
+        </div>
       </div>
 
       {/* ── Content ────────────────────────────────────────────────────── */}
@@ -128,7 +153,7 @@ export function FitnessPage() {
                   <div key={key} className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm">
                     <p className="mb-1 text-xs font-medium text-stone-500">{icon} {label}</p>
                     <p className="mb-3 text-sm leading-relaxed text-stone-700">{meal.food}</p>
-                    <Bubble text={meal.bubble} accent="rose" />
+                    <Bubble text={meal.bubble} accent="rose" onTap={rotateChibi} />
                   </div>
                 );
               })}
@@ -144,7 +169,7 @@ export function FitnessPage() {
                   <p className="mb-1 text-xs font-medium text-stone-500">{EXERCISE_ICONS[i]} 動作 {i + 1}</p>
                   <p className="mb-3 text-sm leading-relaxed text-stone-700">{item}</p>
                   {week.exercise.bubbles[i] && (
-                    <Bubble text={week.exercise.bubbles[i]} accent="amber" />
+                    <Bubble text={week.exercise.bubbles[i]} accent="amber" onTap={rotateChibi} />
                   )}
                 </div>
               ))}
@@ -160,7 +185,7 @@ export function FitnessPage() {
                 <p className="mt-0.5 text-xs text-stone-400">{week.book.author}</p>
                 <p className="mt-3 text-sm leading-relaxed text-stone-600">{week.book.desc}</p>
               </div>
-              <Bubble text={week.book.bubble} accent="purple" />
+              <Bubble text={week.book.bubble} accent="purple" onTap={rotateChibi} />
               <ClosingCard text={week.closing} />
             </div>
           )}
@@ -174,12 +199,15 @@ export function FitnessPage() {
 
       {/* ── Floating chibi (bottom, one per page) ──────────────────────── */}
       <div className="flex shrink-0 justify-center pb-1 pt-1">
-        <img
-          src={chibiSrc}
-          alt=""
-          draggable={false}
-          className="calendar-chibi w-20 select-none"
-        />
+        {showChibi && (
+          <img
+            src={chibiSources[chibiIndex]}
+            alt=""
+            draggable={false}
+            className="calendar-chibi w-[7.5rem] select-none"
+            onError={() => setShowChibi(false)}
+          />
+        )}
       </div>
     </div>
   );
@@ -190,15 +218,40 @@ export function FitnessPage() {
 function Bubble({
   text,
   accent,
+  onTap,
 }: {
   text: string;
   accent: 'rose' | 'amber' | 'purple';
+  onTap?: () => void;
 }) {
   const styles = {
-    rose:   { bg: '#fff0f3', border: '#fecdd3' },
-    amber:  { bg: '#fffbeb', border: '#fde68a' },
-    purple: { bg: '#f5f0ff', border: '#ddd6fe' },
+    rose: {
+      bg: 'rgb(var(--theme-accent-rgb) / 0.14)',
+      border: 'rgb(var(--theme-accent-rgb) / 0.35)',
+    },
+    amber: {
+      bg: 'rgb(var(--theme-accent-rgb) / 0.2)',
+      border: 'rgb(var(--theme-accent-rgb) / 0.46)',
+    },
+    purple: {
+      bg: 'rgb(var(--theme-accent-rgb) / 0.26)',
+      border: 'rgb(var(--theme-accent-rgb) / 0.56)',
+    },
   }[accent];
+  const interactive = typeof onTap === 'function';
+
+  if (interactive) {
+    return (
+      <button
+        type="button"
+        onClick={onTap}
+        className="fitness-bubble w-full rounded-2xl rounded-br-sm px-4 py-3 text-left text-sm leading-relaxed text-stone-700 transition active:scale-[0.99]"
+        style={{ background: styles.bg, border: `1px solid ${styles.border}` }}
+      >
+        {text}
+      </button>
+    );
+  }
 
   return (
     <div
