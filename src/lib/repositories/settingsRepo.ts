@@ -73,6 +73,8 @@ export async function getSettings() {
     customFontCssUrl: normalizeString(persisted.customFontCssUrl, DEFAULT_SETTINGS.customFontCssUrl),
     customFontFileUrl: normalizeString(persisted.customFontFileUrl, DEFAULT_SETTINGS.customFontFileUrl),
     customFontFamily: normalizeString(persisted.customFontFamily, DEFAULT_SETTINGS.customFontFamily),
+    tarotGalleryImageUrl: normalizeString(persisted.tarotGalleryImageUrl, DEFAULT_SETTINGS.tarotGalleryImageUrl),
+    letterFontUrl: normalizeString(persisted.letterFontUrl, DEFAULT_SETTINGS.letterFontUrl),
     backgroundMode: normalizeBackgroundMode(persisted.backgroundMode, DEFAULT_SETTINGS.backgroundMode),
     backgroundGradientStart: normalizeString(persisted.backgroundGradientStart, DEFAULT_SETTINGS.backgroundGradientStart),
     backgroundGradientEnd: normalizeString(persisted.backgroundGradientEnd, DEFAULT_SETTINGS.backgroundGradientEnd),

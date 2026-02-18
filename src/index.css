@@ -104,6 +104,13 @@ textarea {
   background: rgb(var(--tab-accent-rgb) / 0.12);
 }
 
+.themed-header-panel {
+  border-color: rgb(var(--calendar-header-accent-rgb) / 0.52);
+  background:
+    linear-gradient(155deg, rgb(255 255 255 / 0.86), rgb(var(--calendar-header-accent-rgb) / 0.16)),
+    linear-gradient(180deg, rgb(255 255 255 / 0.24), transparent);
+}
+
 .calendar-header-panel {
   border-color: rgb(var(--calendar-header-accent-rgb) / 0.52);
   background:

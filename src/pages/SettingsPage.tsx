@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { APP_CUSTOM_FONT_FAMILY, SETTINGS_PREVIEW_FONT_FAMILY, buildFontFaceRule } from '../lib/font';
+import type { ChatProfile } from '../lib/chatDB';
 import type { AppSettings, BackgroundMode, TabIconKey, TabIconUrls } from '../types/settings';
 
 type SettingsPageProps = {
@@ -15,18 +16,22 @@ type SettingsPageProps = {
     message: string;
   };
   letterCount: number;
+  chatProfiles: ChatProfile[];
   onSettingChange: (partial: Partial<AppSettings>) => void;
   onRequestNotificationPermission: () => void;
   onImportEmlFiles: (files: File[]) => void;
   onImportCalendarFiles: (files: File[]) => void;
   onImportLetterFiles: (files: File[]) => void;
+  onImportLetterFolderFiles: (files: File[]) => void;
   onClearAllLetters: () => void;
+  onSaveChatProfile: (profile: ChatProfile) => void;
+  onDeleteChatProfile: (id: string) => void;
   onHoverToneWeightChange: (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => void;
   onReshuffleHoverPhrases: () => void;
   onRefresh: () => void;
 };
 
-type PanelKey = 'overview' | 'appearance' | 'tabIcons' | 'notification' | 'imports' | 'hover' | 'letters' | 'maintenance';
+type PanelKey = 'overview' | 'appearance' | 'tabIcons' | 'notification' | 'imports' | 'hover' | 'letters' | 'tarot' | 'maintenance';
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   inbox: '📮',
@@ -108,17 +113,31 @@ export function SettingsPage({
   notificationPermission,
   importStatus,
   letterCount,
+  chatProfiles,
   onSettingChange,
   onRequestNotificationPermission,
   onImportEmlFiles,
   onImportCalendarFiles,
   onImportLetterFiles,
+  onImportLetterFolderFiles,
   onClearAllLetters,
+  onSaveChatProfile,
+  onDeleteChatProfile,
   onHoverToneWeightChange,
   onReshuffleHoverPhrases,
   onRefresh,
 }: SettingsPageProps) {
   const [openPanel, setOpenPanel] = useState<PanelKey | null>('appearance');
+  const [letterFontUrlDraft, setLetterFontUrlDraft] = useState(settings.letterFontUrl);
+  const [tarotGalleryUrlDraft, setTarotGalleryUrlDraft] = useState(settings.tarotGalleryImageUrl);
+  const [newProfileDraft, setNewProfileDraft] = useState<Omit<ChatProfile, 'id'>>({
+    name: '',
+    leftNick: 'M',
+    rightNick: '你',
+    leftAvatarDataUrl: '',
+    rightAvatarDataUrl: '',
+  });
+  const [showNewProfile, setShowNewProfile] = useState(false);
   const [fontFileUrlDraft, setFontFileUrlDraft] = useState(settings.customFontFileUrl);
   const [fontFamilyDraft, setFontFamilyDraft] = useState(settings.customFontFamily);
   const [backgroundImageUrlDraft, setBackgroundImageUrlDraft] = useState(settings.backgroundImageUrl);
@@ -131,7 +150,9 @@ export function SettingsPage({
     setFontFamilyDraft(settings.customFontFamily);
     setBackgroundImageUrlDraft(settings.backgroundImageUrl);
     setTabIconDrafts(settings.tabIconUrls);
-  }, [settings.customFontFileUrl, settings.customFontFamily, settings.backgroundImageUrl, settings.tabIconUrls]);
+    setLetterFontUrlDraft(settings.letterFontUrl);
+    setTarotGalleryUrlDraft(settings.tarotGalleryImageUrl);
+  }, [settings.customFontFileUrl, settings.customFontFamily, settings.backgroundImageUrl, settings.tabIconUrls, settings.letterFontUrl, settings.tarotGalleryImageUrl]);
 
   useEffect(() => {
     const styleId = 'settings-preview-font-file-style';
@@ -368,7 +389,7 @@ export function SettingsPage({
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-4 pb-24">
-      <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
+      <header className="themed-header-panel rounded-2xl border p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.18em] text-stone-500">設定</p>
         <h1 className="mt-1 text-2xl text-stone-900">控制中心</h1>
       </header>
@@ -891,42 +912,244 @@ export function SettingsPage({
         </SettingPanel>
 
         <SettingPanel
+          icon="🃏"
+          title="塔羅"
+          subtitle="閱覽室入口圖片"
+          isOpen={openPanel === 'tarot'}
+          onToggle={() => togglePanel('tarot')}
+        >
+          <div className="space-y-3">
+            <label className="block space-y-1">
+              <span className="text-xs text-stone-500">閱覽室入口圖片 URL</span>
+              <input
+                type="url"
+                value={tarotGalleryUrlDraft}
+                onChange={(e) => setTarotGalleryUrlDraft(e.target.value)}
+                placeholder="https://files.catbox.moe/..."
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+              />
+            </label>
+            {tarotGalleryUrlDraft && (
+              <img
+                src={tarotGalleryUrlDraft}
+                alt="預覽"
+                className="h-24 w-full rounded-lg object-cover border border-stone-200"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => onSettingChange({ tarotGalleryImageUrl: tarotGalleryUrlDraft.trim() })}
+              className="w-full rounded-xl bg-stone-900 py-2.5 text-sm text-white transition active:opacity-80"
+            >
+              套用
+            </button>
+            <p className="text-xs text-stone-400">圖片會顯示在塔羅頁底部，點擊進入全部 22 張牌的閱覽室。</p>
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
           icon="💌"
           title="情書"
-          subtitle="匯入 .txt / .docx 到本機"
+          subtitle="匯入 · 字體 · 對話角色"
           isOpen={openPanel === 'letters'}
           onToggle={() => togglePanel('letters')}
         >
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Count */}
             <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
               <p className="text-xs text-stone-500">已匯入情書</p>
               <p className="mt-0.5 truncate text-sm text-stone-800">{letterCount} 封</p>
             </div>
-            <label className="block space-y-2">
-              <span>匯入情書檔案</span>
+
+            {/* File import */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-stone-600">匯入情書檔案</p>
+              <label className="block">
+                <span className="sr-only">選擇檔案</span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".txt,.md,.json,.docx"
+                  onChange={(event) => {
+                    const files = event.target.files ? Array.from(event.target.files) : [];
+                    if (files.length) onImportLetterFiles(files);
+                    event.currentTarget.value = '';
+                  }}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-2 py-2 text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs text-stone-500">或整個資料夾匯入</span>
+                <input
+                  type="file"
+                  // @ts-expect-error webkitdirectory is non-standard
+                  webkitdirectory=""
+                  multiple
+                  accept=".txt,.md,.json,.docx"
+                  onChange={(event) => {
+                    const files = event.target.files ? Array.from(event.target.files) : [];
+                    if (files.length) onImportLetterFolderFiles(files);
+                    event.currentTarget.value = '';
+                  }}
+                  className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-2 py-2 text-sm"
+                />
+              </label>
+            </div>
+
+            {/* Letter font URL */}
+            <div className="space-y-2 border-t border-stone-100 pt-3">
+              <p className="text-xs font-medium text-stone-600">情書頁自訂字體</p>
               <input
-                type="file"
-                multiple
-                accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                onChange={(event) => {
-                  const files = event.target.files ? Array.from(event.target.files) : [];
-                  if (files.length) {
-                    onImportLetterFiles(files);
-                  }
-                  event.currentTarget.value = '';
-                }}
-                className="w-full rounded-lg border border-stone-300 bg-white px-2 py-2"
+                type="url"
+                value={letterFontUrlDraft}
+                onChange={(e) => setLetterFontUrlDraft(e.target.value)}
+                placeholder="https://files.catbox.moe/xxxxx.ttf"
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
               />
-            </label>
-            <button
-              type="button"
-              onClick={onClearAllLetters}
-              disabled={!letterCount}
-              className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-sm text-rose-700 transition disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              清空所有情書
-            </button>
-            <p className="text-xs text-stone-400">情書儲存在本機，不會上傳到伺服器。</p>
+              <button
+                type="button"
+                onClick={() => onSettingChange({ letterFontUrl: letterFontUrlDraft.trim() })}
+                className="w-full rounded-xl bg-stone-900 py-2 text-sm text-white transition active:opacity-80"
+              >
+                套用字體
+              </button>
+              {settings.letterFontUrl && (
+                <button
+                  type="button"
+                  onClick={() => { setLetterFontUrlDraft(''); onSettingChange({ letterFontUrl: '' }); }}
+                  className="w-full rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-600"
+                >
+                  移除自訂字體（恢復手寫體）
+                </button>
+              )}
+              <p className="text-xs text-stone-400">支援 .ttf / .woff2，留空使用預設手寫字體。</p>
+            </div>
+
+            {/* Chat profiles */}
+            <div className="space-y-2 border-t border-stone-100 pt-3">
+              <p className="text-xs font-medium text-stone-600">聊天模式角色設定</p>
+              {chatProfiles.length === 0 && (
+                <p className="text-xs text-stone-400">尚未建立任何角色設定，預設為「你」/「M」。</p>
+              )}
+              {chatProfiles.map((profile) => (
+                <div key={profile.id} className="flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-stone-800">{profile.name}</p>
+                    <p className="text-xs text-stone-400">右：{profile.rightNick} ／ 左：{profile.leftNick}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteChatProfile(profile.id)}
+                    className="shrink-0 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-600"
+                  >
+                    刪除
+                  </button>
+                </div>
+              ))}
+
+              {/* New profile form */}
+              {showNewProfile ? (
+                <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50 p-3">
+                  <input
+                    type="text"
+                    placeholder="設定名稱，例：和4o的對話"
+                    value={newProfileDraft.name}
+                    onChange={(e) => setNewProfileDraft((d) => ({ ...d, name: e.target.value }))}
+                    className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="右側暱稱（你）"
+                      value={newProfileDraft.rightNick}
+                      onChange={(e) => setNewProfileDraft((d) => ({ ...d, rightNick: e.target.value }))}
+                      className="flex-1 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="左側暱稱（M）"
+                      value={newProfileDraft.leftNick}
+                      onChange={(e) => setNewProfileDraft((d) => ({ ...d, leftNick: e.target.value }))}
+                      className="flex-1 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <label className="flex-1 space-y-1">
+                      <span className="text-xs text-stone-500">右側頭像</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () => setNewProfileDraft((d) => ({ ...d, rightAvatarDataUrl: reader.result as string }));
+                          reader.readAsDataURL(file);
+                        }}
+                        className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
+                      />
+                    </label>
+                    <label className="flex-1 space-y-1">
+                      <span className="text-xs text-stone-500">左側頭像</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () => setNewProfileDraft((d) => ({ ...d, leftAvatarDataUrl: reader.result as string }));
+                          reader.readAsDataURL(file);
+                        }}
+                        className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
+                      />
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newProfileDraft.name.trim()) return;
+                        onSaveChatProfile({ ...newProfileDraft, id: `profile-${Date.now()}` });
+                        setNewProfileDraft({ name: '', leftNick: 'M', rightNick: '你', leftAvatarDataUrl: '', rightAvatarDataUrl: '' });
+                        setShowNewProfile(false);
+                      }}
+                      className="flex-1 rounded-xl bg-stone-900 py-2 text-sm text-white"
+                    >
+                      儲存
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewProfile(false)}
+                      className="flex-1 rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-600"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowNewProfile(true)}
+                  className="w-full rounded-xl border border-violet-200 bg-violet-50 py-2 text-sm text-violet-700 transition active:opacity-80"
+                >
+                  ＋ 新增角色設定
+                </button>
+              )}
+            </div>
+
+            <div className="border-t border-stone-100 pt-3">
+              <button
+                type="button"
+                onClick={onClearAllLetters}
+                disabled={!letterCount}
+                className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-sm text-rose-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                清空所有情書
+              </button>
+              <p className="mt-2 text-xs text-stone-400">情書儲存在本機，不會上傳到伺服器。</p>
+            </div>
           </div>
         </SettingPanel>
 

@@ -23,7 +23,9 @@ import { LetterPage } from './pages/LetterPage';
 import { clearAllLetters, loadLetters, saveLetters } from './lib/letterDB';
 import type { StoredLetter } from './lib/letterDB';
 import { readLetterContent } from './lib/letterReader';
-import { APP_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
+import { APP_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
+import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
+import type { ChatProfile } from './lib/chatDB';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
@@ -182,11 +184,13 @@ function App() {
     preferredCustomFontFamily || "'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
   const appHeadingFamily =
     preferredCustomFontFamily || "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
+  const letterFontFamily = settings.letterFontUrl.trim() ? LETTER_CUSTOM_FONT_FAMILY : '';
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [starredEmailIds, setStarredEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
   const [hoverResetSeed, setHoverResetSeed] = useState(0);
   const [letters, setLetters] = useState<StoredLetter[]>([]);
+  const [chatProfiles, setChatProfiles] = useState<ChatProfile[]>([]);
   const backgroundImageUrl = settings.backgroundImageUrl.trim();
   const backgroundOverlay = Math.min(0.9, Math.max(0, settings.backgroundImageOverlay / 100));
   const appBackgroundImage =
@@ -255,6 +259,30 @@ function App() {
       .catch(() => {});
   }, []);
 
+  // Load chat profiles
+  useEffect(() => {
+    loadChatProfiles()
+      .then(setChatProfiles)
+      .catch(() => {});
+  }, []);
+
+  // Load letter custom font
+  useEffect(() => {
+    const href = settings.letterFontUrl.trim();
+    const styleId = 'letter-custom-font-style';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!href) {
+      style?.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = buildFontFaceRule(LETTER_CUSTOM_FONT_FAMILY, href);
+  }, [settings.letterFontUrl]);
+
   const handleImportLetterFiles = useCallback(async (files: File[]) => {
     const now = Date.now();
     const imported: StoredLetter[] = [];
@@ -277,6 +305,37 @@ function App() {
   const handleClearAllLetters = useCallback(async () => {
     await clearAllLetters();
     setLetters([]);
+  }, []);
+
+  const handleImportLetterFolderFiles = useCallback(async (files: File[]) => {
+    // Same logic as file import — folder just provides multiple files at once
+    const now = Date.now();
+    const imported: StoredLetter[] = [];
+    for (const file of files) {
+      try {
+        const content = await readLetterContent(file);
+        if (content.trim()) {
+          imported.push({ name: file.name, content, importedAt: now });
+        }
+      } catch {
+        // skip unreadable files
+      }
+    }
+    if (!imported.length) return;
+    await saveLetters(imported);
+    const updated = await loadLetters();
+    setLetters(updated);
+  }, []);
+
+  const handleSaveChatProfile = useCallback(async (profile: ChatProfile) => {
+    await saveChatProfile(profile);
+    const updated = await loadChatProfiles();
+    setChatProfiles(updated);
+  }, []);
+
+  const handleDeleteChatProfile = useCallback(async (id: string) => {
+    await deleteChatProfile(id);
+    setChatProfiles((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
   useEffect(() => {
@@ -600,12 +659,18 @@ function App() {
       {
         id: 'tarot',
         label: '塔羅',
-        node: <TarotPage />,
+        node: <TarotPage tarotGalleryImageUrl={settings.tarotGalleryImageUrl} />,
       },
       {
         id: 'letters',
         label: '情書',
-        node: <LetterPage letters={letters} />,
+        node: (
+          <LetterPage
+            letters={letters}
+            chatProfiles={chatProfiles}
+            letterFontFamily={letterFontFamily}
+          />
+        ),
       },
       {
         id: 'settings',
@@ -619,12 +684,16 @@ function App() {
             notificationPermission={notificationPermission}
             importStatus={importStatus}
             letterCount={letters.length}
+            chatProfiles={chatProfiles}
             onSettingChange={onSettingChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
             onImportEmlFiles={onImportEmlFiles}
             onImportCalendarFiles={onImportCalendarFiles}
             onImportLetterFiles={(files) => void handleImportLetterFiles(files)}
+            onImportLetterFolderFiles={(files) => void handleImportLetterFolderFiles(files)}
             onClearAllLetters={() => void handleClearAllLetters()}
+            onSaveChatProfile={(profile) => void handleSaveChatProfile(profile)}
+            onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
             onHoverToneWeightChange={onHoverToneWeightChange}
             onReshuffleHoverPhrases={onReshuffleHoverPhrases}
             onRefresh={() => {
@@ -664,8 +733,13 @@ function App() {
       unreadEmailIds,
       visibleEmailCount,
       letters,
+      chatProfiles,
+      letterFontFamily,
       handleImportLetterFiles,
+      handleImportLetterFolderFiles,
       handleClearAllLetters,
+      handleSaveChatProfile,
+      handleDeleteChatProfile,
     ],
   );
 

@@ -160,7 +160,7 @@ export function InboxPage({ emails, unreadEmailIds, starredEmailIds, onOpenEmail
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-4">
-      <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
+      <header className="themed-header-panel rounded-2xl border p-4 shadow-sm">
         {favoritesOnly ? (
           <div className="flex items-center justify-between gap-2">
             <button
@@ -170,13 +170,13 @@ export function InboxPage({ emails, unreadEmailIds, starredEmailIds, onOpenEmail
             >
               ← 回信箱
             </button>
-            <p className="text-xs uppercase tracking-[0.18em] text-stone-500">收藏頁</p>
+            <p className="text-xs tracking-[0.08em] text-stone-600">我的最愛</p>
           </div>
         ) : (
           <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Inbox</p>
         )}
 
-        <h1 className="mt-1 text-2xl text-stone-900">{favoritesOnly ? '收藏信件' : 'Memorial Mailroom'}</h1>
+        <h1 className="mt-1 text-2xl text-stone-900">{favoritesOnly ? '我的最愛' : 'Memorial Mailroom'}</h1>
 
         <p className="mt-3 rounded-xl border border-stone-200 bg-white/80 px-3 py-2 text-sm text-stone-700">{dailyHeaderPhrase}</p>
 
@@ -190,7 +190,7 @@ export function InboxPage({ emails, unreadEmailIds, starredEmailIds, onOpenEmail
                 : 'border-stone-300 bg-white/80 text-stone-700 hover:bg-white'
             }`}
           >
-            ★ 收藏 ({starredCount})
+            ★ {starredCount}
           </button>
           <input
             type="search"
@@ -307,8 +307,10 @@ export function InboxPage({ emails, unreadEmailIds, starredEmailIds, onOpenEmail
                         ? 'border-amber-400 bg-amber-100 text-amber-900'
                         : 'border-stone-600 text-stone-200'
                     }`}
+                    aria-label={starredEmailIds.has(selectedEmail.id) ? '取消收藏' : '加入收藏'}
+                    title={starredEmailIds.has(selectedEmail.id) ? '取消收藏' : '加入收藏'}
                   >
-                    {starredEmailIds.has(selectedEmail.id) ? '★ 已收藏' : '☆ 收藏'}
+                    {starredEmailIds.has(selectedEmail.id) ? '★' : '☆'}
                   </button>
                   <button
                     type="button"

@@ -13,13 +13,17 @@ type SpreadPosition = (typeof SPREAD_POSITIONS)[number];
 
 interface ModalState {
   card: TarotCard;
-  position: SpreadPosition;
+  position: SpreadPosition | '閱覽室';
   phase: CardPhase;
 }
 
 // ─── TarotPage ───────────────────────────────────────────────────────────────
 
-export function TarotPage() {
+export type TarotPageProps = {
+  tarotGalleryImageUrl?: string;
+};
+
+export function TarotPage({ tarotGalleryImageUrl }: TarotPageProps) {
   const basePath = `${import.meta.env.BASE_URL}tarot/`;
   const today = todayDateKey();
 
@@ -29,8 +33,9 @@ export function TarotPage() {
   );
 
   const [modal, setModal] = useState<ModalState | null>(null);
+  const [showGallery, setShowGallery] = useState(false);
 
-  function openCard(card: TarotCard, position: SpreadPosition) {
+  function openCard(card: TarotCard, position: SpreadPosition | '閱覽室') {
     setModal({ card, position, phase: 'image' });
   }
 
@@ -55,10 +60,24 @@ export function TarotPage() {
     setModal({ ...modal, phase: 'image' });
   }
 
+  if (showGallery) {
+    return (
+      <TarotGallery
+        basePath={basePath}
+        onOpenCard={(card) => openCard(card, '閱覽室')}
+        onBack={() => setShowGallery(false)}
+        modal={modal}
+        onAdvance={advancePhase}
+        onFlipBack={flipBack}
+        onCloseModal={() => setModal(null)}
+      />
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-xl space-y-4">
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
+      <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Tarot</p>
         <h1 className="mt-1 text-2xl text-stone-900">今日牌陣</h1>
         <p className="mt-0.5 text-sm text-stone-500">{today.replace(/-/g, ' · ')}</p>
@@ -109,6 +128,35 @@ export function TarotPage() {
         點擊牌卡翻牌 · 每日牌陣由日期決定 · 有 ✦ 的牌可再翻一面
       </p>
 
+      {/* ── Gallery entry ───────────────────────────────────────────────── */}
+      <button
+        type="button"
+        onClick={() => setShowGallery(true)}
+        className="group relative w-full overflow-hidden rounded-2xl border border-stone-300/70 shadow-md transition-all duration-150 active:scale-95"
+        style={{ minHeight: '120px' }}
+      >
+        {tarotGalleryImageUrl ? (
+          <img
+            src={tarotGalleryImageUrl}
+            alt="進入卡牌閱覽室"
+            className="h-full w-full object-cover"
+            style={{ maxHeight: '200px' }}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 bg-stone-100/90 py-8">
+            <span className="text-3xl">🃏</span>
+            <p className="text-sm text-stone-500">卡牌閱覽室</p>
+            <p className="text-xs text-stone-400">點此瀏覽全部 22 張牌</p>
+          </div>
+        )}
+        {tarotGalleryImageUrl && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/30 opacity-0 transition-opacity group-active:opacity-100">
+            <span className="text-2xl">🃏</span>
+            <p className="text-sm font-medium text-white">進入閱覽室</p>
+          </div>
+        )}
+      </button>
+
       {/* ── Modal ───────────────────────────────────────────────────────── */}
       {modal && (
         <CardModal
@@ -117,6 +165,91 @@ export function TarotPage() {
           onAdvance={advancePhase}
           onFlipBack={flipBack}
           onClose={() => setModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── TarotGallery ────────────────────────────────────────────────────────────
+
+function TarotGallery({
+  basePath,
+  onOpenCard,
+  onBack,
+  modal,
+  onAdvance,
+  onFlipBack,
+  onCloseModal,
+}: {
+  basePath: string;
+  onOpenCard: (card: TarotCard) => void;
+  onBack: () => void;
+  modal: ModalState | null;
+  onAdvance: () => void;
+  onFlipBack: () => void;
+  onCloseModal: () => void;
+}) {
+  const allCards = cardsData as TarotCard[];
+
+  return (
+    <div className="mx-auto w-full max-w-xl space-y-4 pb-6">
+      {/* Header */}
+      <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-xs text-stone-600 transition active:scale-95"
+          >
+            ← 返回
+          </button>
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Tarot Gallery</p>
+            <h1 className="text-xl text-stone-900">卡牌閱覽室</h1>
+          </div>
+        </div>
+        <p className="mt-1 text-xs text-stone-400">共 {allCards.length} 張 · 點任一張牌進入完整流程</p>
+      </header>
+
+      {/* Grid */}
+      <div className="grid grid-cols-3 gap-3 px-1">
+        {allCards.map((card) => (
+          <button
+            key={card.id}
+            type="button"
+            onClick={() => onOpenCard(card)}
+            className="group flex flex-col items-center gap-1.5"
+          >
+            <div className="relative w-full overflow-hidden rounded-xl border border-stone-300/70 shadow-sm transition-all duration-150 group-active:scale-95 group-active:shadow-sm">
+              <img
+                src={`${basePath}${card.image}`}
+                alt={card.name}
+                className="h-auto w-full object-cover"
+                loading="lazy"
+              />
+              {card.bonus && (
+                <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[9px] text-white shadow">
+                  ✦
+                </span>
+              )}
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] font-medium text-stone-600">{card.number}</p>
+              <p className="text-[10px] text-stone-700">{card.name}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Modal */}
+      {modal && (
+        <CardModal
+          modal={modal}
+          basePath={basePath}
+          onAdvance={onAdvance}
+          onFlipBack={onFlipBack}
+          onClose={onCloseModal}
         />
       )}
     </div>

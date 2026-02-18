@@ -41,6 +41,8 @@ export type AppSettings = {
   calendarCellRadius: number;
   calendarCellShadow: number;
   calendarCellDepth: number;
+  tarotGalleryImageUrl: string;
+  letterFontUrl: string;
 };
 
 export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
@@ -73,4 +75,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   calendarCellRadius: 16,
   calendarCellShadow: 68,
   calendarCellDepth: 70,
+  tarotGalleryImageUrl: '',
+  letterFontUrl: '',
 };
