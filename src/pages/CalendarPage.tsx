@@ -186,7 +186,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
                   ? 'border-stone-200 bg-stone-100/70 text-stone-500 hover:border-stone-300'
                   : locked
                     ? 'border-stone-300 bg-stone-100/80 text-stone-500 hover:border-stone-400'
-                    : 'border-orange-200 bg-orange-50 text-stone-800 hover:border-orange-300'
+                    : 'calendar-day-unlocked'
               }`}
               title={
                 !hasMessage

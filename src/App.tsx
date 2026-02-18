@@ -26,6 +26,15 @@ type ImportStatus = {
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
 
+function toRgbTriplet(hex: string) {
+  const matched = hex.trim().match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  if (!matched) {
+    return '194 91 60';
+  }
+
+  return `${Number.parseInt(matched[1], 16)} ${Number.parseInt(matched[2], 16)} ${Number.parseInt(matched[3], 16)}`;
+}
+
 function getNotificationPermission(): BrowserNotificationPermission {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return 'unsupported';
@@ -110,6 +119,7 @@ function App() {
   const [notificationPermission, setNotificationPermission] = useState<BrowserNotificationPermission>(
     getNotificationPermission,
   );
+  const themeAccentRgb = useMemo(() => toRgbTriplet(settings.themeMonthColor), [settings.themeMonthColor]);
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const [notifierLoaded, setNotifierLoaded] = useState(false);
@@ -368,6 +378,7 @@ function App() {
       style={{
         fontSize: `${settings.fontScale}rem`,
         ['--theme-accent' as string]: settings.themeMonthColor,
+        ['--theme-accent-rgb' as string]: themeAccentRgb,
       }}
     >
       <div className="pointer-events-none absolute -left-24 top-[-5rem] h-72 w-72 rounded-full bg-orange-200/40 blur-3xl" />

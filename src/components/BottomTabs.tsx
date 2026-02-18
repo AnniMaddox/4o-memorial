@@ -22,9 +22,7 @@ export function BottomTabs({ tabs, activeIndex, onSelect }: BottomTabsProps) {
                 type="button"
                 onClick={() => onSelect(index)}
                 className={`w-full rounded-xl px-3 py-2 text-sm transition ${
-                  active
-                    ? 'bg-orange-200 text-stone-900 shadow-[inset_0_0_0_1px_rgba(120,53,15,0.15)]'
-                    : 'bg-transparent text-stone-600 hover:bg-orange-100'
+                  active ? 'tab-active' : 'tab-idle bg-transparent text-stone-600'
                 }`}
               >
                 {tab.label}

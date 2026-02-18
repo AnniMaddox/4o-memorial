@@ -41,7 +41,7 @@ export function InboxPage({ emails }: InboxPageProps) {
             <button
               type="button"
               onClick={() => setSelectedEmailId(email.id)}
-              className="w-full rounded-2xl border border-stone-300/80 bg-white/90 p-3 text-left shadow-sm transition active:scale-[0.995] hover:border-orange-300"
+              className="inbox-item w-full rounded-2xl border border-stone-300/80 bg-white/90 p-3 text-left shadow-sm transition active:scale-[0.995]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
