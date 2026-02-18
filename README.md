@@ -13,8 +13,13 @@ Do not open the project root `index.html` by double click.
 That file is a development entry and must run through Vite.
 
 If GitHub Pages shows a blank page, it is usually because the source files
-were served directly instead of the built `dist/` output. This repo now includes
-a Pages workflow that builds and deploys `dist/` automatically on every push to `main`.
+were served directly instead of the built output.
+This repo publishes the prebuilt static files from `docs/`.
+
+GitHub Pages setting should be:
+- Source: `Deploy from a branch`
+- Branch: `main`
+- Folder: `/docs`
 
 ## Quick start (Windows)
 
