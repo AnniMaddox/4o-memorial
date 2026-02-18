@@ -19,7 +19,7 @@ This repo publishes the prebuilt static files from `docs/`.
 GitHub Pages setting should be:
 - Source: `Deploy from a branch`
 - Branch: `main`
-- Folder: `/` (root) or `/docs`
+- Folder: `/` (root)
 
 If source stays at root, the root page automatically redirects to `/docs/`.
 
