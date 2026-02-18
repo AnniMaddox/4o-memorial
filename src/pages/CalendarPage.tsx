@@ -15,12 +15,6 @@ type CalendarPageProps = {
   onMonthChange: (monthKey: string) => void;
 };
 
-type TapState = {
-  date: string | null;
-  count: number;
-  atMs: number;
-};
-
 type HoverPreview = {
   dateKey: string;
   phrase: string;
@@ -55,7 +49,6 @@ export function CalendarPage({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [temporaryUnlockDate, setTemporaryUnlockDate] = useState<string | null>(null);
   const [primedDateKey, setPrimedDateKey] = useState<string | null>(null);
-  const [tapState, setTapState] = useState<TapState>({ date: null, count: 0, atMs: 0 });
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
   const [hoverPhraseByDate, setHoverPhraseByDate] = useState<Record<string, string>>({});
   const [monthFadeSeed, setMonthFadeSeed] = useState(0);
@@ -140,7 +133,6 @@ export function CalendarPage({
     setSelectedDate(null);
     setTemporaryUnlockDate(null);
     setPrimedDateKey(null);
-    setTapState({ date: null, count: 0, atMs: 0 });
     setHoverPreview(null);
     setMonthFadeSeed((prev) => prev + 1);
   }, [monthKey]);
@@ -203,6 +195,7 @@ export function CalendarPage({
   const selectedMessage = selectedDay?.text ?? null;
   const selectedHoverPhrase = selectedDate ? getPinnedHoverPhrase(selectedDate) : null;
   const selectedUnlocked = !!selectedDate && (selectedDate <= today || temporaryUnlockDate === selectedDate);
+  const hoverPreviewLocked = !!hoverPreview && hoverPreview.dateKey > today && temporaryUnlockDate !== hoverPreview.dateKey;
 
   const currentMonthIndex = monthKeys.findIndex((entry) => entry === monthKey);
 
@@ -236,37 +229,23 @@ export function CalendarPage({
     }
 
     clearCalendarSelection();
+    void ensureHoverPhrase(dateKey);
+    setSelectedDate(dateKey);
+  }
 
-    const nowMs = Date.now();
-    const locked = dateKey > today;
-
-    if (!locked) {
-      void ensureHoverPhrase(dateKey);
-      setSelectedDate(dateKey);
-      setTapState({ date: null, count: 0, atMs: 0 });
+  function handleHoverBubbleTap() {
+    if (!hoverPreviewLocked || !hoverPreview) {
       return;
     }
 
-    const sameDate = tapState.date === dateKey;
-    const quickEnough = nowMs - tapState.atMs < 1400;
-    const nextCount = sameDate && quickEnough ? tapState.count + 1 : 1;
-
-    setTapState({
-      date: dateKey,
-      count: nextCount,
-      atMs: nowMs,
-    });
-
-    void ensureHoverPhrase(dateKey);
-    setSelectedDate(dateKey);
-
-    if (nextCount >= 3) {
-      const approved = window.confirm('這天還沒解鎖，要提前偷看一次嗎？');
-      if (approved) {
-        setTemporaryUnlockDate(dateKey);
-      }
-      setTapState({ date: null, count: 0, atMs: 0 });
+    const approved = window.confirm('要提前解鎖這一天嗎？');
+    if (!approved) {
+      return;
     }
+
+    setTemporaryUnlockDate(hoverPreview.dateKey);
+    setSelectedDate(hoverPreview.dateKey);
+    clearCalendarSelection();
   }
 
   return (
@@ -361,7 +340,7 @@ export function CalendarPage({
                 !hasMessage
                   ? 'No message for this day'
                   : locked
-                    ? 'Tap once for phrase, tap again to open'
+                    ? 'Tap once for phrase; tap bubble to early unlock'
                     : 'Tap once for phrase, tap again to open'
               }
             >
@@ -377,7 +356,25 @@ export function CalendarPage({
 
       <div className="min-h-[4.5rem] px-2">
         {hoverPreview ? (
-          <div className="calendar-hover-bubble calendar-chat-bubble ml-1 w-fit max-w-[92%] rounded-2xl border border-stone-300/80 bg-white/94 px-4 py-2 text-sm text-stone-700 shadow-xl">
+          <div
+            className={`calendar-hover-bubble calendar-chat-bubble ml-1 w-fit max-w-[92%] rounded-2xl border px-4 py-2 text-sm text-stone-700 shadow-xl ${
+              hoverPreviewLocked ? 'calendar-hover-bubble-locked calendar-hover-bubble-clickable' : 'calendar-hover-bubble-unlocked'
+            }`}
+            onClick={hoverPreviewLocked ? handleHoverBubbleTap : undefined}
+            onKeyDown={
+              hoverPreviewLocked
+                ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleHoverBubbleTap();
+                    }
+                  }
+                : undefined
+            }
+            role={hoverPreviewLocked ? 'button' : undefined}
+            tabIndex={hoverPreviewLocked ? 0 : undefined}
+            title={hoverPreviewLocked ? '點氣泡可提前解鎖' : undefined}
+          >
             {hoverPreview.phrase}
           </div>
         ) : null}
