@@ -46,10 +46,12 @@ export function CalendarPage({
   hoverResetSeed,
   onMonthChange,
 }: CalendarPageProps) {
+  const chibiSrc = `${import.meta.env.BASE_URL}chibi.png`;
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [temporaryUnlockDate, setTemporaryUnlockDate] = useState<string | null>(null);
   const [primedDateKey, setPrimedDateKey] = useState<string | null>(null);
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
+  const [showChibi, setShowChibi] = useState(true);
   const [hoverPhraseByDate, setHoverPhraseByDate] = useState<Record<string, string>>({});
   const [monthFadeSeed, setMonthFadeSeed] = useState(0);
   const hoverPhraseByDateRef = useRef<Record<string, string>>({});
@@ -348,7 +350,7 @@ export function CalendarPage({
         })}
       </div>
 
-      <div className="min-h-[4.5rem] px-2">
+      <div className="calendar-hover-stage min-h-[4.5rem] px-2">
         {hoverPreview ? (
           <div
             className={`calendar-hover-bubble calendar-chat-bubble ml-1 w-fit max-w-[92%] rounded-2xl border px-4 py-2 text-sm text-stone-700 shadow-xl ${
@@ -371,7 +373,17 @@ export function CalendarPage({
           >
             {hoverPreview.phrase}
           </div>
-        ) : null}
+        ) : (
+          showChibi && (
+            <img
+              src={chibiSrc}
+              alt="Q版角色"
+              className="calendar-chibi pointer-events-none ml-auto mr-2 h-20 w-20 object-contain opacity-85 select-none"
+              loading="lazy"
+              onError={() => setShowChibi(false)}
+            />
+          )
+        )}
       </div>
 
       {selectedDate && (
