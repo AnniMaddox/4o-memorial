@@ -381,35 +381,43 @@ function LetterReadView({
       </div>
 
       {/* Action bar */}
-      <div className="flex shrink-0 gap-3 pt-3">
+      <div className="flex shrink-0 items-end justify-center gap-3 pt-3">
         {hasMultiple && (
           <button
             type="button"
             onClick={onPickRandom}
-            className="flex-1 rounded-xl border border-amber-300 bg-amber-50 py-3 text-sm text-amber-900 transition active:scale-95"
+            className="rounded-xl border border-amber-300 bg-amber-50 px-6 py-3 text-sm text-amber-900 transition active:scale-95"
           >
             再抽一封
           </button>
         )}
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex-1 rounded-xl border border-stone-300 bg-white/80 py-3 text-sm text-stone-600 transition active:scale-95"
-        >
-          回主頁
-        </button>
+        {/* Chibi as close button */}
+        {chibiSrc ? (
+          <button
+            type="button"
+            onClick={onClose}
+            draggable={false}
+            className="flex flex-col items-center gap-0.5 transition active:scale-90"
+            title="回主頁"
+          >
+            <img
+              src={chibiSrc}
+              alt="回主頁"
+              draggable={false}
+              className="w-20 select-none drop-shadow"
+            />
+            <span className="text-[10px] text-stone-400">回主頁</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-stone-300 bg-white/80 px-8 py-3 text-sm text-stone-600 transition active:scale-95"
+          >
+            回主頁
+          </button>
+        )}
       </div>
-
-      {/* Chibi overlay */}
-      {chibiSrc && (
-        <img
-          src={chibiSrc}
-          alt=""
-          draggable={false}
-          className="pointer-events-none fixed bottom-20 right-6 w-28 select-none"
-          style={{ zIndex: 20 }}
-        />
-      )}
     </div>
   );
 }
