@@ -18,6 +18,7 @@ import {
 } from './lib/repositories/metaRepo';
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
+import { HomePage } from './pages/HomePage';
 import { InboxPage } from './pages/InboxPage';
 import { LetterPage } from './pages/LetterPage';
 import { clearAllLetters, loadLetters, saveLetters } from './lib/letterDB';
@@ -39,6 +40,7 @@ type ImportStatus = {
   kind: 'idle' | 'working' | 'success' | 'error';
   message: string;
 };
+type LauncherAppId = 'tarot' | 'letters' | 'heart';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -57,6 +59,7 @@ const MONTH_THEME_COLORS: Record<number, string> = {
   12: '#1B1B3A',
 };
 const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
+  home: '🏠',
   inbox: '📮',
   calendar: '📅',
   tarot: '🔮',
@@ -156,6 +159,7 @@ function summarizeImport(
 
 function App() {
   const [activeTab, setActiveTab] = useState(0);
+  const [launcherApp, setLauncherApp] = useState<LauncherAppId | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -626,8 +630,17 @@ function App() {
     [onSettingChange],
   );
 
+  const onLaunchApp = useCallback((appId: LauncherAppId) => {
+    setLauncherApp(appId);
+  }, []);
+
   const pages = useMemo(
     () => [
+      {
+        id: 'home',
+        label: 'Home',
+        node: <HomePage tabIconUrls={settings.tabIconUrls} onLaunchApp={onLaunchApp} />,
+      },
       {
         id: 'inbox',
         label: 'Inbox',
@@ -657,27 +670,6 @@ function App() {
             onCalendarColorModeChange={onCalendarColorModeChange}
           />
         ),
-      },
-      {
-        id: 'tarot',
-        label: '塔羅',
-        node: <TarotPage tarotGalleryImageUrl={settings.tarotGalleryImageUrl} />,
-      },
-      {
-        id: 'letters',
-        label: '情書',
-        node: (
-          <LetterPage
-            letters={letters}
-            chatProfiles={chatProfiles}
-            letterFontFamily={letterFontFamily}
-          />
-        ),
-      },
-      {
-        id: 'heart',
-        label: 'MY LOVE',
-        node: <HeartWallPage />,
       },
       {
         id: 'settings',
@@ -722,6 +714,7 @@ function App() {
       monthCount,
       monthAccentColor,
       notificationPermission,
+      onLaunchApp,
       onOpenEmail,
       onToggleEmailStar,
       onHoverToneWeightChange,
@@ -741,7 +734,6 @@ function App() {
       visibleEmailCount,
       letters,
       chatProfiles,
-      letterFontFamily,
       handleImportLetterFiles,
       handleImportLetterFolderFiles,
       handleClearAllLetters,
@@ -806,22 +798,87 @@ function App() {
           <SwipePager
             activeIndex={activeTab}
             onIndexChange={setActiveTab}
-            swipeEnabled={settings.swipeEnabled}
+            swipeEnabled={settings.swipeEnabled && !launcherApp && activeTab !== 0}
             pages={pages.map((page) => ({ id: page.id, node: page.node }))}
           />
-          <BottomTabs
-            activeIndex={activeTab}
-            onSelect={setActiveTab}
-            tabs={pages.map((page) => {
-              const tabId = page.id as TabIconKey;
-              return {
-                id: page.id,
-                label: page.label,
-                icon: DEFAULT_TAB_ICONS[tabId] ?? '•',
-                iconUrl: settings.tabIconUrls[tabId] || undefined,
-              };
-            })}
-          />
+          {!launcherApp && (
+            <BottomTabs
+              activeIndex={activeTab}
+              onSelect={setActiveTab}
+              tabs={pages.map((page) => {
+                const tabId = page.id as TabIconKey;
+                return {
+                  id: page.id,
+                  label: page.label,
+                  icon: DEFAULT_TAB_ICONS[tabId] ?? '•',
+                  iconUrl: settings.tabIconUrls[tabId] || undefined,
+                };
+              })}
+            />
+          )}
+
+          {launcherApp === 'tarot' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ← 返回
+                  </button>
+                  <p className="text-sm text-white/85">塔羅</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+                  <TarotPage tarotGalleryImageUrl={settings.tarotGalleryImageUrl} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'letters' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ← 返回
+                  </button>
+                  <p className="text-sm text-white/85">情書</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+                  <LetterPage letters={letters} chatProfiles={chatProfiles} letterFontFamily={letterFontFamily} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'heart' && (
+            <div className="fixed inset-0 z-30 bg-black/65 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ← 返回
+                  </button>
+                  <p className="text-sm text-white/85">心牆</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden pt-3">
+                  <HeartWallPage />
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

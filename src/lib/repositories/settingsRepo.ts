@@ -26,6 +26,7 @@ function normalizeBackgroundMode(value: unknown, fallback: BackgroundMode): Back
 function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrls {
   const input = (value && typeof value === 'object' ? value : {}) as Partial<TabIconUrls>;
   return {
+    home: normalizeString(input.home, fallback.home),
     inbox: normalizeString(input.inbox, fallback.inbox),
     calendar: normalizeString(input.calendar, fallback.calendar),
     tarot: normalizeString(input.tarot, fallback.tarot),

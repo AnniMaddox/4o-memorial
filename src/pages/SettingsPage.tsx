@@ -34,6 +34,7 @@ type SettingsPageProps = {
 type PanelKey = 'overview' | 'appearance' | 'tabIcons' | 'notification' | 'imports' | 'hover' | 'letters' | 'tarot' | 'maintenance';
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
+  home: '🏠',
   inbox: '📮',
   calendar: '📅',
   tarot: '🔮',
@@ -43,6 +44,7 @@ const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
 };
 
 const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
+  { key: 'home', label: 'Home' },
   { key: 'inbox', label: 'Inbox' },
   { key: 'calendar', label: 'Calendar' },
   { key: 'tarot', label: 'Tarot' },
@@ -206,6 +208,7 @@ export function SettingsPage({
 
   function saveTabIcons() {
     const next: TabIconUrls = {
+      home: tabIconDrafts.home.trim(),
       inbox: tabIconDrafts.inbox.trim(),
       calendar: tabIconDrafts.calendar.trim(),
       tarot: tabIconDrafts.tarot.trim(),
@@ -284,6 +287,7 @@ export function SettingsPage({
       if (source.tabIconUrls && typeof source.tabIconUrls === 'object') {
         const input = source.tabIconUrls as Partial<TabIconUrls>;
         next.tabIconUrls = {
+          home: typeof input.home === 'string' ? input.home.trim() : '',
           inbox: typeof input.inbox === 'string' ? input.inbox.trim() : '',
           calendar: typeof input.calendar === 'string' ? input.calendar.trim() : '',
           tarot: typeof input.tarot === 'string' ? input.tarot.trim() : '',
