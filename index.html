@@ -10,12 +10,19 @@
       (function redirectGithubPagesRoot() {
         var isGithubPages = window.location.hostname.endsWith('github.io');
         var repoBase = '/4o-memorial';
-        var isRoot = window.location.pathname === repoBase || window.location.pathname === repoBase + '/';
+        var pathname = window.location.pathname;
+        var isRoot =
+          pathname === repoBase ||
+          pathname === repoBase + '/' ||
+          pathname === repoBase + '/index.html';
         if (isGithubPages && isRoot) {
           window.location.replace(repoBase + '/docs/');
         }
       })();
     </script>
+    <noscript>
+      <meta http-equiv="refresh" content="0;url=/4o-memorial/docs/" />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>
