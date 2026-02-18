@@ -132,6 +132,14 @@ export type LetterPageProps = {
   letterFontFamily: string;
 };
 
+const CHIBI_COUNT = 35;
+const BASE = import.meta.env.BASE_URL as string;
+
+function randomChibiSrc() {
+  const idx = Math.floor(Math.random() * CHIBI_COUNT) + 1;
+  return `${BASE}chibi/chibi-${String(idx).padStart(2, '0')}.png`;
+}
+
 export function LetterPage({ letters, chatProfiles, letterFontFamily }: LetterPageProps) {
   const [content, setContent] = useState('');
   const [fileName, setFileName] = useState('');
@@ -139,6 +147,7 @@ export function LetterPage({ letters, chatProfiles, letterFontFamily }: LetterPa
   const [animKey, setAnimKey] = useState(0);
   const [chatMode, setChatMode] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
+  const [chibiSrc, setChibiSrc] = useState('');
 
   const selectedProfile = chatProfiles.find((p) => p.id === selectedProfileId) ?? null;
 
@@ -147,6 +156,7 @@ export function LetterPage({ letters, chatProfiles, letterFontFamily }: LetterPa
     setFileName(letter.name);
     setIsReading(true);
     setAnimKey((k) => k + 1);
+    setChibiSrc(randomChibiSrc());
   }
 
   const pickRandom = useCallback(() => {
@@ -167,8 +177,9 @@ export function LetterPage({ letters, chatProfiles, letterFontFamily }: LetterPa
         selectedProfileId={selectedProfileId}
         selectedProfile={selectedProfile}
         letterFontFamily={letterFontFamily}
+        chibiSrc={chibiSrc}
         onPickRandom={pickRandom}
-        onClose={() => setIsReading(false)}
+        onClose={() => { setIsReading(false); setChibiSrc(''); }}
         onToggleChatMode={() => setChatMode((m) => !m)}
         onSelectProfile={setSelectedProfileId}
       />
@@ -238,6 +249,7 @@ function LetterReadView({
   selectedProfileId,
   selectedProfile,
   letterFontFamily,
+  chibiSrc,
   onPickRandom,
   onClose,
   onToggleChatMode,
@@ -252,6 +264,7 @@ function LetterReadView({
   selectedProfileId: string;
   selectedProfile: ChatProfile | null;
   letterFontFamily: string;
+  chibiSrc: string;
   onPickRandom: () => void;
   onClose: () => void;
   onToggleChatMode: () => void;
@@ -386,6 +399,17 @@ function LetterReadView({
           回主頁
         </button>
       </div>
+
+      {/* Chibi overlay */}
+      {chibiSrc && (
+        <img
+          src={chibiSrc}
+          alt=""
+          draggable={false}
+          className="pointer-events-none fixed bottom-20 right-6 w-28 select-none"
+          style={{ zIndex: 20 }}
+        />
+      )}
     </div>
   );
 }

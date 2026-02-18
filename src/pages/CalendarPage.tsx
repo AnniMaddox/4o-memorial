@@ -341,6 +341,17 @@ export function CalendarPage({
     setHoverPreview(null);
   }
 
+  function rotateChibiOnDateTap() {
+    if (chibiSources.length <= 1) {
+      return;
+    }
+
+    setChibiIndex((current) => {
+      const randomIndex = Math.floor(Math.random() * chibiSources.length);
+      return randomIndex === current ? (current + 1) % chibiSources.length : randomIndex;
+    });
+  }
+
   function openDateContent(dateKey: string, forceUnlocked = false) {
     const messages = getMessagesForDate(dateKey);
     if (!messages.length) {
@@ -361,6 +372,8 @@ export function CalendarPage({
   }
 
   function handleDateTap(dateKey: string, messageCount: number) {
+    rotateChibiOnDateTap();
+
     if (primedDateKey !== dateKey) {
       setPrimedDateKey(dateKey);
       void showHoverPreview(dateKey);
@@ -390,14 +403,6 @@ export function CalendarPage({
     clearCalendarSelection();
     void ensureHoverPhrase(hoverPreview.dateKey);
     openDateContent(hoverPreview.dateKey, true);
-  }
-
-  function cycleChibi() {
-    if (chibiSources.length <= 1) {
-      return;
-    }
-
-    setChibiIndex((current) => (current + 1) % chibiSources.length);
   }
 
   return (
@@ -591,21 +596,9 @@ export function CalendarPage({
           <img
             src={chibiSources[chibiIndex]}
             alt="Q版角色"
-            className={`calendar-chibi mt-2 h-28 w-28 object-contain opacity-90 select-none ${
-              chibiSources.length > 1 ? 'calendar-chibi-clickable' : 'pointer-events-none'
-            }`}
+            className="calendar-chibi mt-2 h-28 w-28 object-contain opacity-90 select-none"
             loading="lazy"
-            onClick={cycleChibi}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                cycleChibi();
-              }
-            }}
             onError={() => setShowChibi(false)}
-            role={chibiSources.length > 1 ? 'button' : undefined}
-            tabIndex={chibiSources.length > 1 ? 0 : undefined}
-            title={chibiSources.length > 1 ? '點我換下一張' : undefined}
           />
         )}
       </div>
