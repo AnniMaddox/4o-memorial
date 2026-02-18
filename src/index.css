@@ -9,6 +9,7 @@
   background-color: #f6f1e8;
   --theme-accent: #c25b3c;
   --theme-accent-rgb: 194 91 60;
+  --app-text-rgb: 31 41 55;
   --tab-accent-rgb: 194 91 60;
   --calendar-accent-rgb: 194 91 60;
   --calendar-header-accent-rgb: 194 91 60;
@@ -101,6 +102,29 @@ textarea {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.app-shell {
+  color: rgb(var(--app-text-rgb) / 1);
+}
+
+/* Let one color control the common stone text utilities across pages. */
+.app-shell [class*='text-stone-9'],
+.app-shell [class*='text-stone-8'] {
+  color: rgb(var(--app-text-rgb) / 1) !important;
+}
+
+.app-shell [class*='text-stone-7'] {
+  color: rgb(var(--app-text-rgb) / 0.9) !important;
+}
+
+.app-shell [class*='text-stone-6'] {
+  color: rgb(var(--app-text-rgb) / 0.78) !important;
+}
+
+.app-shell [class*='text-stone-5'],
+.app-shell [class*='text-stone-4'] {
+  color: rgb(var(--app-text-rgb) / 0.64) !important;
 }
 
 .tab-active {

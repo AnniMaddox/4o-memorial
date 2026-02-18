@@ -51,6 +51,7 @@ export const DEFAULT_APP_LABELS: AppLabels = {
 
 export type AppSettings = {
   themeMonthColor: string;
+  globalTextColor: string;
   calendarColorMode: CalendarColorMode;
   lockedBubbleColor: string;
   chatBubbleStyle: ChatBubbleStyle;
@@ -99,6 +100,7 @@ export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   themeMonthColor: '#c25b3c',
+  globalTextColor: '#1f2937',
   calendarColorMode: 'month',
   lockedBubbleColor: '#d2f0ff',
   chatBubbleStyle: 'jelly',

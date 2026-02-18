@@ -67,6 +67,7 @@ export async function getSettings() {
   return {
     ...DEFAULT_SETTINGS,
     ...persisted,
+    globalTextColor: normalizeString(persisted.globalTextColor, DEFAULT_SETTINGS.globalTextColor),
     calendarColorMode: normalizeCalendarColorMode(
       persisted.calendarColorMode,
       DEFAULT_SETTINGS.calendarColorMode,

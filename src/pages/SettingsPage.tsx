@@ -91,6 +91,7 @@ type AppearancePresetPayload = {
   savedAt: string;
   appearance: {
     themeMonthColor: string;
+    globalTextColor: string;
     calendarColorMode: AppSettings['calendarColorMode'];
     lockedBubbleColor: string;
     chatBubbleStyle: AppSettings['chatBubbleStyle'];
@@ -340,6 +341,7 @@ export function SettingsPage({
       savedAt: new Date().toISOString(),
       appearance: {
         themeMonthColor: settings.themeMonthColor,
+        globalTextColor: settings.globalTextColor,
         calendarColorMode: settings.calendarColorMode,
         lockedBubbleColor: settings.lockedBubbleColor,
         chatBubbleStyle: settings.chatBubbleStyle,
@@ -390,6 +392,9 @@ export function SettingsPage({
 
       if (typeof source.themeMonthColor === 'string') {
         next.themeMonthColor = source.themeMonthColor;
+      }
+      if (typeof source.globalTextColor === 'string') {
+        next.globalTextColor = source.globalTextColor;
       }
       if (source.calendarColorMode === 'month' || source.calendarColorMode === 'custom') {
         next.calendarColorMode = source.calendarColorMode;
@@ -643,6 +648,16 @@ export function SettingsPage({
                 type="color"
                 value={settings.themeMonthColor}
                 onChange={(event) => onSettingChange({ themeMonthColor: event.target.value })}
+                className="h-10 w-full rounded-md border border-stone-300"
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span>全域字體顏色</span>
+              <input
+                type="color"
+                value={settings.globalTextColor}
+                onChange={(event) => onSettingChange({ globalTextColor: event.target.value })}
                 className="h-10 w-full rounded-md border border-stone-300"
               />
             </label>

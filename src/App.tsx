@@ -207,6 +207,7 @@ function App() {
     [settings.appLabels],
   );
   const themeAccentRgb = useMemo(() => toRgbTriplet(appAccentColor), [appAccentColor]);
+  const globalTextRgb = useMemo(() => toRgbTriplet(settings.globalTextColor), [settings.globalTextColor]);
   const calendarAccentRgb = useMemo(() => toRgbTriplet(calendarAccentColor), [calendarAccentColor]);
   const calendarHeaderAccentRgb = useMemo(() => toRgbTriplet(calendarHeaderColor), [calendarHeaderColor]);
   const lockedBubbleRgb = useMemo(() => toRgbTriplet(settings.lockedBubbleColor), [settings.lockedBubbleColor]);
@@ -856,7 +857,7 @@ function App() {
 
   return (
     <div
-      className="relative h-dvh w-full overflow-hidden"
+      className="app-shell relative h-dvh w-full overflow-hidden"
       data-chat-style={settings.chatBubbleStyle}
       style={{
         backgroundImage: appBackgroundImage,
@@ -866,6 +867,7 @@ function App() {
         fontSize: `${settings.fontScale}rem`,
         ['--theme-accent' as string]: appAccentColor,
         ['--theme-accent-rgb' as string]: themeAccentRgb,
+        ['--app-text-rgb' as string]: globalTextRgb,
         ['--tab-accent-rgb' as string]: themeAccentRgb,
         ['--calendar-accent-rgb' as string]: calendarAccentRgb,
         ['--calendar-header-accent-rgb' as string]: calendarHeaderAccentRgb,
