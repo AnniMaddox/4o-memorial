@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import type { AppSettings } from '../types/settings';
 
 type SettingsPageProps = {
@@ -34,6 +36,21 @@ export function SettingsPage({
   onReshuffleHoverPhrases,
   onRefresh,
 }: SettingsPageProps) {
+  const [fontUrlDraft, setFontUrlDraft] = useState(settings.customFontCssUrl);
+  const [fontFamilyDraft, setFontFamilyDraft] = useState(settings.customFontFamily);
+
+  useEffect(() => {
+    setFontUrlDraft(settings.customFontCssUrl);
+    setFontFamilyDraft(settings.customFontFamily);
+  }, [settings.customFontCssUrl, settings.customFontFamily]);
+
+  function applyFontSettings() {
+    onSettingChange({
+      customFontCssUrl: fontUrlDraft.trim(),
+      customFontFamily: fontFamilyDraft.trim(),
+    });
+  }
+
   const notificationLabel =
     notificationPermission === 'unsupported'
       ? '此瀏覽器不支援'
@@ -104,6 +121,53 @@ export function SettingsPage({
             className="w-full"
           />
         </label>
+
+        <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3 text-sm text-stone-700">
+          <p className="text-sm text-stone-800">字體替換（整站）</p>
+          <label className="block space-y-1">
+            <span className="text-xs text-stone-600">字體 CSS 網址</span>
+            <input
+              type="url"
+              value={fontUrlDraft}
+              onChange={(event) => setFontUrlDraft(event.target.value)}
+              placeholder="https://fonts.googleapis.com/css2?family=..."
+              className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs text-stone-600">字體名稱（font-family）</span>
+            <input
+              type="text"
+              value={fontFamilyDraft}
+              onChange={(event) => setFontFamilyDraft(event.target.value)}
+              placeholder="Noto Sans TC"
+              className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+            />
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={applyFontSettings}
+              className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+            >
+              套用字體
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFontUrlDraft('');
+                setFontFamilyDraft('');
+                onSettingChange({
+                  customFontCssUrl: '',
+                  customFontFamily: '',
+                });
+              }}
+              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+            >
+              還原預設
+            </button>
+          </div>
+        </div>
 
         <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3 text-sm text-stone-700">
           <p className="text-sm text-stone-800">月曆立體外觀</p>

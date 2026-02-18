@@ -12,7 +12,10 @@ type BottomTabsProps = {
 export function BottomTabs({ tabs, activeIndex, onSelect }: BottomTabsProps) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-300/70 bg-amber-50/90 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur">
-      <ul className="mx-auto grid w-full max-w-xl grid-cols-3 gap-2">
+      <ul
+        className="mx-auto grid w-full max-w-xl gap-2"
+        style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}
+      >
         {tabs.map((tab, index) => {
           const active = index === activeIndex;
 

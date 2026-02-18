@@ -2,7 +2,9 @@
 @import 'tailwindcss';
 
 :root {
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --app-font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --app-heading-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  font-family: var(--app-font-family);
   color: #262626;
   background-color: #f6f1e8;
   --theme-accent: #c25b3c;
@@ -19,12 +21,21 @@
 h1,
 h2,
 h3 {
-  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  font-family: var(--app-heading-family);
   letter-spacing: 0.01em;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* ── Tarot card text fade-in (used when switching text ↔ bonus phases) ─────── */
+@keyframes tarot-text-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tarot-text-fade {
+  animation: tarot-text-fade 0.25s ease forwards;
 }
 
 html,
@@ -62,6 +73,37 @@ textarea {
 
 .tab-idle:hover {
   background: rgb(var(--theme-accent-rgb) / 0.12);
+}
+
+.calendar-nav-btn {
+  border: 1px solid rgb(var(--theme-accent-rgb) / 0.5);
+  background: linear-gradient(145deg, rgb(255 255 255 / 0.92), rgb(var(--theme-accent-rgb) / 0.2));
+  box-shadow:
+    0 4px 10px rgb(0 0 0 / 0.08),
+    inset 0 1px 0 rgb(255 255 255 / 0.86),
+    inset 0 -1px 0 rgb(0 0 0 / 0.08);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    filter 0.16s ease;
+}
+
+.calendar-nav-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow:
+    0 6px 14px rgb(0 0 0 / 0.11),
+    inset 0 1px 0 rgb(255 255 255 / 0.92),
+    inset 0 -1px 0 rgb(0 0 0 / 0.1);
+}
+
+.calendar-nav-btn:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.99);
+}
+
+.calendar-nav-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .calendar-day-unlocked {
@@ -240,8 +282,10 @@ textarea {
 }
 
 .calendar-hover-stage {
-  display: grid;
-  align-items: end;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .calendar-chibi {

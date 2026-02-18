@@ -11,6 +11,10 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
   return Math.min(max, Math.max(min, value));
 }
 
+function normalizeString(value: unknown, fallback = '') {
+  return typeof value === 'string' ? value : fallback;
+}
+
 export async function getSettings() {
   const db = await getDb();
   const row = await db.get('settings', 'app');
@@ -42,6 +46,8 @@ export async function getSettings() {
       100,
       DEFAULT_SETTINGS.calendarCellDepth,
     ),
+    customFontCssUrl: normalizeString(persisted.customFontCssUrl, DEFAULT_SETTINGS.customFontCssUrl),
+    customFontFamily: normalizeString(persisted.customFontFamily, DEFAULT_SETTINGS.customFontFamily),
   };
 }
 

@@ -59,6 +59,7 @@ export function CalendarPage({
   const [temporaryUnlockDate, setTemporaryUnlockDate] = useState<string | null>(null);
   const [primedDateKey, setPrimedDateKey] = useState<string | null>(null);
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [chibiIndex, setChibiIndex] = useState(0);
   const [showChibi, setShowChibi] = useState(true);
   const [hoverPhraseByDate, setHoverPhraseByDate] = useState<Record<string, string>>({});
@@ -140,6 +141,7 @@ export function CalendarPage({
     setTemporaryUnlockDate(null);
     setPrimedDateKey(null);
     setHoverPreview(null);
+    setMonthPickerOpen(false);
     setMonthFadeSeed((prev) => prev + 1);
   }, [monthKey]);
 
@@ -202,8 +204,22 @@ export function CalendarPage({
   const selectedHoverPhrase = selectedDate ? getPinnedHoverPhrase(selectedDate) : null;
   const selectedUnlocked = !!selectedDate && (selectedDate <= today || temporaryUnlockDate === selectedDate);
   const hoverPreviewLocked = !!hoverPreview && hoverPreview.dateKey > today && temporaryUnlockDate !== hoverPreview.dateKey;
+  const currentMonthKey = today.slice(0, 7);
 
   const currentMonthIndex = monthKeys.findIndex((entry) => entry === monthKey);
+  const monthGroups = useMemo(() => {
+    const grouped = new Map<string, string[]>();
+
+    for (const key of monthKeys) {
+      const year = key.split('-')[0] ?? '';
+      if (!grouped.has(year)) {
+        grouped.set(year, []);
+      }
+      grouped.get(year)?.push(key);
+    }
+
+    return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [monthKeys]);
 
   function goToNeighborMonth(offset: -1 | 1) {
     if (currentMonthIndex < 0) {
@@ -216,6 +232,18 @@ export function CalendarPage({
     }
 
     onMonthChange(monthKeys[nextIndex]);
+  }
+
+  function goToCurrentMonth() {
+    const target = monthKeys.includes(currentMonthKey) ? currentMonthKey : monthKeys.at(-1) ?? monthKey;
+    if (target !== monthKey) {
+      onMonthChange(target);
+    }
+  }
+
+  function monthChipLabel(key: string) {
+    const month = Number(key.split('-')[1]);
+    return Number.isInteger(month) ? `${month}月` : key;
   }
 
   function clearCalendarSelection() {
@@ -271,39 +299,70 @@ export function CalendarPage({
             type="button"
             onClick={() => goToNeighborMonth(-1)}
             disabled={currentMonthIndex <= 0}
-            className="rounded-lg border border-stone-300 px-3 py-1 text-sm text-stone-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="calendar-nav-btn rounded-lg px-3 py-1 text-sm text-stone-700"
           >
-            Prev
+            上一月
           </button>
           <h1 className="text-2xl text-stone-900">{monthLabel(monthKey)}</h1>
           <button
             type="button"
             onClick={() => goToNeighborMonth(1)}
             disabled={currentMonthIndex < 0 || currentMonthIndex >= monthKeys.length - 1}
-            className="rounded-lg border border-stone-300 px-3 py-1 text-sm text-stone-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="calendar-nav-btn rounded-lg px-3 py-1 text-sm text-stone-700"
           >
-            Next
+            下一月
           </button>
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
-          <label htmlFor="month-select" className="text-xs uppercase tracking-[0.18em] text-stone-500">
-            Month
-          </label>
-          <select
-            id="month-select"
-            value={monthKey}
-            onChange={(event) => onMonthChange(event.target.value)}
-            className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm text-stone-700"
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={goToCurrentMonth}
+            disabled={monthKey === currentMonthKey}
+            className="calendar-nav-btn rounded-lg px-3 py-1 text-sm text-stone-700"
           >
-            {monthKeys.map((entry) => (
-              <option key={entry} value={entry}>
-                {monthLabel(entry)}
-              </option>
-            ))}
-          </select>
+            回當月
+          </button>
+          <button
+            type="button"
+            onClick={() => setMonthPickerOpen((open) => !open)}
+            className="rounded-lg border border-stone-300 bg-white px-3 py-1 text-sm text-stone-700 shadow-sm"
+          >
+            {monthPickerOpen ? '收起月份' : '點選月份'}
+          </button>
         </div>
 
+        {monthPickerOpen && (
+          <div className="mt-3 max-h-52 space-y-3 overflow-y-auto rounded-xl border border-stone-300/80 bg-white/85 p-3">
+            {monthGroups.map(([year, keys]) => (
+              <div key={year} className="space-y-2">
+                <p className="text-xs font-medium text-stone-500">{year} 年</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {keys.map((key) => {
+                    const active = key === monthKey;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setMonthPickerOpen(false);
+                          onMonthChange(key);
+                        }}
+                        className={`rounded-lg border px-2 py-1 text-sm transition ${
+                          active
+                            ? 'border-stone-500 bg-stone-900 text-white'
+                            : 'border-stone-300 bg-stone-50 text-stone-700 hover:border-stone-400'
+                        }`}
+                      >
+                        {monthChipLabel(key)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </header>
 
       <div
@@ -367,10 +426,10 @@ export function CalendarPage({
         })}
       </div>
 
-      <div className="calendar-hover-stage min-h-[4.5rem] px-2">
+      <div className="calendar-hover-stage min-h-[8.5rem] px-2">
         {hoverPreview ? (
           <div
-            className={`calendar-hover-bubble calendar-chat-bubble ml-1 w-fit max-w-[92%] rounded-2xl border px-4 py-2 text-sm text-stone-700 shadow-xl ${
+            className={`calendar-hover-bubble calendar-chat-bubble w-fit max-w-[92%] rounded-2xl border px-4 py-2 text-sm text-stone-700 shadow-xl ${
               hoverPreviewLocked ? 'calendar-hover-bubble-locked calendar-hover-bubble-clickable' : 'calendar-hover-bubble-unlocked'
             }`}
             onClick={hoverPreviewLocked ? handleHoverBubbleTap : undefined}
@@ -391,27 +450,29 @@ export function CalendarPage({
             {hoverPreview.phrase}
           </div>
         ) : (
-          showChibi && (
-            <img
-              src={chibiSources[chibiIndex]}
-              alt="Q版角色"
-              className={`calendar-chibi ml-auto mr-2 h-20 w-20 object-contain opacity-85 select-none ${
-                chibiSources.length > 1 ? 'calendar-chibi-clickable' : 'pointer-events-none'
-              }`}
-              loading="lazy"
-              onClick={cycleChibi}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  cycleChibi();
-                }
-              }}
-              onError={() => setShowChibi(false)}
-              role={chibiSources.length > 1 ? 'button' : undefined}
-              tabIndex={chibiSources.length > 1 ? 0 : undefined}
-              title={chibiSources.length > 1 ? '點我換下一張' : undefined}
-            />
-          )
+          <div className="h-1" />
+        )}
+
+        {showChibi && (
+          <img
+            src={chibiSources[chibiIndex]}
+            alt="Q版角色"
+            className={`calendar-chibi mt-2 h-28 w-28 object-contain opacity-90 select-none ${
+              chibiSources.length > 1 ? 'calendar-chibi-clickable' : 'pointer-events-none'
+            }`}
+            loading="lazy"
+            onClick={cycleChibi}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                cycleChibi();
+              }
+            }}
+            onError={() => setShowChibi(false)}
+            role={chibiSources.length > 1 ? 'button' : undefined}
+            tabIndex={chibiSources.length > 1 ? 0 : undefined}
+            title={chibiSources.length > 1 ? '點我換下一張' : undefined}
+          />
         )}
       </div>
 

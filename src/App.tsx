@@ -18,6 +18,7 @@ import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
 import { InboxPage } from './pages/InboxPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { TarotPage } from './pages/TarotPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
 import type { AppSettings } from './types/settings';
 import { DEFAULT_SETTINGS } from './types/settings';
@@ -152,6 +153,11 @@ function App() {
   const effectiveThemeColor = monthAccentColor ?? settings.themeMonthColor;
   const themeAccentRgb = useMemo(() => toRgbTriplet(effectiveThemeColor), [effectiveThemeColor]);
   const lockedBubbleRgb = useMemo(() => toRgbTriplet(settings.lockedBubbleColor), [settings.lockedBubbleColor]);
+  const customFontFamily = settings.customFontFamily.trim();
+  const appFontFamily =
+    customFontFamily || "'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+  const appHeadingFamily =
+    customFontFamily || "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
   const [hoverResetSeed, setHoverResetSeed] = useState(0);
@@ -218,6 +224,28 @@ function App() {
       document.removeEventListener('visibilitychange', onVisibilityOrFocus);
     };
   }, [refreshNotificationPermission]);
+
+  useEffect(() => {
+    const href = settings.customFontCssUrl.trim();
+    const linkId = 'custom-font-css-link';
+    let link = document.getElementById(linkId) as HTMLLinkElement | null;
+
+    if (!href) {
+      if (link) {
+        link.remove();
+      }
+      return;
+    }
+
+    if (!link) {
+      link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+
+    link.href = href;
+  }, [settings.customFontCssUrl]);
 
   useEffect(() => {
     let active = true;
@@ -449,6 +477,11 @@ function App() {
         ),
       },
       {
+        id: 'tarot',
+        label: '塔羅',
+        node: <TarotPage />,
+      },
+      {
         id: 'settings',
         label: '設定',
         node: (
@@ -509,6 +542,8 @@ function App() {
         ['--theme-accent-rgb' as string]: themeAccentRgb,
         ['--locked-bubble-rgb' as string]: lockedBubbleRgb,
         ['--app-font-scale' as string]: settings.fontScale,
+        ['--app-font-family' as string]: appFontFamily,
+        ['--app-heading-family' as string]: appHeadingFamily,
         ['--calendar-cell-radius' as string]: `${settings.calendarCellRadius}px`,
         ['--calendar-cell-shadow' as string]: settings.calendarCellShadow,
         ['--calendar-cell-depth' as string]: settings.calendarCellDepth,
