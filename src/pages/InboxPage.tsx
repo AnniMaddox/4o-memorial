@@ -8,6 +8,7 @@ type InboxPageProps = {
   emails: EmailViewRecord[];
   unreadEmailIds: Set<string>;
   starredEmailIds: Set<string>;
+  inboxTitle: string;
   onOpenEmail: (emailId: string) => void;
   onToggleEmailStar: (emailId: string) => void;
 };
@@ -77,7 +78,14 @@ function stablePhraseIndex(dateKey: string, phraseCount: number) {
   return (hash >>> 0) % phraseCount;
 }
 
-export function InboxPage({ emails, unreadEmailIds, starredEmailIds, onOpenEmail, onToggleEmailStar }: InboxPageProps) {
+export function InboxPage({
+  emails,
+  unreadEmailIds,
+  starredEmailIds,
+  inboxTitle,
+  onOpenEmail,
+  onToggleEmailStar,
+}: InboxPageProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [detailExpanded, setDetailExpanded] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -176,7 +184,9 @@ export function InboxPage({ emails, unreadEmailIds, starredEmailIds, onOpenEmail
           <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Inbox</p>
         )}
 
-        <h1 className="mt-1 text-2xl text-stone-900">{favoritesOnly ? '我的最愛' : 'Memorial Mailroom'}</h1>
+        <h1 className="mt-1 text-2xl text-stone-900">
+          {favoritesOnly ? '我的最愛' : (inboxTitle.trim() || 'Memorial Mailroom')}
+        </h1>
 
         <p className="mt-3 rounded-xl border border-stone-200 bg-white/80 px-3 py-2 text-sm text-stone-700">{dailyHeaderPhrase}</p>
 

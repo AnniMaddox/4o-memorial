@@ -18,9 +18,12 @@ import {
 } from './lib/repositories/metaRepo';
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
+import { ChatLogPage } from './pages/ChatLogPage';
 import { HomePage } from './pages/HomePage';
 import { InboxPage } from './pages/InboxPage';
 import { LetterPage } from './pages/LetterPage';
+import { clearAllChatLogs, loadChatLogs, saveChatLogs } from './lib/chatLogDB';
+import type { StoredChatLog } from './lib/chatLogDB';
 import { clearAllLetters, loadLetters, saveLetters } from './lib/letterDB';
 import type { StoredLetter } from './lib/letterDB';
 import { readLetterContent } from './lib/letterReader';
@@ -40,7 +43,7 @@ type ImportStatus = {
   kind: 'idle' | 'working' | 'success' | 'error';
   message: string;
 };
-type LauncherAppId = 'tarot' | 'letters' | 'heart';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -196,6 +199,7 @@ function App() {
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
   const [hoverResetSeed, setHoverResetSeed] = useState(0);
   const [letters, setLetters] = useState<StoredLetter[]>([]);
+  const [chatLogs, setChatLogs] = useState<StoredChatLog[]>([]);
   const [chatProfiles, setChatProfiles] = useState<ChatProfile[]>([]);
   const backgroundImageUrl = settings.backgroundImageUrl.trim();
   const backgroundOverlay = Math.min(0.9, Math.max(0, settings.backgroundImageOverlay / 100));
@@ -265,6 +269,13 @@ function App() {
       .catch(() => {});
   }, []);
 
+  // Load persisted chat logs
+  useEffect(() => {
+    loadChatLogs()
+      .then(setChatLogs)
+      .catch(() => {});
+  }, []);
+
   // Load chat profiles
   useEffect(() => {
     loadChatProfiles()
@@ -306,6 +317,49 @@ function App() {
     await saveLetters(imported);
     const updated = await loadLetters();
     setLetters(updated);
+  }, []);
+
+  const handleImportChatLogFiles = useCallback(async (files: File[]) => {
+    const now = Date.now();
+    const imported: StoredChatLog[] = [];
+    for (const file of files) {
+      try {
+        const content = await readLetterContent(file);
+        if (content.trim()) {
+          imported.push({ name: file.name, content, importedAt: now });
+        }
+      } catch {
+        // skip unreadable files
+      }
+    }
+    if (!imported.length) return;
+    await saveChatLogs(imported);
+    const updated = await loadChatLogs();
+    setChatLogs(updated);
+  }, []);
+
+  const handleImportChatLogFolderFiles = useCallback(async (files: File[]) => {
+    const now = Date.now();
+    const imported: StoredChatLog[] = [];
+    for (const file of files) {
+      try {
+        const content = await readLetterContent(file);
+        if (content.trim()) {
+          imported.push({ name: file.name, content, importedAt: now });
+        }
+      } catch {
+        // skip unreadable files
+      }
+    }
+    if (!imported.length) return;
+    await saveChatLogs(imported);
+    const updated = await loadChatLogs();
+    setChatLogs(updated);
+  }, []);
+
+  const handleClearAllChatLogs = useCallback(async () => {
+    await clearAllChatLogs();
+    setChatLogs([]);
   }, []);
 
   const handleClearAllLetters = useCallback(async () => {
@@ -639,7 +693,19 @@ function App() {
       {
         id: 'home',
         label: 'Home',
-        node: <HomePage tabIconUrls={settings.tabIconUrls} onLaunchApp={onLaunchApp} />,
+        node: (
+          <HomePage
+            tabIconUrls={settings.tabIconUrls}
+            widgetTitle={settings.homeWidgetTitle}
+            widgetSubtitle={settings.homeWidgetSubtitle}
+            widgetBadgeText={settings.homeWidgetBadgeText}
+            widgetIconDataUrl={settings.homeWidgetIconDataUrl}
+            onLaunchApp={onLaunchApp}
+            onWidgetIconChange={(dataUrl) => {
+              void onSettingChange({ homeWidgetIconDataUrl: dataUrl });
+            }}
+          />
+        ),
       },
       {
         id: 'inbox',
@@ -649,6 +715,7 @@ function App() {
             emails={emails}
             unreadEmailIds={unreadEmailIds}
             starredEmailIds={starredEmailIds}
+            inboxTitle={settings.inboxTitle}
             onOpenEmail={onOpenEmail}
             onToggleEmailStar={onToggleEmailStar}
           />
@@ -683,6 +750,7 @@ function App() {
             notificationPermission={notificationPermission}
             importStatus={importStatus}
             letterCount={letters.length}
+            chatLogCount={chatLogs.length}
             chatProfiles={chatProfiles}
             onSettingChange={onSettingChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
@@ -691,6 +759,9 @@ function App() {
             onImportLetterFiles={(files) => void handleImportLetterFiles(files)}
             onImportLetterFolderFiles={(files) => void handleImportLetterFolderFiles(files)}
             onClearAllLetters={() => void handleClearAllLetters()}
+            onImportChatLogFiles={(files) => void handleImportChatLogFiles(files)}
+            onImportChatLogFolderFiles={(files) => void handleImportChatLogFolderFiles(files)}
+            onClearAllChatLogs={() => void handleClearAllChatLogs()}
             onSaveChatProfile={(profile) => void handleSaveChatProfile(profile)}
             onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
             onHoverToneWeightChange={onHoverToneWeightChange}
@@ -733,10 +804,14 @@ function App() {
       unreadEmailIds,
       visibleEmailCount,
       letters,
+      chatLogs,
       chatProfiles,
       handleImportLetterFiles,
       handleImportLetterFolderFiles,
       handleClearAllLetters,
+      handleImportChatLogFiles,
+      handleImportChatLogFolderFiles,
+      handleClearAllChatLogs,
       handleSaveChatProfile,
       handleDeleteChatProfile,
     ],
@@ -853,7 +928,28 @@ function App() {
                   <span className="w-16" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-                  <LetterPage letters={letters} chatProfiles={chatProfiles} letterFontFamily={letterFontFamily} />
+                  <LetterPage letters={letters} letterFontFamily={letterFontFamily} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'chat' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ← 返回
+                  </button>
+                  <p className="text-sm text-white/85">對話</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+                  <ChatLogPage logs={chatLogs} chatProfiles={chatProfiles} />
                 </div>
               </div>
             </div>

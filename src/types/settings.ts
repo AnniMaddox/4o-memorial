@@ -28,6 +28,11 @@ export type AppSettings = {
   customFontCssUrl: string;
   customFontFileUrl: string;
   customFontFamily: string;
+  homeWidgetTitle: string;
+  homeWidgetSubtitle: string;
+  homeWidgetBadgeText: string;
+  homeWidgetIconDataUrl: string;
+  inboxTitle: string;
   backgroundMode: BackgroundMode;
   backgroundGradientStart: string;
   backgroundGradientEnd: string;
@@ -62,6 +67,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customFontCssUrl: '',
   customFontFileUrl: '',
   customFontFamily: '',
+  homeWidgetTitle: 'Memorial',
+  homeWidgetSubtitle: '在這裡等妳，慢慢把日子收好。',
+  homeWidgetBadgeText: 'ACTIVE',
+  homeWidgetIconDataUrl: '',
+  inboxTitle: 'Memorial Mailroom',
   backgroundMode: 'gradient',
   backgroundGradientStart: '#fde9d7',
   backgroundGradientEnd: '#ece4d5',

@@ -2,11 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { TabIconUrls } from '../types/settings';
 
-type LauncherAppId = 'tarot' | 'letters' | 'heart';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
+  widgetTitle: string;
+  widgetSubtitle: string;
+  widgetBadgeText: string;
+  widgetIconDataUrl: string;
   onLaunchApp: (appId: LauncherAppId) => void;
+  onWidgetIconChange: (dataUrl: string) => void;
 };
 
 type HomeAppSlot = {
@@ -84,10 +89,19 @@ function HomePlaceholderTile() {
   );
 }
 
-export function HomePage({ tabIconUrls, onLaunchApp }: HomePageProps) {
+export function HomePage({
+  tabIconUrls,
+  widgetTitle,
+  widgetSubtitle,
+  widgetBadgeText,
+  widgetIconDataUrl,
+  onLaunchApp,
+  onWidgetIconChange,
+}: HomePageProps) {
   const [now, setNow] = useState(() => new Date());
   const [screenIndex, setScreenIndex] = useState(0);
   const pagerRef = useRef<HTMLDivElement | null>(null);
+  const widgetIconInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -118,6 +132,12 @@ export function HomePage({ tabIconUrls, onLaunchApp }: HomePageProps) {
       iconUrl: tabIconUrls.heart.trim() || undefined,
       launch: 'heart',
     };
+    const chatSlot: HomeAppSlot = {
+      id: 'chat',
+      label: '對話',
+      icon: '💬',
+      launch: 'chat',
+    };
 
     const placeholder = (id: string): HomeAppSlot => ({
       id,
@@ -126,12 +146,12 @@ export function HomePage({ tabIconUrls, onLaunchApp }: HomePageProps) {
       disabled: true,
     });
 
-    // Screen 1: tarot / letters / heart, plus reserved empty slots.
+    // Screen 1: main apps, plus reserved empty slots.
     const screen1: HomeAppSlot[] = [
       tarotSlot,
       lettersSlot,
       heartSlot,
-      placeholder('slot-1-4'),
+      chatSlot,
       placeholder('slot-1-5'),
       placeholder('slot-1-6'),
       placeholder('slot-1-7'),
@@ -172,6 +192,10 @@ export function HomePage({ tabIconUrls, onLaunchApp }: HomePageProps) {
   const weekdayText = formatWeekday(now);
   const monthDayText = formatMonthDay(now);
 
+  const headerTitle = widgetTitle.trim() || 'Memorial';
+  const headerSubtitle = widgetSubtitle.trim();
+  const badgeText = widgetBadgeText.trim();
+
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
       {/* Time header */}
@@ -193,19 +217,56 @@ export function HomePage({ tabIconUrls, onLaunchApp }: HomePageProps) {
       {/* Widget card */}
       <div className="rounded-[2.25rem] border border-white/55 bg-white/25 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.12)] backdrop-blur">
         <div className="flex items-center gap-4">
-          <div className="grid h-16 w-16 place-items-center rounded-2xl bg-white/40 shadow-sm">
-            <span className="text-3xl" aria-hidden="true">
-              ♡
-            </span>
-          </div>
+          <button
+            type="button"
+            className="grid h-16 w-16 place-items-center rounded-2xl bg-white/40 shadow-sm transition active:scale-95"
+            onClick={() => widgetIconInputRef.current?.click()}
+            aria-label="更換小圖"
+            title="點一下更換小圖"
+          >
+            <input
+              ref={widgetIconInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.currentTarget.value = '';
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const result = typeof reader.result === 'string' ? reader.result : '';
+                  if (result) onWidgetIconChange(result);
+                };
+                reader.readAsDataURL(file);
+              }}
+            />
+            {widgetIconDataUrl.trim() ? (
+              <img
+                src={widgetIconDataUrl}
+                alt=""
+                className="h-12 w-12 rounded-xl object-cover"
+                loading="lazy"
+                draggable={false}
+              />
+            ) : (
+              <span className="text-3xl" aria-hidden="true">
+                ♡
+              </span>
+            )}
+          </button>
           <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <p className="truncate text-2xl font-semibold tracking-wide text-stone-800">Memorial</p>
-              <span className="rounded-full border border-white/60 bg-white/35 px-2 py-0.5 text-[11px] tracking-[0.14em] text-stone-700">
-                ACTIVE
-              </span>
+              <p className="truncate text-2xl font-semibold tracking-wide text-stone-800">{headerTitle}</p>
+              {badgeText && (
+                <span className="rounded-full border border-white/60 bg-white/35 px-2 py-0.5 text-[11px] tracking-[0.14em] text-stone-700">
+                  {badgeText}
+                </span>
+              )}
             </div>
-            <p className="mt-1 truncate text-sm text-stone-600">在這裡等妳，慢慢把日子收好。</p>
+            {headerSubtitle && (
+              <p className="mt-1 truncate text-sm text-stone-600">{headerSubtitle}</p>
+            )}
           </div>
         </div>
       </div>

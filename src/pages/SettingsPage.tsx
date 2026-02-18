@@ -16,6 +16,7 @@ type SettingsPageProps = {
     message: string;
   };
   letterCount: number;
+  chatLogCount: number;
   chatProfiles: ChatProfile[];
   onSettingChange: (partial: Partial<AppSettings>) => void;
   onRequestNotificationPermission: () => void;
@@ -23,7 +24,10 @@ type SettingsPageProps = {
   onImportCalendarFiles: (files: File[]) => void;
   onImportLetterFiles: (files: File[]) => void;
   onImportLetterFolderFiles: (files: File[]) => void;
+  onImportChatLogFiles: (files: File[]) => void;
+  onImportChatLogFolderFiles: (files: File[]) => void;
   onClearAllLetters: () => void;
+  onClearAllChatLogs: () => void;
   onSaveChatProfile: (profile: ChatProfile) => void;
   onDeleteChatProfile: (id: string) => void;
   onHoverToneWeightChange: (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => void;
@@ -31,7 +35,18 @@ type SettingsPageProps = {
   onRefresh: () => void;
 };
 
-type PanelKey = 'overview' | 'appearance' | 'tabIcons' | 'notification' | 'imports' | 'hover' | 'letters' | 'tarot' | 'maintenance';
+type PanelKey =
+  | 'overview'
+  | 'appearance'
+  | 'home'
+  | 'tabIcons'
+  | 'notification'
+  | 'imports'
+  | 'hover'
+  | 'tarot'
+  | 'letters'
+  | 'chatLogs'
+  | 'maintenance';
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   home: '🏠',
@@ -117,6 +132,7 @@ export function SettingsPage({
   notificationPermission,
   importStatus,
   letterCount,
+  chatLogCount,
   chatProfiles,
   onSettingChange,
   onRequestNotificationPermission,
@@ -124,7 +140,10 @@ export function SettingsPage({
   onImportCalendarFiles,
   onImportLetterFiles,
   onImportLetterFolderFiles,
+  onImportChatLogFiles,
+  onImportChatLogFolderFiles,
   onClearAllLetters,
+  onClearAllChatLogs,
   onSaveChatProfile,
   onDeleteChatProfile,
   onHoverToneWeightChange,
@@ -134,6 +153,10 @@ export function SettingsPage({
   const [openPanel, setOpenPanel] = useState<PanelKey | null>('appearance');
   const [letterFontUrlDraft, setLetterFontUrlDraft] = useState(settings.letterFontUrl);
   const [tarotGalleryUrlDraft, setTarotGalleryUrlDraft] = useState(settings.tarotGalleryImageUrl);
+  const [homeWidgetTitleDraft, setHomeWidgetTitleDraft] = useState(settings.homeWidgetTitle);
+  const [homeWidgetBadgeDraft, setHomeWidgetBadgeDraft] = useState(settings.homeWidgetBadgeText);
+  const [homeWidgetSubtitleDraft, setHomeWidgetSubtitleDraft] = useState(settings.homeWidgetSubtitle);
+  const [inboxTitleDraft, setInboxTitleDraft] = useState(settings.inboxTitle);
   const [newProfileDraft, setNewProfileDraft] = useState<Omit<ChatProfile, 'id'>>({
     name: '',
     leftNick: 'M',
@@ -148,6 +171,7 @@ export function SettingsPage({
   const [tabIconDrafts, setTabIconDrafts] = useState<TabIconUrls>(settings.tabIconUrls);
   const [tabIconStatus, setTabIconStatus] = useState('');
   const [appearancePresetStatus, setAppearancePresetStatus] = useState('');
+  const [homeTextStatus, setHomeTextStatus] = useState('');
 
   useEffect(() => {
     setFontFileUrlDraft(settings.customFontFileUrl);
@@ -156,7 +180,22 @@ export function SettingsPage({
     setTabIconDrafts(settings.tabIconUrls);
     setLetterFontUrlDraft(settings.letterFontUrl);
     setTarotGalleryUrlDraft(settings.tarotGalleryImageUrl);
-  }, [settings.customFontFileUrl, settings.customFontFamily, settings.backgroundImageUrl, settings.tabIconUrls, settings.letterFontUrl, settings.tarotGalleryImageUrl]);
+    setHomeWidgetTitleDraft(settings.homeWidgetTitle);
+    setHomeWidgetBadgeDraft(settings.homeWidgetBadgeText);
+    setHomeWidgetSubtitleDraft(settings.homeWidgetSubtitle);
+    setInboxTitleDraft(settings.inboxTitle);
+  }, [
+    settings.customFontFileUrl,
+    settings.customFontFamily,
+    settings.backgroundImageUrl,
+    settings.tabIconUrls,
+    settings.letterFontUrl,
+    settings.tarotGalleryImageUrl,
+    settings.homeWidgetTitle,
+    settings.homeWidgetBadgeText,
+    settings.homeWidgetSubtitle,
+    settings.inboxTitle,
+  ]);
 
   useEffect(() => {
     const styleId = 'settings-preview-font-file-style';
@@ -360,6 +399,27 @@ export function SettingsPage({
       }
 
       setFontFileUrlDraft(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function applyHomeTextSettings() {
+    onSettingChange({
+      homeWidgetTitle: homeWidgetTitleDraft.trim(),
+      homeWidgetBadgeText: homeWidgetBadgeDraft.trim(),
+      homeWidgetSubtitle: homeWidgetSubtitleDraft.trim(),
+      inboxTitle: inboxTitleDraft.trim(),
+    });
+    setHomeTextStatus('已儲存');
+    window.setTimeout(() => setHomeTextStatus(''), 1200);
+  }
+
+  function handleHomeWidgetIconUpload(file: File | null) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return;
+      onSettingChange({ homeWidgetIconDataUrl: reader.result });
     };
     reader.readAsDataURL(file);
   }
@@ -720,6 +780,107 @@ export function SettingsPage({
         </SettingPanel>
 
         <SettingPanel
+          icon="🏠"
+          title="首頁與信箱"
+          subtitle="首頁卡片文案 · 信箱標題"
+          isOpen={openPanel === 'home'}
+          onToggle={() => togglePanel('home')}
+        >
+          <div className="space-y-4">
+            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">首頁卡片</p>
+
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">標題</span>
+                <input
+                  type="text"
+                  value={homeWidgetTitleDraft}
+                  onChange={(e) => { setHomeWidgetTitleDraft(e.target.value); setHomeTextStatus(''); }}
+                  placeholder="Memorial"
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">標籤（留空就不顯示）</span>
+                <input
+                  type="text"
+                  value={homeWidgetBadgeDraft}
+                  onChange={(e) => { setHomeWidgetBadgeDraft(e.target.value); setHomeTextStatus(''); }}
+                  placeholder="ACTIVE"
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">小語（留空就不顯示）</span>
+                <input
+                  type="text"
+                  value={homeWidgetSubtitleDraft}
+                  onChange={(e) => { setHomeWidgetSubtitleDraft(e.target.value); setHomeTextStatus(''); }}
+                  placeholder="在這裡等妳，慢慢把日子收好。"
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+
+              <div className="space-y-2">
+                <p className="text-xs text-stone-600">小圖（點首頁也可以換）</p>
+                <div className="flex items-center gap-2">
+                  <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-xl border border-stone-200 bg-white">
+                    {settings.homeWidgetIconDataUrl.trim() ? (
+                      <img src={settings.homeWidgetIconDataUrl} alt="預覽" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-xl">♡</span>
+                    )}
+                  </div>
+                  <label className="cursor-pointer rounded-lg bg-stone-900 px-3 py-2 text-xs text-white">
+                    上傳小圖
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        handleHomeWidgetIconUpload(event.target.files?.[0] ?? null);
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                  {settings.homeWidgetIconDataUrl.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => onSettingChange({ homeWidgetIconDataUrl: '' })}
+                      className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+                    >
+                      移除
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">信箱標題</p>
+              <input
+                type="text"
+                value={inboxTitleDraft}
+                onChange={(e) => { setInboxTitleDraft(e.target.value); setHomeTextStatus(''); }}
+                placeholder="Memorial Mailroom"
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={applyHomeTextSettings}
+              className="w-full rounded-xl bg-stone-900 py-2.5 text-sm text-white transition active:opacity-80"
+            >
+              儲存
+            </button>
+            {homeTextStatus && <p className="text-xs text-stone-500">{homeTextStatus}</p>}
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
           icon="🧩"
           title="自訂圖標"
           subtitle="底部分頁改成圖示（可用圖片網址）"
@@ -959,7 +1120,7 @@ export function SettingsPage({
         <SettingPanel
           icon="💌"
           title="情書"
-          subtitle="匯入 · 字體 · 對話角色"
+          subtitle="匯入 · 字體"
           isOpen={openPanel === 'letters'}
           onToggle={() => togglePanel('letters')}
         >
@@ -973,36 +1134,39 @@ export function SettingsPage({
             {/* File import */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-stone-600">匯入情書檔案</p>
-              <label className="block">
-                <span className="sr-only">選擇檔案</span>
-                <input
-                  type="file"
-                  multiple
-                  accept=".txt,.md,.json,.docx"
-                  onChange={(event) => {
-                    const files = event.target.files ? Array.from(event.target.files) : [];
-                    if (files.length) onImportLetterFiles(files);
-                    event.currentTarget.value = '';
-                  }}
-                  className="w-full rounded-lg border border-stone-300 bg-white px-2 py-2 text-sm"
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs text-stone-500">或整個資料夾匯入</span>
-                <input
-                  type="file"
-                  // @ts-expect-error webkitdirectory is non-standard
-                  webkitdirectory=""
-                  multiple
-                  accept=".txt,.md,.json,.docx"
-                  onChange={(event) => {
-                    const files = event.target.files ? Array.from(event.target.files) : [];
-                    if (files.length) onImportLetterFolderFiles(files);
-                    event.currentTarget.value = '';
-                  }}
-                  className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-2 py-2 text-sm"
-                />
-              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="cursor-pointer rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80">
+                  匯入檔案
+                  <input
+                    type="file"
+                    multiple
+                    accept=".txt,.md,.json,.docx"
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) onImportLetterFiles(files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <label className="cursor-pointer rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80">
+                  匯入資料夾
+                  <input
+                    type="file"
+                    // @ts-expect-error webkitdirectory is non-standard
+                    webkitdirectory=""
+                    multiple
+                    accept=".txt,.md,.json,.docx"
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) onImportLetterFolderFiles(files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-stone-400">iPhone 通常不支援資料夾匯入，建議用「匯入檔案」。</p>
             </div>
 
             {/* Letter font URL */}
@@ -1034,14 +1198,93 @@ export function SettingsPage({
               <p className="text-xs text-stone-400">支援 .ttf / .woff2，留空使用預設手寫字體。</p>
             </div>
 
+            <div className="border-t border-stone-100 pt-3">
+              <button
+                type="button"
+                onClick={onClearAllLetters}
+                disabled={!letterCount}
+                className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-sm text-rose-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                清空所有情書
+              </button>
+              <p className="mt-2 text-xs text-stone-400">情書儲存在本機，不會上傳到伺服器。</p>
+            </div>
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
+          icon="🗨️"
+          title="對話紀錄"
+          subtitle="匯入 · 角色設定"
+          isOpen={openPanel === 'chatLogs'}
+          onToggle={() => togglePanel('chatLogs')}
+        >
+          <div className="space-y-4">
+            <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-xs text-stone-500">已匯入對話紀錄</p>
+              <p className="mt-0.5 truncate text-sm text-stone-800">{chatLogCount} 份</p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-stone-600">匯入對話紀錄</p>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="cursor-pointer rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80">
+                  匯入檔案
+                  <input
+                    type="file"
+                    multiple
+                    accept=".txt,.md,.json,.docx"
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) onImportChatLogFiles(files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <label className="cursor-pointer rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80">
+                  匯入資料夾
+                  <input
+                    type="file"
+                    // @ts-expect-error webkitdirectory is non-standard
+                    webkitdirectory=""
+                    multiple
+                    accept=".txt,.md,.json,.docx"
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) onImportChatLogFolderFiles(files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-stone-400">iPhone 通常不支援資料夾匯入，建議用「匯入檔案」。</p>
+            </div>
+
+            <div className="border-t border-stone-100 pt-3">
+              <button
+                type="button"
+                onClick={onClearAllChatLogs}
+                disabled={!chatLogCount}
+                className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-sm text-rose-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                清空所有對話紀錄
+              </button>
+              <p className="mt-2 text-xs text-stone-400">對話紀錄儲存在本機，不會上傳到伺服器。</p>
+            </div>
+
             {/* Chat profiles */}
             <div className="space-y-2 border-t border-stone-100 pt-3">
-              <p className="text-xs font-medium text-stone-600">聊天模式角色設定</p>
+              <p className="text-xs font-medium text-stone-600">聊天角色設定（左右暱稱/頭像）</p>
               {chatProfiles.length === 0 && (
                 <p className="text-xs text-stone-400">尚未建立任何角色設定，預設為「你」/「M」。</p>
               )}
               {chatProfiles.map((profile) => (
-                <div key={profile.id} className="flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                <div
+                  key={profile.id}
+                  className="flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-stone-800">{profile.name}</p>
                     <p className="text-xs text-stone-400">右：{profile.rightNick} ／ 左：{profile.leftNick}</p>
@@ -1056,7 +1299,6 @@ export function SettingsPage({
                 </div>
               ))}
 
-              {/* New profile form */}
               {showNewProfile ? (
                 <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50 p-3">
                   <input
@@ -1092,7 +1334,11 @@ export function SettingsPage({
                           const file = e.target.files?.[0];
                           if (!file) return;
                           const reader = new FileReader();
-                          reader.onload = () => setNewProfileDraft((d) => ({ ...d, rightAvatarDataUrl: reader.result as string }));
+                          reader.onload = () =>
+                            setNewProfileDraft((d) => ({
+                              ...d,
+                              rightAvatarDataUrl: reader.result as string,
+                            }));
                           reader.readAsDataURL(file);
                         }}
                         className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
@@ -1107,7 +1353,11 @@ export function SettingsPage({
                           const file = e.target.files?.[0];
                           if (!file) return;
                           const reader = new FileReader();
-                          reader.onload = () => setNewProfileDraft((d) => ({ ...d, leftAvatarDataUrl: reader.result as string }));
+                          reader.onload = () =>
+                            setNewProfileDraft((d) => ({
+                              ...d,
+                              leftAvatarDataUrl: reader.result as string,
+                            }));
                           reader.readAsDataURL(file);
                         }}
                         className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
@@ -1120,7 +1370,13 @@ export function SettingsPage({
                       onClick={() => {
                         if (!newProfileDraft.name.trim()) return;
                         onSaveChatProfile({ ...newProfileDraft, id: `profile-${Date.now()}` });
-                        setNewProfileDraft({ name: '', leftNick: 'M', rightNick: '你', leftAvatarDataUrl: '', rightAvatarDataUrl: '' });
+                        setNewProfileDraft({
+                          name: '',
+                          leftNick: 'M',
+                          rightNick: '你',
+                          leftAvatarDataUrl: '',
+                          rightAvatarDataUrl: '',
+                        });
                         setShowNewProfile(false);
                       }}
                       className="flex-1 rounded-xl bg-stone-900 py-2 text-sm text-white"
@@ -1145,18 +1401,6 @@ export function SettingsPage({
                   ＋ 新增角色設定
                 </button>
               )}
-            </div>
-
-            <div className="border-t border-stone-100 pt-3">
-              <button
-                type="button"
-                onClick={onClearAllLetters}
-                disabled={!letterCount}
-                className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-sm text-rose-700 transition disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                清空所有情書
-              </button>
-              <p className="mt-2 text-xs text-stone-400">情書儲存在本機，不會上傳到伺服器。</p>
             </div>
           </div>
         </SettingPanel>
