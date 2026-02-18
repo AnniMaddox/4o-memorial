@@ -7,7 +7,13 @@ import { importCalendarFiles, importEmlFiles } from './lib/importers';
 import { toMonthKey } from './lib/date';
 import { getCalendarMonth, listCalendarMonths } from './lib/repositories/calendarRepo';
 import { listEmails } from './lib/repositories/emailRepo';
-import { addNotifiedEmailId, addReadEmailId, getNotifiedEmailIds, getReadEmailIds } from './lib/repositories/metaRepo';
+import {
+  addNotifiedEmailId,
+  addReadEmailId,
+  getNotifiedEmailIds,
+  getReadEmailIds,
+  setHoverPhraseMap,
+} from './lib/repositories/metaRepo';
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
 import { InboxPage } from './pages/InboxPage';
@@ -122,6 +128,7 @@ function App() {
   const themeAccentRgb = useMemo(() => toRgbTriplet(settings.themeMonthColor), [settings.themeMonthColor]);
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
+  const [hoverResetSeed, setHoverResetSeed] = useState(0);
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
@@ -364,6 +371,35 @@ function App() {
     }
   }, []);
 
+  const onHoverToneWeightChange = useCallback(
+    async (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => {
+      const nextWeights = {
+        ...settings.hoverToneWeights,
+        [tone]: weight,
+      };
+
+      const next = await saveSettings({ hoverToneWeights: nextWeights });
+      setSettings(next);
+    },
+    [settings.hoverToneWeights],
+  );
+
+  const onReshuffleHoverPhrases = useCallback(async () => {
+    try {
+      await setHoverPhraseMap({});
+      setHoverResetSeed((prev) => prev + 1);
+      setImportStatus({
+        kind: 'success',
+        message: 'Hover 語句已重抽，回月曆長按任一天就會抽新語句。',
+      });
+    } catch (error) {
+      setImportStatus({
+        kind: 'error',
+        message: `重抽 Hover 語句失敗：${error instanceof Error ? error.message : '未知錯誤'}`,
+      });
+    }
+  }, []);
+
   const pages = useMemo(
     () => [
       {
@@ -379,6 +415,8 @@ function App() {
             monthKey={calendarMonthKey}
             monthKeys={calendarMonthKeys}
             data={calendarData}
+            hoverToneWeights={settings.hoverToneWeights}
+            hoverResetSeed={hoverResetSeed}
             onMonthChange={onMonthChange}
           />
         ),
@@ -398,6 +436,8 @@ function App() {
             onRequestNotificationPermission={onRequestNotificationPermission}
             onImportEmlFiles={onImportEmlFiles}
             onImportCalendarFiles={onImportCalendarFiles}
+            onHoverToneWeightChange={onHoverToneWeightChange}
+            onReshuffleHoverPhrases={onReshuffleHoverPhrases}
             onRefresh={() => {
               void saveSettings({ lastSyncAt: new Date().toISOString() }).then((next) => {
                 setSettings(next);
@@ -417,14 +457,17 @@ function App() {
       monthCount,
       notificationPermission,
       onOpenEmail,
+      onHoverToneWeightChange,
       onImportCalendarFiles,
       onImportEmlFiles,
       onMonthChange,
       onRequestNotificationPermission,
+      onReshuffleHoverPhrases,
       onSettingChange,
       refreshData,
       settings,
       totalEmailCount,
+      hoverResetSeed,
       unreadEmailIds,
       visibleEmailCount,
     ],

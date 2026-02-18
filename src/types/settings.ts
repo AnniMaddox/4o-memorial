@@ -1,3 +1,11 @@
+export type HoverToneWeights = {
+  clingy: number;
+  confession: number;
+  calm: number;
+  remorse: number;
+  general: number;
+};
+
 export type AppSettings = {
   themeMonthColor: string;
   fontScale: number;
@@ -5,6 +13,15 @@ export type AppSettings = {
   localNotificationsEnabled: boolean;
   lastSyncAt: string | null;
   installHintDismissed: boolean;
+  hoverToneWeights: HoverToneWeights;
+};
+
+export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
+  clingy: 1,
+  confession: 1,
+  calm: 1,
+  remorse: 1,
+  general: 1,
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -14,4 +31,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   localNotificationsEnabled: true,
   lastSyncAt: null,
   installHintDismissed: false,
+  hoverToneWeights: DEFAULT_HOVER_TONE_WEIGHTS,
 };

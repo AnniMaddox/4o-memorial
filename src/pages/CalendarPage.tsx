@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { monthLabel, todayDateKey } from '../lib/date';
-import { getGlobalHoverPhrases } from '../lib/hoverPool';
+import { getGlobalHoverPoolEntries, pickHoverPhraseByWeights } from '../lib/hoverPool';
 import { getHoverPhraseMap, setHoverPhraseMap } from '../lib/repositories/metaRepo';
 import type { CalendarMonth } from '../types/content';
+import type { HoverToneWeights } from '../types/settings';
 
 type CalendarPageProps = {
   monthKey: string;
   monthKeys: string[];
   data: CalendarMonth;
+  hoverToneWeights: HoverToneWeights;
+  hoverResetSeed: number;
   onMonthChange: (monthKey: string) => void;
 };
 
@@ -42,7 +45,14 @@ function getMonthMeta(monthKey: string) {
   };
 }
 
-export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: CalendarPageProps) {
+export function CalendarPage({
+  monthKey,
+  monthKeys,
+  data,
+  hoverToneWeights,
+  hoverResetSeed,
+  onMonthChange,
+}: CalendarPageProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [temporaryUnlockDate, setTemporaryUnlockDate] = useState<string | null>(null);
   const [tapState, setTapState] = useState<TapState>({ date: null, count: 0, atMs: 0 });
@@ -56,8 +66,13 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
 
   const today = todayDateKey();
   const globalHoverPool = useMemo(() => {
-    const pool = getGlobalHoverPhrases();
-    return pool.length ? pool : DEFAULT_HOVER_PHRASES;
+    const pool = getGlobalHoverPoolEntries();
+    return pool.length
+      ? pool
+      : DEFAULT_HOVER_PHRASES.map((phrase) => ({
+          phrase,
+          category: 'general' as const,
+        }));
   }, []);
 
   function clearLongPressTimer() {
@@ -74,13 +89,13 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     }
   }
 
-  function getHoverPool(dateKey: string) {
+  function getDateHoverPool(dateKey: string) {
     const hoverPhrases = data[dateKey]?.hoverPhrases;
     if (hoverPhrases?.length) {
       return hoverPhrases;
     }
 
-    return globalHoverPool;
+    return null;
   }
 
   async function ensureHoverPhrase(dateKey: string) {
@@ -94,8 +109,15 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
       return '';
     }
 
-    const pool = getHoverPool(dateKey);
-    const phrase = pool[Math.floor(Math.random() * pool.length)] ?? DEFAULT_HOVER_PHRASES[0];
+    const datePool = getDateHoverPool(dateKey);
+    const phrase = datePool?.length
+      ? datePool[Math.floor(Math.random() * datePool.length)]
+      : pickHoverPhraseByWeights(globalHoverPool, hoverToneWeights);
+
+    if (!phrase) {
+      return '';
+    }
+
     const nextMap = {
       ...hoverPhraseByDateRef.current,
       [dateKey]: phrase,
@@ -128,7 +150,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
       return existing;
     }
 
-    return getHoverPool(dateKey)[0] ?? DEFAULT_HOVER_PHRASES[0];
+    return getDateHoverPool(dateKey)?.[0] ?? DEFAULT_HOVER_PHRASES[0];
   }
 
   function scheduleTouchHoverHide(dateKey: string) {
@@ -196,7 +218,7 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     return () => {
       active = false;
     };
-  }, []);
+  }, [hoverResetSeed]);
 
   useEffect(() => {
     return () => {
@@ -334,11 +356,14 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
         key={`${monthKey}-${monthFadeSeed}`}
         className="calendar-month-fade grid grid-cols-7 gap-2 rounded-2xl border border-stone-300/70 bg-white/65 p-3 shadow-sm backdrop-blur-sm"
       >
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
-          <p key={weekday} className="text-center text-xs uppercase text-stone-500">
-            {weekday}
-          </p>
-        ))}
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday, index) => {
+          const weekend = index === 0 || index === 6;
+          return (
+            <p key={weekday} className={`text-center text-xs uppercase ${weekend ? 'text-rose-500' : 'text-stone-500'}`}>
+              {weekday}
+            </p>
+          );
+        })}
 
         {dayCells.map((cell, index) => {
           if (!cell) {
@@ -397,12 +422,6 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
                     : 'Open message'
               }
             >
-              {hoverPreview?.dateKey === cell.dateKey && (
-                <span className="calendar-hover-bubble pointer-events-none absolute left-1/2 top-0 z-20 max-w-[9rem] -translate-x-1/2 -translate-y-[112%] rounded-full border border-stone-300/80 bg-white/95 px-3 py-1 text-[11px] text-stone-700 shadow-lg">
-                  {hoverPreview.phrase}
-                </span>
-              )}
-
               <div className="flex items-center justify-between">
                 <span>{cell.day}</span>
                 {!hasMessage && <span className="text-xs">-</span>}
@@ -411,6 +430,16 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
             </button>
           );
         })}
+      </div>
+
+      <div className="calendar-hover-dock min-h-[4.5rem] px-2">
+        {hoverPreview ? (
+          <div className="calendar-hover-bubble calendar-chat-bubble ml-1 w-fit max-w-[92%] rounded-2xl border border-stone-300/80 bg-white/94 px-4 py-2 text-sm text-stone-700 shadow-xl">
+            {hoverPreview.phrase}
+          </div>
+        ) : (
+          <p className="px-2 text-xs text-stone-500">長按或滑過日期，可看今天語氣。</p>
+        )}
       </div>
 
       {selectedDate && (

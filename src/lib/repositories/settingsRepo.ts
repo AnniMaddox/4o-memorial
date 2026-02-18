@@ -7,9 +7,15 @@ export async function getSettings() {
   const db = await getDb();
   const row = await db.get('settings', 'app');
 
+  const persisted = (row?.value ?? {}) as Partial<AppSettings>;
+
   return {
     ...DEFAULT_SETTINGS,
-    ...(row?.value ?? {}),
+    ...persisted,
+    hoverToneWeights: {
+      ...DEFAULT_SETTINGS.hoverToneWeights,
+      ...(persisted.hoverToneWeights ?? {}),
+    },
   };
 }
 

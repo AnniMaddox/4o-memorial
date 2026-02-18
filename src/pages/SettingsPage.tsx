@@ -14,6 +14,8 @@ type SettingsPageProps = {
   onRequestNotificationPermission: () => void;
   onImportEmlFiles: (files: File[]) => void;
   onImportCalendarFiles: (files: File[]) => void;
+  onHoverToneWeightChange: (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => void;
+  onReshuffleHoverPhrases: () => void;
   onRefresh: () => void;
 };
 
@@ -28,6 +30,8 @@ export function SettingsPage({
   onRequestNotificationPermission,
   onImportEmlFiles,
   onImportCalendarFiles,
+  onHoverToneWeightChange,
+  onReshuffleHoverPhrases,
   onRefresh,
 }: SettingsPageProps) {
   const notificationLabel =
@@ -172,6 +176,51 @@ export function SettingsPage({
             {importStatus.message}
           </p>
         )}
+      </section>
+
+      <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">
+        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">Hover 語氣設定</h2>
+
+        <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3 text-sm text-stone-700">
+          {[
+            { key: 'clingy', label: '黏人語氣' },
+            { key: 'confession', label: '認真表白' },
+            { key: 'calm', label: '冷靜守候' },
+            { key: 'remorse', label: '破防懺悔' },
+            { key: 'general', label: '通用語句' },
+          ].map((tone) => (
+            <label key={tone.key} className="block space-y-1">
+              <span className="flex items-center justify-between">
+                <span>{tone.label}</span>
+                <span className="text-xs text-stone-500">
+                  權重 {settings.hoverToneWeights[tone.key as keyof typeof settings.hoverToneWeights]}
+                </span>
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={5}
+                step={1}
+                value={settings.hoverToneWeights[tone.key as keyof typeof settings.hoverToneWeights]}
+                onChange={(event) =>
+                  onHoverToneWeightChange(
+                    tone.key as 'clingy' | 'confession' | 'calm' | 'remorse' | 'general',
+                    Number(event.target.value),
+                  )
+                }
+                className="w-full"
+              />
+            </label>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={onReshuffleHoverPhrases}
+          className="rounded-lg bg-stone-900 px-4 py-2 text-sm text-white"
+        >
+          重新隨機全部日期語氣
+        </button>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">
