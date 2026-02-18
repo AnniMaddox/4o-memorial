@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
 import type { AppLabels, TabIconUrls } from '../types/settings';
 
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'diary';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -35,6 +35,13 @@ type HomeScreen =
       id: string;
       kind: 'blank';
     };
+
+type AnchorPosition = {
+  x: number;
+  y: number;
+};
+
+const CHIBI_POSITION_STORAGE_KEY = 'memorial-home-corner-chibi-anchor';
 
 function pad2(value: number) {
   return String(value).padStart(2, '0');
@@ -117,7 +124,47 @@ export function HomePage({
   const [screenIndex, setScreenIndex] = useState(0);
   const pagerRef = useRef<HTMLDivElement | null>(null);
   const widgetIconInputRef = useRef<HTMLInputElement | null>(null);
+  const homeRootRef = useRef<HTMLDivElement | null>(null);
+  const cornerChibiRef = useRef<HTMLButtonElement | null>(null);
+  const dragStateRef = useRef<{ pointerId: number; deltaX: number; deltaY: number } | null>(null);
+  const [isDraggingChibi, setIsDraggingChibi] = useState(false);
+  const [chibiAnchor, setChibiAnchor] = useState<AnchorPosition>({ x: 0.9, y: 0.86 });
+  const chibiAnchorRef = useRef(chibiAnchor);
   const cornerChibiUrl = `${import.meta.env.BASE_URL}chibi/chibi-00.png`;
+
+  useEffect(() => {
+    chibiAnchorRef.current = chibiAnchor;
+  }, [chibiAnchor]);
+
+  const clampChibiAnchor = useCallback((anchor: AnchorPosition): AnchorPosition => {
+    const host = homeRootRef.current;
+    const ball = cornerChibiRef.current;
+    if (!host || !ball) return anchor;
+
+    const hostWidth = host.clientWidth;
+    const hostHeight = host.clientHeight;
+    if (!hostWidth || !hostHeight) return anchor;
+
+    const halfWidth = ball.offsetWidth / 2;
+    const halfHeight = ball.offsetHeight / 2;
+    const minX = Math.min(0.95, Math.max(0.05, halfWidth / hostWidth));
+    const maxX = Math.max(minX, 1 - minX);
+    const minY = Math.min(0.95, Math.max(0.05, halfHeight / hostHeight));
+    const maxY = Math.max(minY, 1 - minY);
+
+    return {
+      x: Math.min(maxX, Math.max(minX, anchor.x)),
+      y: Math.min(maxY, Math.max(minY, anchor.y)),
+    };
+  }, []);
+
+  const persistChibiAnchor = useCallback((anchor: AnchorPosition) => {
+    try {
+      window.localStorage.setItem(CHIBI_POSITION_STORAGE_KEY, JSON.stringify(anchor));
+    } catch {
+      // ignore storage failures (private mode, quota, etc.)
+    }
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -125,6 +172,37 @@ export function HomePage({
     }, 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(CHIBI_POSITION_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<AnchorPosition>;
+      if (
+        typeof parsed.x === 'number' &&
+        Number.isFinite(parsed.x) &&
+        typeof parsed.y === 'number' &&
+        Number.isFinite(parsed.y)
+      ) {
+        setChibiAnchor({
+          x: Math.min(0.98, Math.max(0.02, parsed.x)),
+          y: Math.min(0.98, Math.max(0.02, parsed.y)),
+        });
+      }
+    } catch {
+      // ignore malformed storage
+    }
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => {
+      setChibiAnchor((current) => clampChibiAnchor(current));
+    };
+
+    window.addEventListener('resize', onResize);
+    onResize();
+    return () => window.removeEventListener('resize', onResize);
+  }, [clampChibiAnchor]);
 
   const screens = useMemo<HomeScreen[]>(() => {
     const tarotSlot: HomeAppSlot = {
@@ -168,6 +246,13 @@ export function HomePage({
       iconUrl: tabIconUrls.fitness.trim() || undefined,
       launch: 'fitness',
     };
+    const diarySlot: HomeAppSlot = {
+      id: 'diary',
+      label: launcherLabels.diary,
+      icon: '📓',
+      iconUrl: tabIconUrls.diary.trim() || undefined,
+      launch: 'diary',
+    };
 
     const placeholder = (id: string): HomeAppSlot => ({
       id,
@@ -184,7 +269,7 @@ export function HomePage({
       chatSlot,
       listSlot,
       fitnessSlot,
-      placeholder('slot-1-5'),
+      diarySlot,
       placeholder('slot-1-6'),
     ];
 
@@ -213,12 +298,14 @@ export function HomePage({
   }, [
     homeSwipeEnabled,
     launcherLabels.chat,
+    launcherLabels.diary,
     launcherLabels.heart,
     launcherLabels.letters,
     launcherLabels.list,
     launcherLabels.fitness,
     launcherLabels.tarot,
     tabIconUrls.fitness,
+    tabIconUrls.diary,
     tabIconUrls.heart,
     tabIconUrls.letters,
     tabIconUrls.list,
@@ -274,8 +361,90 @@ export function HomePage({
   const headerSubtitle = widgetSubtitle.trim();
   const badgeText = widgetBadgeText.trim();
 
+  const handleChibiPointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    const host = homeRootRef.current;
+    const ball = cornerChibiRef.current;
+    if (!host || !ball) return;
+
+    const hostRect = host.getBoundingClientRect();
+    const ballRect = ball.getBoundingClientRect();
+    const centerX = ballRect.left - hostRect.left + ballRect.width / 2;
+    const centerY = ballRect.top - hostRect.top + ballRect.height / 2;
+
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      deltaX: event.clientX - (hostRect.left + centerX),
+      deltaY: event.clientY - (hostRect.top + centerY),
+    };
+
+    setIsDraggingChibi(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }, []);
+
+  const handleChibiPointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const dragState = dragStateRef.current;
+      const host = homeRootRef.current;
+      const ball = cornerChibiRef.current;
+      if (!dragState || !host || !ball) return;
+      if (dragState.pointerId !== event.pointerId) return;
+
+      const hostRect = host.getBoundingClientRect();
+      const hostWidth = host.clientWidth;
+      const hostHeight = host.clientHeight;
+      if (!hostWidth || !hostHeight) return;
+
+      const centerX = event.clientX - hostRect.left - dragState.deltaX;
+      const centerY = event.clientY - hostRect.top - dragState.deltaY;
+      const halfWidth = ball.offsetWidth / 2;
+      const halfHeight = ball.offsetHeight / 2;
+
+      const next = clampChibiAnchor({
+        x: Math.min(hostWidth - halfWidth, Math.max(halfWidth, centerX)) / hostWidth,
+        y: Math.min(hostHeight - halfHeight, Math.max(halfHeight, centerY)) / hostHeight,
+      });
+
+      setChibiAnchor(next);
+      event.preventDefault();
+    },
+    [clampChibiAnchor],
+  );
+
+  const handleChibiPointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const dragState = dragStateRef.current;
+      const host = homeRootRef.current;
+      const ball = cornerChibiRef.current;
+      if (!dragState || !host || !ball) return;
+      if (dragState.pointerId !== event.pointerId) return;
+
+      dragStateRef.current = null;
+      setIsDraggingChibi(false);
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+
+      const hostWidth = host.clientWidth;
+      const halfWidth = ball.offsetWidth / 2;
+      const minX = hostWidth ? halfWidth / hostWidth : 0;
+      const maxX = hostWidth ? 1 - minX : 1;
+      const current = chibiAnchorRef.current;
+      const snapped = clampChibiAnchor({
+        x: current.x < 0.5 ? minX : maxX,
+        y: current.y,
+      });
+
+      setChibiAnchor(snapped);
+      persistChibiAnchor(snapped);
+      event.preventDefault();
+    },
+    [clampChibiAnchor, persistChibiAnchor],
+  );
+
   return (
-    <div className="relative mx-auto h-full w-full max-w-xl">
+    <div ref={homeRootRef} className="relative mx-auto h-full w-full max-w-xl">
       <div
         ref={pagerRef}
         className={`h-full w-full snap-x snap-mandatory overflow-y-hidden ${homeSwipeEnabled ? 'overflow-x-auto' : 'overflow-x-hidden'}`}
@@ -388,13 +557,34 @@ export function HomePage({
         </div>
       )}
 
-      <img
-        src={cornerChibiUrl}
-        alt=""
-        draggable={false}
-        className="pointer-events-none absolute bottom-2 right-1 z-10 w-[7.25rem] select-none opacity-95"
-        loading="lazy"
-      />
+      <button
+        ref={cornerChibiRef}
+        type="button"
+        aria-label="可拖曳小人"
+        onPointerDown={handleChibiPointerDown}
+        onPointerMove={handleChibiPointerMove}
+        onPointerUp={handleChibiPointerUp}
+        onPointerCancel={handleChibiPointerUp}
+        className={`absolute z-20 select-none touch-none ${
+          isDraggingChibi ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+        style={{
+          left: `${chibiAnchor.x * 100}%`,
+          top: `${chibiAnchor.y * 100}%`,
+          transform: 'translate(-50%, -50%)',
+          transition: isDraggingChibi ? 'none' : 'left 180ms ease, top 180ms ease',
+        }}
+      >
+        <img
+          src={cornerChibiUrl}
+          alt=""
+          draggable={false}
+          className={`w-[7.5rem] opacity-95 drop-shadow-[0_10px_18px_rgba(0,0,0,0.24)] ${
+            isDraggingChibi ? '' : 'home-corner-chibi-float'
+          }`}
+          loading="lazy"
+        />
+      </button>
     </div>
   );
 }

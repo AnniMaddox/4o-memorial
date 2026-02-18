@@ -16,6 +16,7 @@ type SettingsPageProps = {
     message: string;
   };
   letterCount: number;
+  diaryCount: number;
   chatLogCount: number;
   chatProfiles: ChatProfile[];
   onSettingChange: (partial: Partial<AppSettings>) => void;
@@ -24,9 +25,12 @@ type SettingsPageProps = {
   onImportCalendarFiles: (files: File[]) => void;
   onImportLetterFiles: (files: File[]) => void;
   onImportLetterFolderFiles: (files: File[]) => void;
+  onImportDiaryFiles: (files: File[]) => void;
+  onImportDiaryFolderFiles: (files: File[]) => void;
   onImportChatLogFiles: (files: File[]) => void;
   onImportChatLogFolderFiles: (files: File[]) => void;
   onClearAllLetters: () => void;
+  onClearAllDiaries: () => void;
   onClearAllChatLogs: () => void;
   onSaveChatProfile: (profile: ChatProfile) => void;
   onDeleteChatProfile: (id: string) => void;
@@ -46,6 +50,7 @@ type PanelKey =
   | 'hover'
   | 'tarot'
   | 'letters'
+  | 'diary'
   | 'chatLogs'
   | 'maintenance';
 
@@ -58,6 +63,7 @@ const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   heart: '💗',
   list: '🎴',
   fitness: '🏋️',
+  diary: '📓',
   settings: '⚙️',
 };
 
@@ -70,6 +76,7 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'heart', label: 'MY LOVE' },
   { key: 'list', label: 'List 清單' },
   { key: 'fitness', label: 'Fitness 健身' },
+  { key: 'diary', label: 'Diary 日記' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -84,6 +91,7 @@ const APP_LABEL_FIELDS: Array<{ key: AppLabelKey; label: string }> = [
   { key: 'chat', label: '首頁入口：對話' },
   { key: 'list', label: '首頁入口：清單' },
   { key: 'fitness', label: '首頁入口：健身' },
+  { key: 'diary', label: '首頁入口：日記' },
 ];
 
 type AppearancePresetPayload = {
@@ -165,6 +173,7 @@ export function SettingsPage({
   notificationPermission,
   importStatus,
   letterCount,
+  diaryCount,
   chatLogCount,
   chatProfiles,
   onSettingChange,
@@ -173,9 +182,12 @@ export function SettingsPage({
   onImportCalendarFiles,
   onImportLetterFiles,
   onImportLetterFolderFiles,
+  onImportDiaryFiles,
+  onImportDiaryFolderFiles,
   onImportChatLogFiles,
   onImportChatLogFolderFiles,
   onClearAllLetters,
+  onClearAllDiaries,
   onClearAllChatLogs,
   onSaveChatProfile,
   onDeleteChatProfile,
@@ -185,6 +197,8 @@ export function SettingsPage({
 }: SettingsPageProps) {
   const [openPanel, setOpenPanel] = useState<PanelKey | null>('appearance');
   const [letterFontUrlDraft, setLetterFontUrlDraft] = useState(settings.letterFontUrl);
+  const [diaryCoverUrlDraft, setDiaryCoverUrlDraft] = useState(settings.diaryCoverImageUrl);
+  const [diaryFontUrlDraft, setDiaryFontUrlDraft] = useState(settings.diaryFontUrl);
   const [tarotGalleryUrlDraft, setTarotGalleryUrlDraft] = useState(settings.tarotGalleryImageUrl);
   const [homeWidgetTitleDraft, setHomeWidgetTitleDraft] = useState(settings.homeWidgetTitle);
   const [homeWidgetBadgeDraft, setHomeWidgetBadgeDraft] = useState(settings.homeWidgetBadgeText);
@@ -215,6 +229,8 @@ export function SettingsPage({
     setTabIconDrafts(settings.tabIconUrls);
     setLabelDrafts(settings.appLabels);
     setLetterFontUrlDraft(settings.letterFontUrl);
+    setDiaryCoverUrlDraft(settings.diaryCoverImageUrl);
+    setDiaryFontUrlDraft(settings.diaryFontUrl);
     setTarotGalleryUrlDraft(settings.tarotGalleryImageUrl);
     setHomeWidgetTitleDraft(settings.homeWidgetTitle);
     setHomeWidgetBadgeDraft(settings.homeWidgetBadgeText);
@@ -227,6 +243,8 @@ export function SettingsPage({
     settings.tabIconUrls,
     settings.appLabels,
     settings.letterFontUrl,
+    settings.diaryCoverImageUrl,
+    settings.diaryFontUrl,
     settings.tarotGalleryImageUrl,
     settings.homeWidgetTitle,
     settings.homeWidgetBadgeText,
@@ -300,6 +318,7 @@ export function SettingsPage({
       heart: tabIconDrafts.heart.trim(),
       list: tabIconDrafts.list.trim(),
       fitness: tabIconDrafts.fitness.trim(),
+      diary: tabIconDrafts.diary.trim(),
       settings: tabIconDrafts.settings.trim(),
     };
 
@@ -324,6 +343,7 @@ export function SettingsPage({
       chat: labelDrafts.chat.trim(),
       list: labelDrafts.list.trim(),
       fitness: labelDrafts.fitness.trim(),
+      diary: labelDrafts.diary.trim(),
     };
 
     onSettingChange({ appLabels: next });
@@ -450,6 +470,7 @@ export function SettingsPage({
           heart: typeof input.heart === 'string' ? input.heart.trim() : '',
           list: typeof input.list === 'string' ? input.list.trim() : '',
           fitness: typeof input.fitness === 'string' ? input.fitness.trim() : '',
+          diary: typeof input.diary === 'string' ? input.diary.trim() : '',
           settings: typeof input.settings === 'string' ? input.settings.trim() : '',
         };
       }
@@ -505,6 +526,7 @@ export function SettingsPage({
           chat: typeof input.chat === 'string' ? input.chat.trim() : '',
           list: typeof input.list === 'string' ? input.list.trim() : '',
           fitness: typeof input.fitness === 'string' ? input.fitness.trim() : '',
+          diary: typeof input.diary === 'string' ? input.diary.trim() : '',
         };
       }
 
@@ -568,6 +590,17 @@ export function SettingsPage({
     reader.onload = () => {
       if (typeof reader.result !== 'string') return;
       onSettingChange({ homeWidgetIconDataUrl: reader.result });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleDiaryCoverUpload(file: File | null) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return;
+      setDiaryCoverUrlDraft(reader.result);
+      onSettingChange({ diaryCoverImageUrl: reader.result });
     };
     reader.readAsDataURL(file);
   }
@@ -1406,6 +1439,143 @@ export function SettingsPage({
                 清空所有情書
               </button>
               <p className="mt-2 text-xs text-stone-400">情書儲存在本機，不會上傳到伺服器。</p>
+            </div>
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
+          icon="📓"
+          title="日記"
+          subtitle="封面 · 匯入 · 字體"
+          isOpen={openPanel === 'diary'}
+          onToggle={() => togglePanel('diary')}
+        >
+          <div className="space-y-4">
+            <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-xs text-stone-500">已匯入日記</p>
+              <p className="mt-0.5 truncate text-sm text-stone-800">{diaryCount} 篇</p>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">日記封面</p>
+              <input
+                type="url"
+                value={diaryCoverUrlDraft}
+                onChange={(event) => setDiaryCoverUrlDraft(event.target.value)}
+                placeholder="https://example.com/cover.jpg"
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ diaryCoverImageUrl: diaryCoverUrlDraft.trim() })}
+                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+                >
+                  套用封面網址
+                </button>
+                <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700">
+                  上傳封面
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      handleDiaryCoverUpload(event.target.files?.[0] ?? null);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDiaryCoverUrlDraft('');
+                    onSettingChange({ diaryCoverImageUrl: '' });
+                  }}
+                  className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+                >
+                  使用資料夾隨機封面
+                </button>
+              </div>
+              <p className="text-xs text-stone-400">若未設定網址，會嘗試用 `public/diary-covers/` 裡的圖片隨機顯示。</p>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">日記字體</p>
+              <input
+                type="url"
+                value={diaryFontUrlDraft}
+                onChange={(event) => setDiaryFontUrlDraft(event.target.value)}
+                placeholder="https://files.catbox.moe/xxxxx.ttf"
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ diaryFontUrl: diaryFontUrlDraft.trim() })}
+                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+                >
+                  套用字體
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDiaryFontUrlDraft('');
+                    onSettingChange({ diaryFontUrl: '' });
+                  }}
+                  className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+                >
+                  清除字體
+                </button>
+              </div>
+              <p className="text-xs text-stone-400">支援 .ttf / .otf / .woff / .woff2。</p>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">匯入日記</p>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="cursor-pointer rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80">
+                  匯入檔案
+                  <input
+                    type="file"
+                    multiple
+                    accept=".txt,.docx"
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) onImportDiaryFiles(files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <label className="cursor-pointer rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80">
+                  匯入資料夾
+                  <input
+                    type="file"
+                    // @ts-expect-error webkitdirectory is non-standard
+                    webkitdirectory=""
+                    multiple
+                    accept=".txt,.docx"
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) onImportDiaryFolderFiles(files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-stone-400">可放 txt / docx；同檔名會覆蓋舊版本。</p>
+            </div>
+
+            <div className="border-t border-stone-100 pt-3">
+              <button
+                type="button"
+                onClick={onClearAllDiaries}
+                disabled={!diaryCount}
+                className="w-full rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-sm text-rose-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                清空所有日記
+              </button>
             </div>
           </div>
         </SettingPanel>

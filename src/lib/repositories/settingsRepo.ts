@@ -38,6 +38,7 @@ function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrl
     heart: normalizeString(input.heart, fallback.heart),
     list: normalizeString(input.list, fallback.list),
     fitness: normalizeString(input.fitness, fallback.fitness),
+    diary: normalizeString(input.diary, fallback.diary),
     settings: normalizeString(input.settings, fallback.settings),
   };
 }
@@ -55,6 +56,7 @@ function normalizeAppLabels(value: unknown, fallback: AppLabels): AppLabels {
     chat: normalizeString(input.chat, fallback.chat),
     list: normalizeString(input.list, fallback.list),
     fitness: normalizeString(input.fitness, fallback.fitness),
+    diary: normalizeString(input.diary, fallback.diary),
   };
 }
 
@@ -122,6 +124,8 @@ export async function getSettings() {
     inboxTitle: normalizeString(persisted.inboxTitle, DEFAULT_SETTINGS.inboxTitle),
     tarotGalleryImageUrl: normalizeString(persisted.tarotGalleryImageUrl, DEFAULT_SETTINGS.tarotGalleryImageUrl),
     letterFontUrl: normalizeString(persisted.letterFontUrl, DEFAULT_SETTINGS.letterFontUrl),
+    diaryCoverImageUrl: normalizeString(persisted.diaryCoverImageUrl, DEFAULT_SETTINGS.diaryCoverImageUrl),
+    diaryFontUrl: normalizeString(persisted.diaryFontUrl, DEFAULT_SETTINGS.diaryFontUrl),
     backgroundMode: normalizeBackgroundMode(persisted.backgroundMode, DEFAULT_SETTINGS.backgroundMode),
     backgroundGradientStart: normalizeString(persisted.backgroundGradientStart, DEFAULT_SETTINGS.backgroundGradientStart),
     backgroundGradientEnd: normalizeString(persisted.backgroundGradientEnd, DEFAULT_SETTINGS.backgroundGradientEnd),

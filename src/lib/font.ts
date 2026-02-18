@@ -1,6 +1,7 @@
 export const APP_CUSTOM_FONT_FAMILY = '__memorial_custom_font__';
 export const SETTINGS_PREVIEW_FONT_FAMILY = '__settings_preview_font__';
 export const LETTER_CUSTOM_FONT_FAMILY = '__memorial_letter_font__';
+export const DIARY_CUSTOM_FONT_FAMILY = '__memorial_diary_font__';
 
 function escapeCssString(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");

@@ -9,7 +9,7 @@ export type HoverToneWeights = {
 export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
-export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'fitness' | 'settings';
+export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'fitness' | 'diary' | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
 export type AppLabelKey =
   | 'home'
@@ -21,7 +21,8 @@ export type AppLabelKey =
   | 'heart'
   | 'chat'
   | 'list'
-  | 'fitness';
+  | 'fitness'
+  | 'diary';
 export type AppLabels = Record<AppLabelKey, string>;
 
 export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
@@ -33,6 +34,7 @@ export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   heart: '',
   list: '',
   fitness: '',
+  diary: '',
   settings: '',
 };
 
@@ -47,6 +49,7 @@ export const DEFAULT_APP_LABELS: AppLabels = {
   chat: '對話',
   list: '清單',
   fitness: '健身',
+  diary: '日記',
 };
 
 export type AppSettings = {
@@ -88,6 +91,8 @@ export type AppSettings = {
   calendarCellDepth: number;
   tarotGalleryImageUrl: string;
   letterFontUrl: string;
+  diaryCoverImageUrl: string;
+  diaryFontUrl: string;
 };
 
 export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
@@ -137,4 +142,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   calendarCellDepth: 70,
   tarotGalleryImageUrl: '',
   letterFontUrl: '',
+  diaryCoverImageUrl: '',
+  diaryFontUrl: '',
 };

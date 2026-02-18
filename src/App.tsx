@@ -19,16 +19,19 @@ import {
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
 import { ChatLogPage } from './pages/ChatLogPage';
+import { DiaryPage } from './pages/DiaryPage';
 import { HomePage } from './pages/HomePage';
 import { InboxPage } from './pages/InboxPage';
 import { LetterPage } from './pages/LetterPage';
 import { clearAllChatLogs, loadChatLogs, saveChatLogs } from './lib/chatLogDB';
 import type { StoredChatLog } from './lib/chatLogDB';
+import { clearAllDiaries, loadDiaries, parseDiaryFile, saveDiaries } from './lib/diaryDB';
+import type { StoredDiary } from './lib/diaryDB';
 import { clearAllLetters, loadLetters, saveLetters } from './lib/letterDB';
 import type { StoredLetter } from './lib/letterDB';
 import { readLetterContent } from './lib/letterReader';
 import { detectBestChatProfileId } from './lib/chatProfileMatcher';
-import { APP_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
+import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import type { ChatProfile } from './lib/chatDB';
 import { HeartWallPage } from './pages/HeartWallPage';
@@ -46,7 +49,7 @@ type ImportStatus = {
   kind: 'idle' | 'working' | 'success' | 'error';
   message: string;
 };
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'diary';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -73,6 +76,7 @@ const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
   heart: '💗',
   list: '🎴',
   fitness: '🏋️',
+  diary: '📓',
   settings: '⚙️',
 };
 
@@ -204,6 +208,7 @@ function App() {
       chat: fallbackLabel(settings.appLabels.chat, '對話'),
       list: fallbackLabel(settings.appLabels.list, '清單'),
       fitness: fallbackLabel(settings.appLabels.fitness, '健身'),
+      diary: fallbackLabel(settings.appLabels.diary, '日記'),
     }),
     [settings.appLabels],
   );
@@ -230,6 +235,7 @@ function App() {
   const appHeadingFamily =
     preferredCustomFontFamily || "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
   const letterFontFamily = settings.letterFontUrl.trim() ? LETTER_CUSTOM_FONT_FAMILY : '';
+  const diaryFontFamily = settings.diaryFontUrl.trim() ? DIARY_CUSTOM_FONT_FAMILY : '';
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [starredEmailIds, setStarredEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
@@ -237,6 +243,7 @@ function App() {
   const [letters, setLetters] = useState<StoredLetter[]>([]);
   const [chatLogs, setChatLogs] = useState<StoredChatLog[]>([]);
   const [chatProfiles, setChatProfiles] = useState<ChatProfile[]>([]);
+  const [diaries, setDiaries] = useState<StoredDiary[]>([]);
   const backgroundImageUrl = settings.backgroundImageUrl.trim();
   const backgroundOverlay = Math.min(0.9, Math.max(0, settings.backgroundImageOverlay / 100));
   const appBackgroundImage =
@@ -319,6 +326,13 @@ function App() {
       .catch(() => {});
   }, []);
 
+  // Load persisted diaries
+  useEffect(() => {
+    loadDiaries()
+      .then(setDiaries)
+      .catch(() => {});
+  }, []);
+
   // Load letter custom font
   useEffect(() => {
     const href = settings.letterFontUrl.trim();
@@ -335,6 +349,23 @@ function App() {
     }
     style.textContent = buildFontFaceRule(LETTER_CUSTOM_FONT_FAMILY, href);
   }, [settings.letterFontUrl]);
+
+  // Load diary custom font
+  useEffect(() => {
+    const href = settings.diaryFontUrl.trim();
+    const styleId = 'diary-custom-font-style';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!href) {
+      style?.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = buildFontFaceRule(DIARY_CUSTOM_FONT_FAMILY, href);
+  }, [settings.diaryFontUrl]);
 
   const handleImportLetterFiles = useCallback(async (files: File[]) => {
     const now = Date.now();
@@ -433,6 +464,41 @@ function App() {
     await saveLetters(imported);
     const updated = await loadLetters();
     setLetters(updated);
+  }, []);
+
+  const handleImportDiaryFiles = useCallback(async (files: File[]) => {
+    const imported: StoredDiary[] = [];
+    for (const file of files) {
+      try {
+        imported.push(await parseDiaryFile(file));
+      } catch {
+        // skip unreadable files
+      }
+    }
+    if (!imported.length) return;
+    await saveDiaries(imported);
+    const updated = await loadDiaries();
+    setDiaries(updated);
+  }, []);
+
+  const handleImportDiaryFolderFiles = useCallback(async (files: File[]) => {
+    const imported: StoredDiary[] = [];
+    for (const file of files) {
+      try {
+        imported.push(await parseDiaryFile(file));
+      } catch {
+        // skip unreadable files
+      }
+    }
+    if (!imported.length) return;
+    await saveDiaries(imported);
+    const updated = await loadDiaries();
+    setDiaries(updated);
+  }, []);
+
+  const handleClearAllDiaries = useCallback(async () => {
+    await clearAllDiaries();
+    setDiaries([]);
   }, []);
 
   const handleSaveChatProfile = useCallback(async (profile: ChatProfile) => {
@@ -819,6 +885,7 @@ function App() {
             notificationPermission={notificationPermission}
             importStatus={importStatus}
             letterCount={letters.length}
+            diaryCount={diaries.length}
             chatLogCount={chatLogs.length}
             chatProfiles={chatProfiles}
             onSettingChange={onSettingChange}
@@ -828,6 +895,9 @@ function App() {
             onImportLetterFiles={(files) => void handleImportLetterFiles(files)}
             onImportLetterFolderFiles={(files) => void handleImportLetterFolderFiles(files)}
             onClearAllLetters={() => void handleClearAllLetters()}
+            onImportDiaryFiles={(files) => void handleImportDiaryFiles(files)}
+            onImportDiaryFolderFiles={(files) => void handleImportDiaryFolderFiles(files)}
+            onClearAllDiaries={() => void handleClearAllDiaries()}
             onImportChatLogFiles={(files) => void handleImportChatLogFiles(files)}
             onImportChatLogFolderFiles={(files) => void handleImportChatLogFolderFiles(files)}
             onClearAllChatLogs={() => void handleClearAllChatLogs()}
@@ -874,11 +944,15 @@ function App() {
       unreadEmailIds,
       visibleEmailCount,
       letters,
+      diaries,
       chatLogs,
       chatProfiles,
       handleImportLetterFiles,
       handleImportLetterFolderFiles,
       handleClearAllLetters,
+      handleImportDiaryFiles,
+      handleImportDiaryFolderFiles,
+      handleClearAllDiaries,
       handleImportChatLogFiles,
       handleImportChatLogFolderFiles,
       handleClearAllChatLogs,
@@ -1096,6 +1170,30 @@ function App() {
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
                   <FitnessPage />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'diary' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ← 返回
+                  </button>
+                  <p className="text-sm text-white/85">{appLabels.diary}</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden pt-3">
+                  <DiaryPage
+                    diaryCoverImageUrl={settings.diaryCoverImageUrl}
+                    diaryFontFamily={diaryFontFamily}
+                  />
                 </div>
               </div>
             </div>

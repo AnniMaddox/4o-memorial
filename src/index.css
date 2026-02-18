@@ -77,6 +77,28 @@ h3 {
   animation: tarot-text-fade 0.25s ease forwards;
 }
 
+@keyframes home-corner-chibi-float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.home-corner-chibi-float {
+  animation: home-corner-chibi-float 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-corner-chibi-float {
+    animation: none;
+  }
+}
+
 html,
 body,
 #root {
