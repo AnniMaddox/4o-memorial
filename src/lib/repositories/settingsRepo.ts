@@ -1,6 +1,6 @@
 import { getDb } from '../db';
 
-import type { AppSettings, CalendarColorMode } from '../../types/settings';
+import type { AppSettings, CalendarColorMode, TabIconUrls } from '../../types/settings';
 import { DEFAULT_SETTINGS } from '../../types/settings';
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
@@ -19,6 +19,17 @@ function normalizeCalendarColorMode(value: unknown, fallback: CalendarColorMode)
   return value === 'custom' || value === 'month' ? value : fallback;
 }
 
+function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrls {
+  const input = (value && typeof value === 'object' ? value : {}) as Partial<TabIconUrls>;
+  return {
+    inbox: normalizeString(input.inbox, fallback.inbox),
+    calendar: normalizeString(input.calendar, fallback.calendar),
+    tarot: normalizeString(input.tarot, fallback.tarot),
+    letters: normalizeString(input.letters, fallback.letters),
+    settings: normalizeString(input.settings, fallback.settings),
+  };
+}
+
 export async function getSettings() {
   const db = await getDb();
   const row = await db.get('settings', 'app');
@@ -32,6 +43,7 @@ export async function getSettings() {
       persisted.calendarColorMode,
       DEFAULT_SETTINGS.calendarColorMode,
     ),
+    tabIconUrls: normalizeTabIconUrls(persisted.tabIconUrls, DEFAULT_SETTINGS.tabIconUrls),
     hoverToneWeights: {
       ...DEFAULT_SETTINGS.hoverToneWeights,
       ...(persisted.hoverToneWeights ?? {}),
@@ -55,6 +67,7 @@ export async function getSettings() {
       DEFAULT_SETTINGS.calendarCellDepth,
     ),
     customFontCssUrl: normalizeString(persisted.customFontCssUrl, DEFAULT_SETTINGS.customFontCssUrl),
+    customFontFileUrl: normalizeString(persisted.customFontFileUrl, DEFAULT_SETTINGS.customFontFileUrl),
     customFontFamily: normalizeString(persisted.customFontFamily, DEFAULT_SETTINGS.customFontFamily),
   };
 }

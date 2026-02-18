@@ -1,6 +1,5 @@
-/** Read a .txt or .docx file handle and return its plain-text content. */
-export async function readLetterFile(handle: FileSystemFileHandle): Promise<string> {
-  const file = await handle.getFile();
+/** Read a .txt or .docx File object and return its plain-text content. */
+export async function readLetterContent(file: File): Promise<string> {
   const name = file.name.toLowerCase();
 
   if (name.endsWith('.txt')) {

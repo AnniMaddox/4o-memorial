@@ -18,13 +18,14 @@ import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
 import { InboxPage } from './pages/InboxPage';
 import { LetterPage } from './pages/LetterPage';
-import type { SingleFile } from './pages/LetterPage';
-import { clearFolderHandle, initLetterFolder, saveFolderHandle } from './lib/letterDB';
-import { readLetterFile } from './lib/letterReader';
+import { clearAllLetters, loadLetters, saveLetters } from './lib/letterDB';
+import type { StoredLetter } from './lib/letterDB';
+import { readLetterContent } from './lib/letterReader';
+import { APP_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
-import type { AppSettings, CalendarColorMode } from './types/settings';
+import type { AppSettings, CalendarColorMode, TabIconKey } from './types/settings';
 import { DEFAULT_SETTINGS } from './types/settings';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -49,6 +50,13 @@ const MONTH_THEME_COLORS: Record<number, string> = {
   10: '#355C7D',
   11: '#A7226E',
   12: '#1B1B3A',
+};
+const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
+  inbox: '📮',
+  calendar: '📅',
+  tarot: '🔮',
+  letters: '💌',
+  settings: '⚙️',
 };
 
 function toRgbTriplet(hex: string) {
@@ -161,16 +169,17 @@ function App() {
   const calendarAccentRgb = useMemo(() => toRgbTriplet(calendarAccentColor), [calendarAccentColor]);
   const calendarHeaderAccentRgb = useMemo(() => toRgbTriplet(calendarHeaderColor), [calendarHeaderColor]);
   const lockedBubbleRgb = useMemo(() => toRgbTriplet(settings.lockedBubbleColor), [settings.lockedBubbleColor]);
+  const customFontFileUrl = settings.customFontFileUrl.trim();
   const customFontFamily = settings.customFontFamily.trim();
+  const preferredCustomFontFamily = customFontFamily || (customFontFileUrl ? APP_CUSTOM_FONT_FAMILY : '');
   const appFontFamily =
-    customFontFamily || "'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+    preferredCustomFontFamily || "'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
   const appHeadingFamily =
-    customFontFamily || "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
+    preferredCustomFontFamily || "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
   const [hoverResetSeed, setHoverResetSeed] = useState(0);
-  const [letterFolderHandle, setLetterFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
-  const [letterSingleFile, setLetterSingleFile] = useState<SingleFile | null>(null);
+  const [letters, setLetters] = useState<StoredLetter[]>([]);
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
@@ -223,67 +232,35 @@ function App() {
     void initialize();
   }, [initialize]);
 
-  // Load persisted letter folder handle on startup
+  // Load persisted letters from IndexedDB on startup
   useEffect(() => {
-    initLetterFolder()
-      .then((handle) => setLetterFolderHandle(handle))
+    loadLetters()
+      .then(setLetters)
       .catch(() => {});
   }, []);
 
-  const handleLetterFolderChange = useCallback(
-    async (handle: FileSystemDirectoryHandle | null) => {
-      if (handle) {
-        await saveFolderHandle(handle);
-      } else {
-        await clearFolderHandle();
+  const handleImportLetterFiles = useCallback(async (files: File[]) => {
+    const now = Date.now();
+    const imported: StoredLetter[] = [];
+    for (const file of files) {
+      try {
+        const content = await readLetterContent(file);
+        if (content.trim()) {
+          imported.push({ name: file.name, content, importedAt: now });
+        }
+      } catch {
+        // skip unreadable files
       }
-      setLetterFolderHandle(handle);
-    },
-    [],
-  );
-
-  const handlePickLetterFolder = useCallback(async () => {
-    if (!('showDirectoryPicker' in window)) {
-      alert('此瀏覽器不支援資料夾選取，請改用 Chrome 或 Edge。');
-      return;
     }
-    try {
-      const handle = await (
-        window as Window & { showDirectoryPicker(opts?: object): Promise<FileSystemDirectoryHandle> }
-      ).showDirectoryPicker({ mode: 'read' });
-      await saveFolderHandle(handle);
-      setLetterFolderHandle(handle);
-    } catch {
-      // User cancelled
-    }
+    if (!imported.length) return;
+    await saveLetters(imported);
+    const updated = await loadLetters();
+    setLetters(updated);
   }, []);
 
-  const handlePickLetterSingleFile = useCallback(async () => {
-    if (!('showOpenFilePicker' in window)) {
-      alert('此瀏覽器不支援檔案選取，請改用 Chrome 或 Edge。');
-      return;
-    }
-    try {
-      const [handle] = await (
-        window as Window & { showOpenFilePicker(opts?: object): Promise<FileSystemFileHandle[]> }
-      ).showOpenFilePicker({
-        types: [
-          {
-            description: '情書檔案',
-            accept: {
-              'text/plain': ['.txt'],
-              'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-            },
-          },
-        ],
-        multiple: false,
-      });
-      const content = await readLetterFile(handle);
-      setLetterSingleFile({ name: handle.name, content });
-      setActiveTab(3); // navigate to letters tab
-    } catch {
-      // User cancelled
-    }
+  const handleClearAllLetters = useCallback(async () => {
+    await clearAllLetters();
+    setLetters([]);
   }, []);
 
   useEffect(() => {
@@ -319,6 +296,27 @@ function App() {
 
     link.href = href;
   }, [settings.customFontCssUrl]);
+
+  useEffect(() => {
+    const href = settings.customFontFileUrl.trim();
+    const styleId = 'custom-font-file-style';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+
+    if (!href) {
+      if (style) {
+        style.remove();
+      }
+      return;
+    }
+
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+
+    style.textContent = buildFontFaceRule(APP_CUSTOM_FONT_FAMILY, href);
+  }, [settings.customFontFileUrl]);
 
   useEffect(() => {
     let active = true;
@@ -567,14 +565,7 @@ function App() {
       {
         id: 'letters',
         label: '情書',
-        node: (
-          <LetterPage
-            folderHandle={letterFolderHandle}
-            singleFile={letterSingleFile}
-            onFolderChange={handleLetterFolderChange}
-            onClearSingleFile={() => setLetterSingleFile(null)}
-          />
-        ),
+        node: <LetterPage letters={letters} />,
       },
       {
         id: 'settings',
@@ -587,16 +578,15 @@ function App() {
             monthCount={monthCount}
             notificationPermission={notificationPermission}
             importStatus={importStatus}
-            letterFolderName={letterFolderHandle?.name ?? ''}
+            letterCount={letters.length}
             onSettingChange={onSettingChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
             onImportEmlFiles={onImportEmlFiles}
             onImportCalendarFiles={onImportCalendarFiles}
+            onImportLetterFiles={(files) => void handleImportLetterFiles(files)}
+            onClearAllLetters={() => void handleClearAllLetters()}
             onHoverToneWeightChange={onHoverToneWeightChange}
             onReshuffleHoverPhrases={onReshuffleHoverPhrases}
-            onPickLetterFolder={() => void handlePickLetterFolder()}
-            onPickLetterSingleFile={() => void handlePickLetterSingleFile()}
-            onClearLetterFolder={() => void handleLetterFolderChange(null)}
             onRefresh={() => {
               void saveSettings({ lastSyncAt: new Date().toISOString() }).then((next) => {
                 setSettings(next);
@@ -630,11 +620,9 @@ function App() {
       hoverResetSeed,
       unreadEmailIds,
       visibleEmailCount,
-      letterFolderHandle,
-      letterSingleFile,
-      handleLetterFolderChange,
-      handlePickLetterFolder,
-      handlePickLetterSingleFile,
+      letters,
+      handleImportLetterFiles,
+      handleClearAllLetters,
     ],
   );
 
@@ -696,7 +684,15 @@ function App() {
           <BottomTabs
             activeIndex={activeTab}
             onSelect={setActiveTab}
-            tabs={pages.map((page) => ({ id: page.id, label: page.label }))}
+            tabs={pages.map((page) => {
+              const tabId = page.id as TabIconKey;
+              return {
+                id: page.id,
+                label: page.label,
+                icon: DEFAULT_TAB_ICONS[tabId] ?? '•',
+                iconUrl: settings.tabIconUrls[tabId] || undefined,
+              };
+            })}
           />
         </>
       )}

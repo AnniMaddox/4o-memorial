@@ -1,6 +1,10 @@
+import { useState } from 'react';
+
 type TabItem = {
   id: string;
   label: string;
+  icon: string;
+  iconUrl?: string;
 };
 
 type BottomTabsProps = {
@@ -10,6 +14,8 @@ type BottomTabsProps = {
 };
 
 export function BottomTabs({ tabs, activeIndex, onSelect }: BottomTabsProps) {
+  const [failedIconIds, setFailedIconIds] = useState<Record<string, boolean>>({});
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-300/70 bg-amber-50/90 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur">
       <ul
@@ -24,11 +30,31 @@ export function BottomTabs({ tabs, activeIndex, onSelect }: BottomTabsProps) {
               <button
                 type="button"
                 onClick={() => onSelect(index)}
-                className={`w-full rounded-xl px-3 py-2 text-sm transition ${
+                aria-label={tab.label}
+                title={tab.label}
+                className={`flex w-full items-center justify-center rounded-xl px-2 py-2 transition ${
                   active ? 'tab-active' : 'tab-idle bg-transparent text-stone-600'
                 }`}
               >
-                {tab.label}
+                {tab.iconUrl && !failedIconIds[tab.id] ? (
+                  <img
+                    src={tab.iconUrl}
+                    alt=""
+                    className="h-6 w-6 rounded-md object-cover"
+                    loading="lazy"
+                    onError={() =>
+                      setFailedIconIds((current) => ({
+                        ...current,
+                        [tab.id]: true,
+                      }))
+                    }
+                  />
+                ) : (
+                  <span className="text-xl leading-none" aria-hidden="true">
+                    {tab.icon}
+                  </span>
+                )}
+                <span className="sr-only">{tab.label}</span>
               </button>
             </li>
           );

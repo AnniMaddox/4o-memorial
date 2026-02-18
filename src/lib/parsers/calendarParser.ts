@@ -25,10 +25,30 @@ function normalizeHoverPhrases(value: unknown) {
   return phrases.length ? phrases : undefined;
 }
 
+function normalizeMessageList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const messages = value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0);
+
+  return messages.length ? messages : undefined;
+}
+
 function normalizeCalendarDay(rawValue: unknown): CalendarDay | null {
   if (typeof rawValue === 'string') {
     return {
       text: rawValue,
+    };
+  }
+
+  const messageListValue = normalizeMessageList(rawValue);
+  if (messageListValue) {
+    return {
+      text: messageListValue[0],
+      ...(messageListValue.length > 1 ? { messages: messageListValue } : {}),
     };
   }
 
@@ -38,8 +58,11 @@ function normalizeCalendarDay(rawValue: unknown): CalendarDay | null {
 
   const row = rawValue as Record<string, unknown>;
   const textRaw = row.text ?? row.message ?? row.body;
+  const messageListRaw = row.messages ?? row.texts ?? row.entries ?? row.notes ?? row.list;
+  const messageList = normalizeMessageList(messageListRaw);
 
-  if (typeof textRaw !== 'string') {
+  const primaryText = messageList?.[0] ?? (typeof textRaw === 'string' ? textRaw : null);
+  if (typeof primaryText !== 'string' || !primaryText.trim()) {
     return null;
   }
 
@@ -49,7 +72,8 @@ function normalizeCalendarDay(rawValue: unknown): CalendarDay | null {
     normalizeHoverPhrases(row.openers);
 
   return {
-    text: textRaw,
+    text: primaryText,
+    ...(messageList && messageList.length > 1 ? { messages: messageList } : {}),
     ...(hoverPhrases ? { hoverPhrases } : {}),
   };
 }

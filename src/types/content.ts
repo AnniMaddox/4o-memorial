@@ -1,5 +1,6 @@
 export type CalendarDay = {
   text: string;
+  messages?: string[];
   hoverPhrases?: string[];
 };
 

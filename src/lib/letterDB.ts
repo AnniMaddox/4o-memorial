@@ -1,64 +1,46 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'letter-db';
-const STORE = 'handles';
-const FOLDER_KEY = 'folder';
+const STORE = 'letters';
+
+export type StoredLetter = {
+  name: string;     // filename (used as key)
+  content: string;  // plain text content
+  importedAt: number;
+};
 
 async function getDB() {
-  return openDB(DB_NAME, 1, {
-    upgrade(database) {
-      database.createObjectStore(STORE);
+  return openDB(DB_NAME, 2, {
+    upgrade(db) {
+      // v1 store ('handles') is no longer needed — create the new letters store
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, { keyPath: 'name' });
+      }
     },
   });
 }
 
-export async function saveFolderHandle(handle: FileSystemDirectoryHandle): Promise<void> {
+export async function saveLetters(letters: StoredLetter[]): Promise<void> {
   const d = await getDB();
-  await d.put(STORE, handle, FOLDER_KEY);
-}
-
-export async function loadFolderHandle(): Promise<FileSystemDirectoryHandle | null> {
-  try {
-    const d = await getDB();
-    const result = await d.get(STORE, FOLDER_KEY);
-    return (result as FileSystemDirectoryHandle | undefined) ?? null;
-  } catch {
-    return null;
+  const tx = d.transaction(STORE, 'readwrite');
+  for (const letter of letters) {
+    await tx.store.put(letter);
   }
+  await tx.done;
 }
 
-export async function clearFolderHandle(): Promise<void> {
+export async function loadLetters(): Promise<StoredLetter[]> {
   const d = await getDB();
-  await d.delete(STORE, FOLDER_KEY);
+  const all = await d.getAll(STORE);
+  return all.sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
 }
 
-/** Re-verify read permission for a persisted handle (required after page reload). */
-export async function verifyFolderPermission(
-  handle: FileSystemDirectoryHandle,
-): Promise<boolean> {
-  const permissionHandle = handle as FileSystemDirectoryHandle & {
-    queryPermission?: (descriptor: { mode: 'read' | 'readwrite' }) => Promise<PermissionState>;
-    requestPermission?: (descriptor: { mode: 'read' | 'readwrite' }) => Promise<PermissionState>;
-  };
-
-  if (!permissionHandle.queryPermission || !permissionHandle.requestPermission) {
-    return false;
-  }
-
-  try {
-    const perm = await permissionHandle.queryPermission({ mode: 'read' });
-    if (perm === 'granted') return true;
-    const req = await permissionHandle.requestPermission({ mode: 'read' });
-    return req === 'granted';
-  } catch {
-    return false;
-  }
+export async function deleteLetter(name: string): Promise<void> {
+  const d = await getDB();
+  await d.delete(STORE, name);
 }
 
-/** Load and verify the persisted folder handle. Returns null if missing or permission denied. */
-export async function initLetterFolder(): Promise<FileSystemDirectoryHandle | null> {
-  const handle = await loadFolderHandle();
-  if (!handle) return null;
-  const ok = await verifyFolderPermission(handle);
-  return ok ? handle : null;
+export async function clearAllLetters(): Promise<void> {
+  const d = await getDB();
+  await d.clear(STORE);
 }

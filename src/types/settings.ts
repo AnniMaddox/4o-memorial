@@ -7,13 +7,25 @@ export type HoverToneWeights = {
 };
 
 export type CalendarColorMode = 'month' | 'custom';
+export type TabIconKey = 'inbox' | 'calendar' | 'tarot' | 'letters' | 'settings';
+export type TabIconUrls = Record<TabIconKey, string>;
+
+export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
+  inbox: '',
+  calendar: '',
+  tarot: '',
+  letters: '',
+  settings: '',
+};
 
 export type AppSettings = {
   themeMonthColor: string;
   calendarColorMode: CalendarColorMode;
   lockedBubbleColor: string;
   customFontCssUrl: string;
+  customFontFileUrl: string;
   customFontFamily: string;
+  tabIconUrls: TabIconUrls;
   fontScale: number;
   swipeEnabled: boolean;
   localNotificationsEnabled: boolean;
@@ -38,7 +50,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   calendarColorMode: 'month',
   lockedBubbleColor: '#d2f0ff',
   customFontCssUrl: '',
+  customFontFileUrl: '',
   customFontFamily: '',
+  tabIconUrls: DEFAULT_TAB_ICON_URLS,
   fontScale: 1,
   swipeEnabled: true,
   localNotificationsEnabled: true,
