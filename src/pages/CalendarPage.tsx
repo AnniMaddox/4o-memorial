@@ -4,7 +4,7 @@ import { monthLabel, todayDateKey } from '../lib/date';
 import { getGlobalHoverPoolEntries, pickHoverPhraseByWeights } from '../lib/hoverPool';
 import { getHoverPhraseMap, setHoverPhraseMap } from '../lib/repositories/metaRepo';
 import type { CalendarMonth } from '../types/content';
-import type { HoverToneWeights } from '../types/settings';
+import type { CalendarColorMode, HoverToneWeights } from '../types/settings';
 
 type CalendarPageProps = {
   monthKey: string;
@@ -12,7 +12,10 @@ type CalendarPageProps = {
   data: CalendarMonth;
   hoverToneWeights: HoverToneWeights;
   hoverResetSeed: number;
+  calendarColorMode: CalendarColorMode;
+  monthAccentColor: string | null;
   onMonthChange: (monthKey: string) => void;
+  onCalendarColorModeChange: (mode: CalendarColorMode) => void;
 };
 
 type HoverPreview = {
@@ -51,7 +54,10 @@ export function CalendarPage({
   data,
   hoverToneWeights,
   hoverResetSeed,
+  calendarColorMode,
+  monthAccentColor,
   onMonthChange,
+  onCalendarColorModeChange,
 }: CalendarPageProps) {
   const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi.png`;
   const chibiSources = CHIBI_IMAGE_SOURCES.length ? CHIBI_IMAGE_SOURCES : [fallbackChibiSrc];
@@ -204,6 +210,7 @@ export function CalendarPage({
   const selectedHoverPhrase = selectedDate ? getPinnedHoverPhrase(selectedDate) : null;
   const selectedUnlocked = !!selectedDate && (selectedDate <= today || temporaryUnlockDate === selectedDate);
   const hoverPreviewLocked = !!hoverPreview && hoverPreview.dateKey > today && temporaryUnlockDate !== hoverPreview.dateKey;
+  const monthColorAvailable = !!monthAccentColor;
   const currentMonthKey = today.slice(0, 7);
 
   const currentMonthIndex = monthKeys.findIndex((entry) => entry === monthKey);
@@ -292,7 +299,7 @@ export function CalendarPage({
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-4">
-      <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
+      <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Calendar</p>
         <div className="mt-1 flex items-center justify-between gap-2">
           <button
@@ -332,8 +339,31 @@ export function CalendarPage({
           </button>
         </div>
 
+        <div className="mt-2 inline-flex items-center gap-1 rounded-xl border border-stone-300/80 bg-white/70 p-1 text-xs text-stone-700">
+          <span className="px-2 text-[0.7rem] tracking-[0.08em] text-stone-500">日曆磚色</span>
+          <button
+            type="button"
+            onClick={() => onCalendarColorModeChange('month')}
+            disabled={!monthColorAvailable}
+            className={`calendar-color-mode-btn rounded-lg px-2.5 py-1 ${
+              calendarColorMode === 'month' ? 'calendar-color-mode-btn-active' : ''
+            }`}
+          >
+            月份色
+          </button>
+          <button
+            type="button"
+            onClick={() => onCalendarColorModeChange('custom')}
+            className={`calendar-color-mode-btn rounded-lg px-2.5 py-1 ${
+              calendarColorMode === 'custom' ? 'calendar-color-mode-btn-active' : ''
+            }`}
+          >
+            自訂色
+          </button>
+        </div>
+
         {monthPickerOpen && (
-          <div className="mt-3 max-h-52 space-y-3 overflow-y-auto rounded-xl border border-stone-300/80 bg-white/85 p-3">
+          <div className="calendar-month-picker-panel mt-3 max-h-52 space-y-3 overflow-y-auto rounded-xl border p-3">
             {monthGroups.map(([year, keys]) => (
               <div key={year} className="space-y-2">
                 <p className="text-xs font-medium text-stone-500">{year} 年</p>

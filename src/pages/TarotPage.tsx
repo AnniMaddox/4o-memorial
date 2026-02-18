@@ -6,7 +6,7 @@ import { seededShuffle, todayDateKey } from '../lib/tarotSeed';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type TarotCard = (typeof cardsData)[number];
-type CardPhase = 'image' | 'text' | 'bonus';
+type CardPhase = 'image' | 'text' | 'bonusImage' | 'bonus';
 
 const SPREAD_POSITIONS = ['過去', '現在', '未來'] as const;
 type SpreadPosition = (typeof SPREAD_POSITIONS)[number];
@@ -39,11 +39,20 @@ export function TarotPage() {
     const { card, phase } = modal;
     if (phase === 'image') {
       setModal({ ...modal, phase: 'text' });
+    } else if (phase === 'text' && card.bonusImage) {
+      setModal({ ...modal, phase: 'bonusImage' });
     } else if (phase === 'text' && card.bonus) {
+      setModal({ ...modal, phase: 'bonus' });
+    } else if (phase === 'bonusImage') {
       setModal({ ...modal, phase: 'bonus' });
     } else {
       setModal({ ...modal, phase: 'image' });
     }
+  }
+
+  function flipBack() {
+    if (!modal) return;
+    setModal({ ...modal, phase: 'image' });
   }
 
   return (
@@ -106,6 +115,7 @@ export function TarotPage() {
           modal={modal}
           basePath={basePath}
           onAdvance={advancePhase}
+          onFlipBack={flipBack}
           onClose={() => setModal(null)}
         />
       )}
@@ -119,21 +129,25 @@ function CardModal({
   modal,
   basePath,
   onAdvance,
+  onFlipBack,
   onClose,
 }: {
   modal: ModalState;
   basePath: string;
   onAdvance: () => void;
+  onFlipBack: () => void;
   onClose: () => void;
 }) {
   const { card, position, phase } = modal;
 
-  const isFlipped = phase !== 'image';
+  const isFlipped = phase === 'text' || phase === 'bonus';
   const isBonus = phase === 'bonus';
+  const isBonusImage = phase === 'bonusImage';
 
-  // Which image to show on the back face
+  // Front face: show bonusImage when revealing the other side
+  const frontImage = isBonusImage && card.bonusImage ? card.bonusImage : card.image;
+  // Back face mini-thumbnail and scrollable text
   const backImage = isBonus && card.bonusImage ? card.bonusImage : card.image;
-  // Text content for current back-face phase
   const backText = isBonus ? (card.bonus ?? '') : card.text;
 
   return (
@@ -182,14 +196,20 @@ function CardModal({
               onClick={onAdvance}
             >
               <img
-                src={`${basePath}${card.image}`}
+                src={`${basePath}${frontImage}`}
                 alt={card.name}
                 className="h-full w-full object-contain"
               />
-              {/* Subtle ✦ badge if has bonus — stays visible on image */}
-              {card.bonus && (
+              {/* ✦ badge on normal front face */}
+              {card.bonus && !isBonusImage && (
                 <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/90 text-xs text-white shadow">
                   ✦
+                </span>
+              )}
+              {/* Hint when showing the bonus image face */}
+              {isBonusImage && (
+                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 text-xs text-white backdrop-blur">
+                  點擊看牌義
                 </span>
               )}
             </div>
@@ -252,7 +272,7 @@ function CardModal({
                 )}
                 <button
                   type="button"
-                  onClick={onAdvance}
+                  onClick={onFlipBack}
                   className="flex-1 rounded-xl border border-stone-300 bg-white/80 py-2 text-sm text-stone-600"
                 >
                   翻回牌面

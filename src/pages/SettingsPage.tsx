@@ -90,7 +90,7 @@ export function SettingsPage({
         <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">顯示與操作</h2>
 
         <label className="block space-y-2 text-sm text-stone-700">
-          <span>解鎖泡泡基準色（有月份配色時會自動覆蓋）</span>
+          <span>自訂主題色（分頁與自訂月曆色）</span>
           <input
             type="color"
             value={settings.themeMonthColor}

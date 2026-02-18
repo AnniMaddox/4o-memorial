@@ -20,7 +20,7 @@ import { InboxPage } from './pages/InboxPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
-import type { AppSettings } from './types/settings';
+import type { AppSettings, CalendarColorMode } from './types/settings';
 import { DEFAULT_SETTINGS } from './types/settings';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -150,8 +150,12 @@ function App() {
     getNotificationPermission,
   );
   const monthAccentColor = useMemo(() => getMonthAccentColor(calendarMonthKey), [calendarMonthKey]);
-  const effectiveThemeColor = monthAccentColor ?? settings.themeMonthColor;
-  const themeAccentRgb = useMemo(() => toRgbTriplet(effectiveThemeColor), [effectiveThemeColor]);
+  const appAccentColor = settings.themeMonthColor;
+  const calendarHeaderColor = monthAccentColor ?? appAccentColor;
+  const calendarAccentColor = settings.calendarColorMode === 'month' ? calendarHeaderColor : appAccentColor;
+  const themeAccentRgb = useMemo(() => toRgbTriplet(appAccentColor), [appAccentColor]);
+  const calendarAccentRgb = useMemo(() => toRgbTriplet(calendarAccentColor), [calendarAccentColor]);
+  const calendarHeaderAccentRgb = useMemo(() => toRgbTriplet(calendarHeaderColor), [calendarHeaderColor]);
   const lockedBubbleRgb = useMemo(() => toRgbTriplet(settings.lockedBubbleColor), [settings.lockedBubbleColor]);
   const customFontFamily = settings.customFontFamily.trim();
   const appFontFamily =
@@ -455,6 +459,13 @@ function App() {
     }
   }, []);
 
+  const onCalendarColorModeChange = useCallback(
+    (mode: CalendarColorMode) => {
+      void onSettingChange({ calendarColorMode: mode });
+    },
+    [onSettingChange],
+  );
+
   const pages = useMemo(
     () => [
       {
@@ -472,7 +483,10 @@ function App() {
             data={calendarData}
             hoverToneWeights={settings.hoverToneWeights}
             hoverResetSeed={hoverResetSeed}
+            calendarColorMode={settings.calendarColorMode}
+            monthAccentColor={monthAccentColor}
             onMonthChange={onMonthChange}
+            onCalendarColorModeChange={onCalendarColorModeChange}
           />
         ),
       },
@@ -521,6 +535,7 @@ function App() {
       onImportCalendarFiles,
       onImportEmlFiles,
       onMonthChange,
+      onCalendarColorModeChange,
       onRequestNotificationPermission,
       onReshuffleHoverPhrases,
       onSettingChange,
@@ -538,8 +553,11 @@ function App() {
       className="relative h-dvh w-full overflow-hidden bg-[radial-gradient(circle_at_20%_10%,#fde9d7_0,#f6f1e8_40%,#ece4d5_100%)]"
       style={{
         fontSize: `${settings.fontScale}rem`,
-        ['--theme-accent' as string]: effectiveThemeColor,
+        ['--theme-accent' as string]: appAccentColor,
         ['--theme-accent-rgb' as string]: themeAccentRgb,
+        ['--tab-accent-rgb' as string]: themeAccentRgb,
+        ['--calendar-accent-rgb' as string]: calendarAccentRgb,
+        ['--calendar-header-accent-rgb' as string]: calendarHeaderAccentRgb,
         ['--locked-bubble-rgb' as string]: lockedBubbleRgb,
         ['--app-font-scale' as string]: settings.fontScale,
         ['--app-font-family' as string]: appFontFamily,

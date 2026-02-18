@@ -6,8 +6,11 @@ export type HoverToneWeights = {
   general: number;
 };
 
+export type CalendarColorMode = 'month' | 'custom';
+
 export type AppSettings = {
   themeMonthColor: string;
+  calendarColorMode: CalendarColorMode;
   lockedBubbleColor: string;
   customFontCssUrl: string;
   customFontFamily: string;
@@ -32,6 +35,7 @@ export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   themeMonthColor: '#c25b3c',
+  calendarColorMode: 'month',
   lockedBubbleColor: '#d2f0ff',
   customFontCssUrl: '',
   customFontFamily: '',

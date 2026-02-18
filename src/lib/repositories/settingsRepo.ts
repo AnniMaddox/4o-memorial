@@ -1,6 +1,6 @@
 import { getDb } from '../db';
 
-import type { AppSettings } from '../../types/settings';
+import type { AppSettings, CalendarColorMode } from '../../types/settings';
 import { DEFAULT_SETTINGS } from '../../types/settings';
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
@@ -15,6 +15,10 @@ function normalizeString(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
 
+function normalizeCalendarColorMode(value: unknown, fallback: CalendarColorMode): CalendarColorMode {
+  return value === 'custom' || value === 'month' ? value : fallback;
+}
+
 export async function getSettings() {
   const db = await getDb();
   const row = await db.get('settings', 'app');
@@ -24,6 +28,10 @@ export async function getSettings() {
   return {
     ...DEFAULT_SETTINGS,
     ...persisted,
+    calendarColorMode: normalizeCalendarColorMode(
+      persisted.calendarColorMode,
+      DEFAULT_SETTINGS.calendarColorMode,
+    ),
     hoverToneWeights: {
       ...DEFAULT_SETTINGS.hoverToneWeights,
       ...(persisted.hoverToneWeights ?? {}),
