@@ -12,12 +12,16 @@ type SettingsPageProps = {
     kind: 'idle' | 'working' | 'success' | 'error';
     message: string;
   };
+  letterFolderName: string;
   onSettingChange: (partial: Partial<AppSettings>) => void;
   onRequestNotificationPermission: () => void;
   onImportEmlFiles: (files: File[]) => void;
   onImportCalendarFiles: (files: File[]) => void;
   onHoverToneWeightChange: (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => void;
   onReshuffleHoverPhrases: () => void;
+  onPickLetterFolder: () => void;
+  onPickLetterSingleFile: () => void;
+  onClearLetterFolder: () => void;
   onRefresh: () => void;
 };
 
@@ -28,12 +32,16 @@ export function SettingsPage({
   monthCount,
   notificationPermission,
   importStatus,
+  letterFolderName,
   onSettingChange,
   onRequestNotificationPermission,
   onImportEmlFiles,
   onImportCalendarFiles,
   onHoverToneWeightChange,
   onReshuffleHoverPhrases,
+  onPickLetterFolder,
+  onPickLetterSingleFile,
+  onClearLetterFolder,
   onRefresh,
 }: SettingsPageProps) {
   const [fontUrlDraft, setFontUrlDraft] = useState(settings.customFontCssUrl);
@@ -347,6 +355,51 @@ export function SettingsPage({
         >
           重新隨機全部日期語氣
         </button>
+      </section>
+
+      <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">
+        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">情書</h2>
+
+        {/* Folder status */}
+        <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-3 text-sm text-stone-700">
+          <p className="text-xs text-stone-500">已連結資料夾</p>
+          <p className="mt-0.5 truncate text-sm text-stone-800">
+            {letterFolderName ? `📁 ${letterFolderName}` : '尚未選擇'}
+          </p>
+        </div>
+
+        {/* Folder actions */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onPickLetterFolder}
+            className="flex-1 rounded-xl border border-amber-300 bg-amber-50 py-2.5 text-sm text-amber-900 transition active:scale-95"
+          >
+            {letterFolderName ? '更換資料夾' : '選擇資料夾'}
+          </button>
+          {letterFolderName && (
+            <button
+              type="button"
+              onClick={onClearLetterFolder}
+              className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700 transition active:scale-95"
+            >
+              清除
+            </button>
+          )}
+        </div>
+
+        {/* Single file import */}
+        <button
+          type="button"
+          onClick={onPickLetterSingleFile}
+          className="w-full rounded-xl border border-stone-300 bg-stone-50 py-2.5 text-sm text-stone-700 transition active:scale-95"
+        >
+          匯入單封情書（.txt / .docx）
+        </button>
+
+        <p className="text-xs text-stone-400">
+          匯入單封後會自動跳至情書頁閱讀，資料夾選取後記憶跨 session。
+        </p>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">

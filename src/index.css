@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Ma+Shan+Zheng&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
 @import 'tailwindcss';
 
 :root {
@@ -30,6 +30,32 @@ h3 {
 
 * {
   box-sizing: border-box;
+}
+
+/* ── Letter paper unfold animation ──────────────────────────────────────────── */
+@keyframes letter-paper-reveal {
+  0% {
+    clip-path: inset(48% 2% 48% 2% round 12px);
+    transform: scale(0.96) translateY(6px);
+    opacity: 0.7;
+  }
+  100% {
+    clip-path: inset(0% 0% 0% 0% round 0px);
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+.letter-paper-reveal {
+  animation: letter-paper-reveal 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+/* ── Letter content fade-in ──────────────────────────────────────────────────── */
+@keyframes letter-content-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.letter-content-fade {
+  animation: letter-content-fade 0.5s 0.3s ease both;
 }
 
 /* ── Tarot card text fade-in (used when switching text ↔ bonus phases) ─────── */

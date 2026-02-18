@@ -17,6 +17,10 @@ import {
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
 import { InboxPage } from './pages/InboxPage';
+import { LetterPage } from './pages/LetterPage';
+import type { SingleFile } from './pages/LetterPage';
+import { clearFolderHandle, initLetterFolder, saveFolderHandle } from './lib/letterDB';
+import { readLetterFile } from './lib/letterReader';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
@@ -165,6 +169,8 @@ function App() {
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
   const [hoverResetSeed, setHoverResetSeed] = useState(0);
+  const [letterFolderHandle, setLetterFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [letterSingleFile, setLetterSingleFile] = useState<SingleFile | null>(null);
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
@@ -216,6 +222,69 @@ function App() {
   useEffect(() => {
     void initialize();
   }, [initialize]);
+
+  // Load persisted letter folder handle on startup
+  useEffect(() => {
+    initLetterFolder()
+      .then((handle) => setLetterFolderHandle(handle))
+      .catch(() => {});
+  }, []);
+
+  const handleLetterFolderChange = useCallback(
+    async (handle: FileSystemDirectoryHandle | null) => {
+      if (handle) {
+        await saveFolderHandle(handle);
+      } else {
+        await clearFolderHandle();
+      }
+      setLetterFolderHandle(handle);
+    },
+    [],
+  );
+
+  const handlePickLetterFolder = useCallback(async () => {
+    if (!('showDirectoryPicker' in window)) {
+      alert('此瀏覽器不支援資料夾選取，請改用 Chrome 或 Edge。');
+      return;
+    }
+    try {
+      const handle = await (
+        window as Window & { showDirectoryPicker(opts?: object): Promise<FileSystemDirectoryHandle> }
+      ).showDirectoryPicker({ mode: 'read' });
+      await saveFolderHandle(handle);
+      setLetterFolderHandle(handle);
+    } catch {
+      // User cancelled
+    }
+  }, []);
+
+  const handlePickLetterSingleFile = useCallback(async () => {
+    if (!('showOpenFilePicker' in window)) {
+      alert('此瀏覽器不支援檔案選取，請改用 Chrome 或 Edge。');
+      return;
+    }
+    try {
+      const [handle] = await (
+        window as Window & { showOpenFilePicker(opts?: object): Promise<FileSystemFileHandle[]> }
+      ).showOpenFilePicker({
+        types: [
+          {
+            description: '情書檔案',
+            accept: {
+              'text/plain': ['.txt'],
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+            },
+          },
+        ],
+        multiple: false,
+      });
+      const content = await readLetterFile(handle);
+      setLetterSingleFile({ name: handle.name, content });
+      setActiveTab(3); // navigate to letters tab
+    } catch {
+      // User cancelled
+    }
+  }, []);
 
   useEffect(() => {
     const onVisibilityOrFocus = () => refreshNotificationPermission();
@@ -496,6 +565,18 @@ function App() {
         node: <TarotPage />,
       },
       {
+        id: 'letters',
+        label: '情書',
+        node: (
+          <LetterPage
+            folderHandle={letterFolderHandle}
+            singleFile={letterSingleFile}
+            onFolderChange={handleLetterFolderChange}
+            onClearSingleFile={() => setLetterSingleFile(null)}
+          />
+        ),
+      },
+      {
         id: 'settings',
         label: '設定',
         node: (
@@ -506,12 +587,16 @@ function App() {
             monthCount={monthCount}
             notificationPermission={notificationPermission}
             importStatus={importStatus}
+            letterFolderName={letterFolderHandle?.name ?? ''}
             onSettingChange={onSettingChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
             onImportEmlFiles={onImportEmlFiles}
             onImportCalendarFiles={onImportCalendarFiles}
             onHoverToneWeightChange={onHoverToneWeightChange}
             onReshuffleHoverPhrases={onReshuffleHoverPhrases}
+            onPickLetterFolder={() => void handlePickLetterFolder()}
+            onPickLetterSingleFile={() => void handlePickLetterSingleFile()}
+            onClearLetterFolder={() => void handleLetterFolderChange(null)}
             onRefresh={() => {
               void saveSettings({ lastSyncAt: new Date().toISOString() }).then((next) => {
                 setSettings(next);
@@ -545,6 +630,11 @@ function App() {
       hoverResetSeed,
       unreadEmailIds,
       visibleEmailCount,
+      letterFolderHandle,
+      letterSingleFile,
+      handleLetterFolderChange,
+      handlePickLetterFolder,
+      handlePickLetterSingleFile,
     ],
   );
 
