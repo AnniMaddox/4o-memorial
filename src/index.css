@@ -7,6 +7,7 @@
   background-color: #f6f1e8;
   --theme-accent: #c25b3c;
   --theme-accent-rgb: 194 91 60;
+  --locked-bubble-rgb: 210 240 255;
   --calendar-cell-radius: 16px;
   --calendar-cell-shadow: 68;
   --calendar-cell-depth: 70;
@@ -84,22 +85,27 @@ textarea {
 }
 
 .calendar-day-locked {
-  border-color: rgb(168 192 204 / 0.95);
+  border-color: rgb(var(--locked-bubble-rgb) / 0.92);
   background:
     linear-gradient(
       145deg,
       rgb(252 255 255 / 0.76) 0%,
-      rgb(210 240 255 / 0.58) 45%,
-      rgb(192 224 239 / 0.44) 100%
+      rgb(var(--locked-bubble-rgb) / 0.58) 45%,
+      rgb(var(--locked-bubble-rgb) / 0.44) 100%
     ),
     linear-gradient(180deg, rgb(255 255 255 / 0.18), rgb(255 255 255 / 0.03));
   color: rgb(68 64 60 / 0.8);
 }
 
 .calendar-day-locked:hover {
-  border-color: rgb(168 192 204 / 1);
+  border-color: rgb(var(--locked-bubble-rgb) / 1);
   background:
-    linear-gradient(145deg, rgb(255 255 255 / 0.8) 0%, rgb(216 244 255 / 0.64) 47%, rgb(198 230 246 / 0.48) 100%),
+    linear-gradient(
+      145deg,
+      rgb(255 255 255 / 0.8) 0%,
+      rgb(var(--locked-bubble-rgb) / 0.64) 47%,
+      rgb(var(--locked-bubble-rgb) / 0.48) 100%
+    ),
     linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.04));
 }
 
@@ -217,10 +223,10 @@ textarea {
   --hover-bubble-fill: linear-gradient(
     145deg,
     rgb(255 255 255 / 0.8) 0%,
-    rgb(216 244 255 / 0.64) 47%,
-    rgb(198 230 246 / 0.48) 100%
+    rgb(var(--locked-bubble-rgb) / 0.64) 47%,
+    rgb(var(--locked-bubble-rgb) / 0.48) 100%
   );
-  border-color: rgb(168 192 204 / 1);
+  border-color: rgb(var(--locked-bubble-rgb) / 0.95);
 }
 
 .calendar-hover-bubble-clickable {

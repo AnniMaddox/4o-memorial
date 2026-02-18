@@ -4,7 +4,7 @@ import { BottomTabs } from './components/BottomTabs';
 import { SwipePager } from './components/SwipePager';
 import { seedDatabaseIfNeeded } from './lib/bootstrapSeed';
 import { importCalendarFiles, importEmlFiles } from './lib/importers';
-import { toMonthKey } from './lib/date';
+import { buildContinuousMonthKeys, toMonthKey } from './lib/date';
 import { getCalendarMonth, listCalendarMonths } from './lib/repositories/calendarRepo';
 import { listEmails } from './lib/repositories/emailRepo';
 import {
@@ -31,6 +31,20 @@ type ImportStatus = {
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
+const MONTH_THEME_COLORS: Record<number, string> = {
+  1: '#2E294E',
+  2: '#D7263D',
+  3: '#F46036',
+  4: '#FFE066',
+  5: '#247BA0',
+  6: '#70C1B3',
+  7: '#FF6B6B',
+  8: '#C44D58',
+  9: '#6C5B7B',
+  10: '#355C7D',
+  11: '#A7226E',
+  12: '#1B1B3A',
+};
 
 function toRgbTriplet(hex: string) {
   const matched = hex.trim().match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
@@ -39,6 +53,15 @@ function toRgbTriplet(hex: string) {
   }
 
   return `${Number.parseInt(matched[1], 16)} ${Number.parseInt(matched[2], 16)} ${Number.parseInt(matched[3], 16)}`;
+}
+
+function getMonthAccentColor(monthKey: string) {
+  const month = Number(monthKey.split('-')[1]);
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    return null;
+  }
+
+  return MONTH_THEME_COLORS[month] ?? null;
 }
 
 function getNotificationPermission(): BrowserNotificationPermission {
@@ -125,7 +148,10 @@ function App() {
   const [notificationPermission, setNotificationPermission] = useState<BrowserNotificationPermission>(
     getNotificationPermission,
   );
-  const themeAccentRgb = useMemo(() => toRgbTriplet(settings.themeMonthColor), [settings.themeMonthColor]);
+  const monthAccentColor = useMemo(() => getMonthAccentColor(calendarMonthKey), [calendarMonthKey]);
+  const effectiveThemeColor = monthAccentColor ?? settings.themeMonthColor;
+  const themeAccentRgb = useMemo(() => toRgbTriplet(effectiveThemeColor), [effectiveThemeColor]);
+  const lockedBubbleRgb = useMemo(() => toRgbTriplet(settings.lockedBubbleColor), [settings.lockedBubbleColor]);
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
   const [hoverResetSeed, setHoverResetSeed] = useState(0);
@@ -143,9 +169,10 @@ function App() {
       listCalendarMonths(),
     ]);
 
-    const monthKeys = months.map((entry) => entry.monthKey);
+    const storedMonthKeys = months.map((entry) => entry.monthKey);
+    const monthKeys = buildContinuousMonthKeys(storedMonthKeys, toMonthKey());
     const preferredMonth = monthKeys.includes(calendarMonthKey) ? calendarMonthKey : null;
-    const activeMonth = preferredMonth ?? monthKeys.at(-1) ?? calendarMonthKey;
+    const activeMonth = preferredMonth ?? toMonthKey();
     const activeCalendar = await getCalendarMonth(activeMonth);
 
     setSettings(loadedSettings);
@@ -155,7 +182,7 @@ function App() {
     setCalendarData(activeCalendar ?? {});
     setVisibleEmailCount(visibleEmails.length);
     setTotalEmailCount(allEmails.length);
-    setMonthCount(months.length);
+    setMonthCount(monthKeys.length);
   }, [calendarMonthKey]);
 
   const initialize = useCallback(async () => {
@@ -478,8 +505,10 @@ function App() {
       className="relative h-dvh w-full overflow-hidden bg-[radial-gradient(circle_at_20%_10%,#fde9d7_0,#f6f1e8_40%,#ece4d5_100%)]"
       style={{
         fontSize: `${settings.fontScale}rem`,
-        ['--theme-accent' as string]: settings.themeMonthColor,
+        ['--theme-accent' as string]: effectiveThemeColor,
         ['--theme-accent-rgb' as string]: themeAccentRgb,
+        ['--locked-bubble-rgb' as string]: lockedBubbleRgb,
+        ['--app-font-scale' as string]: settings.fontScale,
         ['--calendar-cell-radius' as string]: `${settings.calendarCellRadius}px`,
         ['--calendar-cell-shadow' as string]: settings.calendarCellShadow,
         ['--calendar-cell-depth' as string]: settings.calendarCellDepth,

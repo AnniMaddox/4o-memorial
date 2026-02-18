@@ -347,7 +347,6 @@ export function CalendarPage({
               <div className="flex items-center justify-between">
                 <span>{cell.day}</span>
                 {!hasMessage && <span className="text-xs">-</span>}
-                {hasMessage && <span className={`h-1.5 w-1.5 rounded-full ${locked ? 'bg-stone-400/80' : 'bg-stone-700/80'}`} />}
               </div>
             </button>
           );
@@ -386,7 +385,9 @@ export function CalendarPage({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl text-stone-900">{selectedDate}</h2>
-                <p className="mt-1 text-sm text-stone-600">{selectedHoverPhrase}</p>
+                <p className="mt-1 text-stone-600" style={{ fontSize: 'calc(0.9rem * var(--app-font-scale, 1))' }}>
+                  {selectedHoverPhrase}
+                </p>
               </div>
               <button
                 type="button"
@@ -400,7 +401,10 @@ export function CalendarPage({
               </button>
             </div>
 
-            <p className="mt-4 max-h-[58vh] overflow-y-auto whitespace-pre-wrap rounded-xl border border-stone-300/70 bg-white/90 p-4 text-sm leading-relaxed text-stone-800">
+            <p
+              className="mt-4 max-h-[58vh] overflow-y-auto whitespace-pre-wrap rounded-xl border border-stone-300/70 bg-white/90 p-4 leading-relaxed text-stone-800"
+              style={{ fontSize: 'calc(0.92rem * var(--app-font-scale, 1))' }}
+            >
               {!selectedMessage
                 ? '這天還沒有內容。'
                 : selectedUnlocked

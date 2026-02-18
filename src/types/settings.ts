@@ -8,6 +8,7 @@ export type HoverToneWeights = {
 
 export type AppSettings = {
   themeMonthColor: string;
+  lockedBubbleColor: string;
   fontScale: number;
   swipeEnabled: boolean;
   localNotificationsEnabled: boolean;
@@ -29,6 +30,7 @@ export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   themeMonthColor: '#c25b3c',
+  lockedBubbleColor: '#d2f0ff',
   fontScale: 1,
   swipeEnabled: true,
   localNotificationsEnabled: true,
