@@ -75,6 +75,13 @@ type AppearancePresetPayload = {
     themeMonthColor: string;
     calendarColorMode: AppSettings['calendarColorMode'];
     lockedBubbleColor: string;
+    chatBubbleStyle: AppSettings['chatBubbleStyle'];
+    chatUserBubbleColor: string;
+    chatUserBubbleBorderColor: string;
+    chatUserBubbleTextColor: string;
+    chatAiBubbleColor: string;
+    chatAiBubbleBorderColor: string;
+    chatAiBubbleTextColor: string;
     customFontFileUrl: string;
     customFontFamily: string;
     fontScale: number;
@@ -87,6 +94,11 @@ type AppearancePresetPayload = {
     backgroundGradientEnd: string;
     backgroundImageUrl: string;
     backgroundImageOverlay: number;
+    homeWidgetTitle: string;
+    homeWidgetSubtitle: string;
+    homeWidgetBadgeText: string;
+    homeWidgetIconDataUrl: string;
+    inboxTitle: string;
   };
 };
 
@@ -273,6 +285,13 @@ export function SettingsPage({
         themeMonthColor: settings.themeMonthColor,
         calendarColorMode: settings.calendarColorMode,
         lockedBubbleColor: settings.lockedBubbleColor,
+        chatBubbleStyle: settings.chatBubbleStyle,
+        chatUserBubbleColor: settings.chatUserBubbleColor,
+        chatUserBubbleBorderColor: settings.chatUserBubbleBorderColor,
+        chatUserBubbleTextColor: settings.chatUserBubbleTextColor,
+        chatAiBubbleColor: settings.chatAiBubbleColor,
+        chatAiBubbleBorderColor: settings.chatAiBubbleBorderColor,
+        chatAiBubbleTextColor: settings.chatAiBubbleTextColor,
         customFontFileUrl: settings.customFontFileUrl,
         customFontFamily: settings.customFontFamily,
         fontScale: settings.fontScale,
@@ -285,6 +304,11 @@ export function SettingsPage({
         backgroundGradientEnd: settings.backgroundGradientEnd,
         backgroundImageUrl: settings.backgroundImageUrl,
         backgroundImageOverlay: settings.backgroundImageOverlay,
+        homeWidgetTitle: settings.homeWidgetTitle,
+        homeWidgetSubtitle: settings.homeWidgetSubtitle,
+        homeWidgetBadgeText: settings.homeWidgetBadgeText,
+        homeWidgetIconDataUrl: settings.homeWidgetIconDataUrl,
+        inboxTitle: settings.inboxTitle,
       },
     };
 
@@ -313,6 +337,27 @@ export function SettingsPage({
       }
       if (typeof source.lockedBubbleColor === 'string') {
         next.lockedBubbleColor = source.lockedBubbleColor;
+      }
+      if (source.chatBubbleStyle === 'jelly' || source.chatBubbleStyle === 'imessage') {
+        next.chatBubbleStyle = source.chatBubbleStyle;
+      }
+      if (typeof source.chatUserBubbleColor === 'string') {
+        next.chatUserBubbleColor = source.chatUserBubbleColor;
+      }
+      if (typeof source.chatUserBubbleBorderColor === 'string') {
+        next.chatUserBubbleBorderColor = source.chatUserBubbleBorderColor;
+      }
+      if (typeof source.chatUserBubbleTextColor === 'string') {
+        next.chatUserBubbleTextColor = source.chatUserBubbleTextColor;
+      }
+      if (typeof source.chatAiBubbleColor === 'string') {
+        next.chatAiBubbleColor = source.chatAiBubbleColor;
+      }
+      if (typeof source.chatAiBubbleBorderColor === 'string') {
+        next.chatAiBubbleBorderColor = source.chatAiBubbleBorderColor;
+      }
+      if (typeof source.chatAiBubbleTextColor === 'string') {
+        next.chatAiBubbleTextColor = source.chatAiBubbleTextColor;
       }
       if (typeof source.customFontFileUrl === 'string') {
         next.customFontFileUrl = source.customFontFileUrl;
@@ -358,6 +403,21 @@ export function SettingsPage({
       }
       if (typeof source.backgroundImageOverlay === 'number' && Number.isFinite(source.backgroundImageOverlay)) {
         next.backgroundImageOverlay = source.backgroundImageOverlay;
+      }
+      if (typeof source.homeWidgetTitle === 'string') {
+        next.homeWidgetTitle = source.homeWidgetTitle;
+      }
+      if (typeof source.homeWidgetSubtitle === 'string') {
+        next.homeWidgetSubtitle = source.homeWidgetSubtitle;
+      }
+      if (typeof source.homeWidgetBadgeText === 'string') {
+        next.homeWidgetBadgeText = source.homeWidgetBadgeText;
+      }
+      if (typeof source.homeWidgetIconDataUrl === 'string') {
+        next.homeWidgetIconDataUrl = source.homeWidgetIconDataUrl;
+      }
+      if (typeof source.inboxTitle === 'string') {
+        next.inboxTitle = source.inboxTitle;
       }
 
       onSettingChange(next);
@@ -1223,6 +1283,101 @@ export function SettingsPage({
             <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
               <p className="text-xs text-stone-500">已匯入對話紀錄</p>
               <p className="mt-0.5 truncate text-sm text-stone-800">{chatLogCount} 份</p>
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">泡泡外觀</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ chatBubbleStyle: 'jelly' })}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    settings.chatBubbleStyle === 'jelly'
+                      ? 'border-stone-900 bg-stone-900 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  QQ 果凍
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ chatBubbleStyle: 'imessage' })}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    settings.chatBubbleStyle === 'imessage'
+                      ? 'border-stone-900 bg-stone-900 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  iMessage
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">我方底色（右側）</span>
+                  <input
+                    type="color"
+                    value={settings.chatUserBubbleColor}
+                    onChange={(e) => onSettingChange({ chatUserBubbleColor: e.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">對方底色（左側）</span>
+                  <input
+                    type="color"
+                    value={settings.chatAiBubbleColor}
+                    onChange={(e) => onSettingChange({ chatAiBubbleColor: e.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">我方邊框</span>
+                  <input
+                    type="color"
+                    value={settings.chatUserBubbleBorderColor}
+                    onChange={(e) => onSettingChange({ chatUserBubbleBorderColor: e.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">對方邊框</span>
+                  <input
+                    type="color"
+                    value={settings.chatAiBubbleBorderColor}
+                    onChange={(e) => onSettingChange({ chatAiBubbleBorderColor: e.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">我方文字</span>
+                  <input
+                    type="color"
+                    value={settings.chatUserBubbleTextColor}
+                    onChange={(e) => onSettingChange({ chatUserBubbleTextColor: e.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">對方文字</span>
+                  <input
+                    type="color"
+                    value={settings.chatAiBubbleTextColor}
+                    onChange={(e) => onSettingChange({ chatAiBubbleTextColor: e.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+              </div>
+
+              <p className="text-xs text-stone-500">
+                iMessage 風格會自動取消亮面與抖動效果。
+              </p>
             </div>
 
             <div className="space-y-2">

@@ -186,6 +186,16 @@ function App() {
   const calendarAccentRgb = useMemo(() => toRgbTriplet(calendarAccentColor), [calendarAccentColor]);
   const calendarHeaderAccentRgb = useMemo(() => toRgbTriplet(calendarHeaderColor), [calendarHeaderColor]);
   const lockedBubbleRgb = useMemo(() => toRgbTriplet(settings.lockedBubbleColor), [settings.lockedBubbleColor]);
+  const chatUserBubbleRgb = useMemo(() => toRgbTriplet(settings.chatUserBubbleColor), [settings.chatUserBubbleColor]);
+  const chatUserBorderRgb = useMemo(
+    () => toRgbTriplet(settings.chatUserBubbleBorderColor),
+    [settings.chatUserBubbleBorderColor],
+  );
+  const chatAiBubbleRgb = useMemo(() => toRgbTriplet(settings.chatAiBubbleColor), [settings.chatAiBubbleColor]);
+  const chatAiBorderRgb = useMemo(
+    () => toRgbTriplet(settings.chatAiBubbleBorderColor),
+    [settings.chatAiBubbleBorderColor],
+  );
   const customFontFileUrl = settings.customFontFileUrl.trim();
   const customFontFamily = settings.customFontFamily.trim();
   const preferredCustomFontFamily = customFontFamily || (customFontFileUrl ? APP_CUSTOM_FONT_FAMILY : '');
@@ -820,6 +830,7 @@ function App() {
   return (
     <div
       className="relative h-dvh w-full overflow-hidden"
+      data-chat-style={settings.chatBubbleStyle}
       style={{
         backgroundImage: appBackgroundImage,
         backgroundSize: settings.backgroundMode === 'image' && backgroundImageUrl ? 'cover' : undefined,
@@ -832,6 +843,12 @@ function App() {
         ['--calendar-accent-rgb' as string]: calendarAccentRgb,
         ['--calendar-header-accent-rgb' as string]: calendarHeaderAccentRgb,
         ['--locked-bubble-rgb' as string]: lockedBubbleRgb,
+        ['--chat-user-bubble-rgb' as string]: chatUserBubbleRgb,
+        ['--chat-user-border-rgb' as string]: chatUserBorderRgb,
+        ['--chat-ai-bubble-rgb' as string]: chatAiBubbleRgb,
+        ['--chat-ai-border-rgb' as string]: chatAiBorderRgb,
+        ['--chat-user-text' as string]: settings.chatUserBubbleTextColor,
+        ['--chat-ai-text' as string]: settings.chatAiBubbleTextColor,
         ['--app-font-scale' as string]: settings.fontScale,
         ['--app-font-family' as string]: appFontFamily,
         ['--app-heading-family' as string]: appHeadingFamily,

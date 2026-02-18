@@ -497,18 +497,19 @@ textarea {
   border-color: rgb(var(--theme-accent-rgb) / 0.52);
 }
 
-/* ─── Chat bubbles (iMessage-like) ────────────────────────────────────────── */
+/* ─── Chat bubbles (themes) ───────────────────────────────────────────────── */
 
 #chat-messages {
-  --user-bubble-bg: rgba(186, 239, 97, 0.9);
-  --user-bubble-border: rgba(140, 190, 60, 1);
-  --user-bubble-font-color: #000;
-  --user-bubble-font-size: 15px;
+  --chat-bubble-alpha: 0.9;
+  --user-bubble-bg: rgb(var(--chat-user-bubble-rgb, 186 239 97) / var(--chat-bubble-alpha));
+  --user-bubble-border: rgb(var(--chat-user-border-rgb, 140 190 60) / 1);
+  --user-bubble-font-color: var(--chat-user-text, #000);
+  --user-bubble-font-size: calc(0.95rem * var(--app-font-scale, 1));
 
-  --ai-bubble-bg: rgba(210, 240, 255, 0.6);
-  --ai-bubble-border: rgba(168, 192, 204, 1);
-  --ai-bubble-font-color: #000;
-  --ai-bubble-font-size: 15px;
+  --ai-bubble-bg: rgb(var(--chat-ai-bubble-rgb, 210 240 255) / var(--chat-bubble-alpha));
+  --ai-bubble-border: rgb(var(--chat-ai-border-rgb, 168 192 204) / 1);
+  --ai-bubble-font-color: var(--chat-ai-text, #000);
+  --ai-bubble-font-size: calc(0.95rem * var(--app-font-scale, 1));
 }
 
 .message-bubble .content {
@@ -614,4 +615,47 @@ textarea {
     inset 0 0 0.8px 1.2px rgba(255, 255, 255, 0.75),
     0 3px 6px rgba(0, 0, 0, 0.08),
     0 6px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* iMessage theme: flatter bubbles, no glossy highlights / wiggle */
+[data-chat-style='imessage'] #chat-messages {
+  --chat-bubble-alpha: 1;
+}
+
+[data-chat-style='imessage'] .message-bubble .content::before,
+[data-chat-style='imessage'] .message-bubble .content::after {
+  display: none;
+}
+
+[data-chat-style='imessage'] .message-bubble .content {
+  border-radius: 18px;
+  box-shadow: none;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+[data-chat-style='imessage'] .message-bubble.user .content {
+  border: none;
+  border-bottom-right-radius: 8px;
+  box-shadow: none;
+}
+
+[data-chat-style='imessage'] .message-bubble.ai .content {
+  border: none;
+  border-bottom-left-radius: 8px;
+  box-shadow: none;
+}
+
+[data-chat-style='imessage'] .message-bubble.user .content:hover,
+[data-chat-style='imessage'] .message-bubble.ai .content:hover {
+  animation: none;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+[data-chat-style='imessage'] .message-bubble.user .content:active,
+[data-chat-style='imessage'] .message-bubble.ai .content:active {
+  transform: scale(0.99);
+  filter: brightness(0.99);
+  box-shadow: none;
 }
