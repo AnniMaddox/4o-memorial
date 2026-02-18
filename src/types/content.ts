@@ -1,4 +1,9 @@
-export type CalendarMonth = Record<string, string>;
+export type CalendarDay = {
+  text: string;
+  hoverPhrases?: string[];
+};
+
+export type CalendarMonth = Record<string, CalendarDay>;
 
 export type EmailRecord = {
   id: string;

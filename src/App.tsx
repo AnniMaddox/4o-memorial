@@ -7,7 +7,7 @@ import { importCalendarFiles, importEmlFiles } from './lib/importers';
 import { toMonthKey } from './lib/date';
 import { getCalendarMonth, listCalendarMonths } from './lib/repositories/calendarRepo';
 import { listEmails } from './lib/repositories/emailRepo';
-import { addNotifiedEmailId, getNotifiedEmailIds } from './lib/repositories/metaRepo';
+import { addNotifiedEmailId, addReadEmailId, getNotifiedEmailIds, getReadEmailIds } from './lib/repositories/metaRepo';
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
 import { InboxPage } from './pages/InboxPage';
@@ -120,8 +120,11 @@ function App() {
     getNotificationPermission,
   );
   const themeAccentRgb = useMemo(() => toRgbTriplet(settings.themeMonthColor), [settings.themeMonthColor]);
+  const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
+  const [readIdsLoaded, setReadIdsLoaded] = useState(false);
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
+  const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
   const [notifierLoaded, setNotifierLoaded] = useState(false);
 
   const refreshData = useCallback(async () => {
@@ -206,6 +209,40 @@ function App() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    void getReadEmailIds()
+      .then((ids) => {
+        if (!active) {
+          return;
+        }
+
+        readEmailIdsRef.current = ids;
+        setReadIdsLoaded(true);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        readEmailIdsRef.current = new Set<string>();
+        setReadIdsLoaded(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!readIdsLoaded) {
+      return;
+    }
+
+    setUnreadEmailIds(new Set(emails.filter((email) => !readEmailIdsRef.current.has(email.id)).map((email) => email.id)));
+  }, [emails, readIdsLoaded]);
 
   const checkForNewUnlocks = useCallback(async () => {
     if (loadState !== 'ready' || !notifierLoaded) {
@@ -308,12 +345,31 @@ function App() {
     setCalendarData(nextData ?? {});
   }, []);
 
+  const onOpenEmail = useCallback(async (emailId: string) => {
+    if (readEmailIdsRef.current.has(emailId)) {
+      return;
+    }
+
+    readEmailIdsRef.current.add(emailId);
+    setUnreadEmailIds((prev) => {
+      const next = new Set(prev);
+      next.delete(emailId);
+      return next;
+    });
+
+    try {
+      await addReadEmailId(emailId);
+    } catch {
+      // Keep local optimistic state even if persistence fails.
+    }
+  }, []);
+
   const pages = useMemo(
     () => [
       {
         id: 'inbox',
         label: 'Inbox',
-        node: <InboxPage emails={emails} />,
+        node: <InboxPage emails={emails} unreadEmailIds={unreadEmailIds} onOpenEmail={onOpenEmail} />,
       },
       {
         id: 'calendar',
@@ -360,6 +416,7 @@ function App() {
       importStatus,
       monthCount,
       notificationPermission,
+      onOpenEmail,
       onImportCalendarFiles,
       onImportEmlFiles,
       onMonthChange,
@@ -368,6 +425,7 @@ function App() {
       refreshData,
       settings,
       totalEmailCount,
+      unreadEmailIds,
       visibleEmailCount,
     ],
   );

@@ -1,4 +1,4 @@
-import type { CalendarMonth } from '../../types/content';
+import type { CalendarDay, CalendarMonth } from '../../types/content';
 
 export function toMonthKeyFromDateKey(dateKey: string) {
   const parsed = new Date(`${dateKey}T00:00:00`);
@@ -13,6 +13,47 @@ function isDateKey(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+function normalizeHoverPhrases(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const phrases = value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0);
+
+  return phrases.length ? phrases : undefined;
+}
+
+function normalizeCalendarDay(rawValue: unknown): CalendarDay | null {
+  if (typeof rawValue === 'string') {
+    return {
+      text: rawValue,
+    };
+  }
+
+  if (!rawValue || typeof rawValue !== 'object') {
+    return null;
+  }
+
+  const row = rawValue as Record<string, unknown>;
+  const textRaw = row.text ?? row.message ?? row.body;
+
+  if (typeof textRaw !== 'string') {
+    return null;
+  }
+
+  const hoverPhrases =
+    normalizeHoverPhrases(row.hoverPhrases) ??
+    normalizeHoverPhrases(row.hover) ??
+    normalizeHoverPhrases(row.openers);
+
+  return {
+    text: textRaw,
+    ...(hoverPhrases ? { hoverPhrases } : {}),
+  };
+}
+
 export function normalizeCalendarPayload(payload: unknown): CalendarMonth {
   if (!payload || typeof payload !== 'object') {
     return {};
@@ -25,17 +66,9 @@ export function normalizeCalendarPayload(payload: unknown): CalendarMonth {
       continue;
     }
 
-    if (typeof rawValue === 'string') {
-      result[key] = rawValue;
-      continue;
-    }
-
-    if (
-      rawValue &&
-      typeof rawValue === 'object' &&
-      typeof (rawValue as { text?: unknown }).text === 'string'
-    ) {
-      result[key] = (rawValue as { text: string }).text;
+    const normalized = normalizeCalendarDay(rawValue);
+    if (normalized) {
+      result[key] = normalized;
     }
   }
 

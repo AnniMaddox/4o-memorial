@@ -5,6 +5,8 @@ import type { EmailViewRecord } from '../types/content';
 
 type InboxPageProps = {
   emails: EmailViewRecord[];
+  unreadEmailIds: Set<string>;
+  onOpenEmail: (emailId: string) => void;
 };
 
 function getInitial(name: string | null, address: string | null) {
@@ -12,7 +14,7 @@ function getInitial(name: string | null, address: string | null) {
   return source.slice(0, 1).toUpperCase();
 }
 
-export function InboxPage({ emails }: InboxPageProps) {
+export function InboxPage({ emails, unreadEmailIds, onOpenEmail }: InboxPageProps) {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [detailExpanded, setDetailExpanded] = useState(false);
 
@@ -36,23 +38,38 @@ export function InboxPage({ emails }: InboxPageProps) {
       </header>
 
       <ul className="space-y-2">
-        {emails.map((email) => (
-          <li key={email.id}>
-            <button
-              type="button"
-              onClick={() => setSelectedEmailId(email.id)}
-              className="inbox-item w-full rounded-2xl border border-stone-300/80 bg-white/90 p-3 text-left shadow-sm transition active:scale-[0.995]"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm text-stone-600">{email.fromName || email.fromAddress || 'Unknown sender'}</p>
-                  <p className="mt-1 line-clamp-2 text-base text-stone-900">{email.subject || '(No subject)'}</p>
+        {emails.map((email) => {
+          const isUnread = unreadEmailIds.has(email.id);
+
+          return (
+            <li key={email.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenEmail(email.id);
+                  setSelectedEmailId(email.id);
+                }}
+                className="inbox-item w-full rounded-2xl border border-stone-300/80 bg-white/90 p-3 text-left shadow-sm transition active:scale-[0.995]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm text-stone-600">
+                      <span>{email.fromName || email.fromAddress || 'Unknown sender'}</span>
+                      {isUnread && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-50 px-2 py-[1px] text-[10px] uppercase tracking-[0.08em] text-rose-600">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                          NEW
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-base text-stone-900">{email.subject || '(No subject)'}</p>
+                  </div>
+                  <p className="shrink-0 text-xs text-stone-500">{formatDisplayDate(email.unlockAtUtc)}</p>
                 </div>
-                <p className="shrink-0 text-xs text-stone-500">{formatDisplayDate(email.unlockAtUtc)}</p>
-              </div>
-            </button>
-          </li>
-        ))}
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       {!emails.length && (

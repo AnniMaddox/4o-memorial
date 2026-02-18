@@ -61,14 +61,49 @@ textarea {
 }
 
 .calendar-day-unlocked {
-  border-color: rgb(var(--theme-accent-rgb) / 0.34);
-  background: rgb(var(--theme-accent-rgb) / 0.14);
+  border-color: rgb(var(--theme-accent-rgb) / 0.48);
+  background: rgb(var(--theme-accent-rgb) / 0.24);
   color: #292524;
 }
 
 .calendar-day-unlocked:hover {
-  border-color: rgb(var(--theme-accent-rgb) / 0.52);
-  background: rgb(var(--theme-accent-rgb) / 0.2);
+  border-color: rgb(var(--theme-accent-rgb) / 0.62);
+  background: rgb(var(--theme-accent-rgb) / 0.3);
+}
+
+.calendar-day-locked {
+  border-color: rgb(var(--theme-accent-rgb) / 0.3);
+  background: rgb(var(--theme-accent-rgb) / 0.11);
+  color: rgb(68 64 60 / 0.86);
+}
+
+.calendar-day-locked:hover {
+  border-color: rgb(var(--theme-accent-rgb) / 0.42);
+  background: rgb(var(--theme-accent-rgb) / 0.16);
+}
+
+.calendar-day-glass {
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 18px rgb(120 113 108 / 0.14);
+}
+
+.calendar-hover-bubble {
+  backdrop-filter: blur(6px);
+}
+
+.calendar-month-fade {
+  animation: calendarMonthFade 280ms ease-out;
+}
+
+@keyframes calendarMonthFade {
+  from {
+    opacity: 0.08;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .inbox-item:hover {
