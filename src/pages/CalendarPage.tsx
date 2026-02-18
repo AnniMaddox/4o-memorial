@@ -80,11 +80,6 @@ export function CalendarPage({
       return existing;
     }
 
-    const day = data[dateKey];
-    if (!day?.text) {
-      return '';
-    }
-
     const datePool = getDateHoverPool(dateKey);
     const phrase = datePool?.length
       ? datePool[Math.floor(Math.random() * datePool.length)]
@@ -218,13 +213,13 @@ export function CalendarPage({
   }
 
   function handleDateTap(dateKey: string, hasMessage: boolean) {
-    if (!hasMessage) {
-      return;
-    }
-
     if (primedDateKey !== dateKey) {
       setPrimedDateKey(dateKey);
       void showHoverPreview(dateKey);
+      return;
+    }
+
+    if (!hasMessage) {
       return;
     }
 
@@ -320,7 +315,7 @@ export function CalendarPage({
               type="button"
               onClick={() => handleDateTap(cell.dateKey, hasMessage)}
               onMouseEnter={() => {
-                if (hasMessage && !primedDateKey) {
+                if (!primedDateKey) {
                   void showHoverPreview(cell.dateKey);
                 }
               }}
