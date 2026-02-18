@@ -728,6 +728,7 @@ function App() {
           <HomePage
             tabIconUrls={settings.tabIconUrls}
             launcherLabels={appLabels}
+            homeSwipeEnabled={settings.swipeEnabled}
             widgetTitle={settings.homeWidgetTitle}
             widgetSubtitle={settings.homeWidgetSubtitle}
             widgetBadgeText={settings.homeWidgetBadgeText}
@@ -914,7 +915,7 @@ function App() {
           <SwipePager
             activeIndex={activeTab}
             onIndexChange={setActiveTab}
-            swipeEnabled={settings.swipeEnabled && !launcherApp && activeTab !== 0}
+            swipeEnabled={false}
             pages={pages.map((page) => ({ id: page.id, node: page.node }))}
           />
           {!launcherApp && (

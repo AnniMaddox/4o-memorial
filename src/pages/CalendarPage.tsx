@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 
 import { monthLabel, todayDateKey } from '../lib/date';
 import { getGlobalHoverPoolEntries, pickHoverPhraseByWeights } from '../lib/hoverPool';
@@ -37,6 +37,7 @@ const CHIBI_IMAGE_SOURCES = Object.entries(CHIBI_MODULES)
   .map(([, src]) => src);
 const MESSAGE_PREVIEW_LENGTH = 6;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_SWIPE_THRESHOLD = 54;
 
 function extractUndatedFallbackMessage(payload: unknown) {
   if (!payload || typeof payload !== 'object') {
@@ -136,6 +137,7 @@ export function CalendarPage({
   const [hoverPhraseByDate, setHoverPhraseByDate] = useState<Record<string, string>>({});
   const [monthFadeSeed, setMonthFadeSeed] = useState(0);
   const hoverPhraseByDateRef = useRef<Record<string, string>>({});
+  const monthSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const today = todayDateKey();
   const hasMonthContent = useMemo(() => Object.keys(data).length > 0, [data]);
@@ -324,6 +326,55 @@ export function CalendarPage({
     onMonthChange(monthKeys[nextIndex]);
   }
 
+  function resetMonthSwipe() {
+    monthSwipeStartRef.current = null;
+  }
+
+  function handleCalendarTouchStart(event: TouchEvent<HTMLDivElement>) {
+    if (monthPickerOpen || selectedDate || messageListDate) {
+      monthSwipeStartRef.current = null;
+      return;
+    }
+
+    const touch = event.touches[0];
+    if (!touch) {
+      monthSwipeStartRef.current = null;
+      return;
+    }
+
+    monthSwipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function handleCalendarTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    const start = monthSwipeStartRef.current;
+    monthSwipeStartRef.current = null;
+
+    if (!start) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (absX < MONTH_SWIPE_THRESHOLD) {
+      return;
+    }
+
+    // Only trigger when horizontal intent is clear, so vertical scrolling still feels natural.
+    if (absY > absX * 0.7) {
+      return;
+    }
+
+    goToNeighborMonth(deltaX < 0 ? 1 : -1);
+  }
+
   function goToCurrentMonth() {
     const target = monthKeys.includes(currentMonthKey) ? currentMonthKey : monthKeys.at(-1) ?? monthKey;
     if (target !== monthKey) {
@@ -406,7 +457,13 @@ export function CalendarPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-4">
+    <div
+      className="mx-auto w-full max-w-xl space-y-4"
+      onTouchStart={handleCalendarTouchStart}
+      onTouchEnd={handleCalendarTouchEnd}
+      onTouchCancel={resetMonthSwipe}
+      style={{ touchAction: 'pan-y' }}
+    >
       <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Calendar</p>
         <div className="mt-1 flex items-center justify-between gap-2">

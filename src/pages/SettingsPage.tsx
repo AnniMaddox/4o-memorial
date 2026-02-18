@@ -1114,13 +1114,13 @@ export function SettingsPage({
         <SettingPanel
           icon="🔔"
           title="通知與操作"
-          subtitle="滑動分頁、通知權限"
+          subtitle="首頁桌面滑動、通知權限"
           isOpen={openPanel === 'notification'}
           onToggle={() => togglePanel('notification')}
         >
           <div className="space-y-3">
             <label className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
-              <span>啟用左右滑分頁</span>
+              <span>啟用首頁左右滑桌面</span>
               <input
                 type="checkbox"
                 checked={settings.swipeEnabled}
