@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AppLabels, TabIconUrls } from '../types/settings';
 
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -160,6 +160,13 @@ export function HomePage({
       iconUrl: tabIconUrls.list.trim() || undefined,
       launch: 'list',
     };
+    const fitnessSlot: HomeAppSlot = {
+      id: 'fitness',
+      label: launcherLabels.fitness,
+      icon: '🏋️',
+      iconUrl: tabIconUrls.fitness.trim() || undefined,
+      launch: 'fitness',
+    };
 
     const placeholder = (id: string): HomeAppSlot => ({
       id,
@@ -175,9 +182,9 @@ export function HomePage({
       heartSlot,
       chatSlot,
       listSlot,
+      fitnessSlot,
       placeholder('slot-1-5'),
       placeholder('slot-1-6'),
-      placeholder('slot-1-7'),
     ];
 
     const builtScreens: HomeScreen[] = [
@@ -208,7 +215,9 @@ export function HomePage({
     launcherLabels.heart,
     launcherLabels.letters,
     launcherLabels.list,
+    launcherLabels.fitness,
     launcherLabels.tarot,
+    tabIconUrls.fitness,
     tabIconUrls.heart,
     tabIconUrls.letters,
     tabIconUrls.list,

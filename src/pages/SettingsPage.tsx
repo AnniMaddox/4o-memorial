@@ -57,6 +57,7 @@ const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   letters: '💌',
   heart: '💗',
   list: '🎴',
+  fitness: '🏋️',
   settings: '⚙️',
 };
 
@@ -68,6 +69,7 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'letters', label: 'Letters' },
   { key: 'heart', label: 'MY LOVE' },
   { key: 'list', label: 'List 清單' },
+  { key: 'fitness', label: 'Fitness 健身' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -81,6 +83,7 @@ const APP_LABEL_FIELDS: Array<{ key: AppLabelKey; label: string }> = [
   { key: 'heart', label: '首頁入口：心牆' },
   { key: 'chat', label: '首頁入口：對話' },
   { key: 'list', label: '首頁入口：清單' },
+  { key: 'fitness', label: '首頁入口：健身' },
 ];
 
 type AppearancePresetPayload = {
@@ -295,6 +298,7 @@ export function SettingsPage({
       letters: tabIconDrafts.letters.trim(),
       heart: tabIconDrafts.heart.trim(),
       list: tabIconDrafts.list.trim(),
+      fitness: tabIconDrafts.fitness.trim(),
       settings: tabIconDrafts.settings.trim(),
     };
 
@@ -318,6 +322,7 @@ export function SettingsPage({
       heart: labelDrafts.heart.trim(),
       chat: labelDrafts.chat.trim(),
       list: labelDrafts.list.trim(),
+      fitness: labelDrafts.fitness.trim(),
     };
 
     onSettingChange({ appLabels: next });
@@ -439,6 +444,7 @@ export function SettingsPage({
           letters: typeof input.letters === 'string' ? input.letters.trim() : '',
           heart: typeof input.heart === 'string' ? input.heart.trim() : '',
           list: typeof input.list === 'string' ? input.list.trim() : '',
+          fitness: typeof input.fitness === 'string' ? input.fitness.trim() : '',
           settings: typeof input.settings === 'string' ? input.settings.trim() : '',
         };
       }
@@ -493,6 +499,7 @@ export function SettingsPage({
           heart: typeof input.heart === 'string' ? input.heart.trim() : '',
           chat: typeof input.chat === 'string' ? input.chat.trim() : '',
           list: typeof input.list === 'string' ? input.list.trim() : '',
+          fitness: typeof input.fitness === 'string' ? input.fitness.trim() : '',
         };
       }
 

@@ -9,9 +9,19 @@ export type HoverToneWeights = {
 export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
-export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'settings';
+export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'fitness' | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
-export type AppLabelKey = 'home' | 'inbox' | 'calendar' | 'settings' | 'tarot' | 'letters' | 'heart' | 'chat' | 'list';
+export type AppLabelKey =
+  | 'home'
+  | 'inbox'
+  | 'calendar'
+  | 'settings'
+  | 'tarot'
+  | 'letters'
+  | 'heart'
+  | 'chat'
+  | 'list'
+  | 'fitness';
 export type AppLabels = Record<AppLabelKey, string>;
 
 export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
@@ -22,6 +32,7 @@ export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   letters: '',
   heart: '',
   list: '',
+  fitness: '',
   settings: '',
 };
 
@@ -35,6 +46,7 @@ export const DEFAULT_APP_LABELS: AppLabels = {
   heart: '心牆',
   chat: '對話',
   list: '清單',
+  fitness: '健身',
 };
 
 export type AppSettings = {

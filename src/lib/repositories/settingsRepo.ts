@@ -37,6 +37,7 @@ function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrl
     letters: normalizeString(input.letters, fallback.letters),
     heart: normalizeString(input.heart, fallback.heart),
     list: normalizeString(input.list, fallback.list),
+    fitness: normalizeString(input.fitness, fallback.fitness),
     settings: normalizeString(input.settings, fallback.settings),
   };
 }
@@ -53,6 +54,7 @@ function normalizeAppLabels(value: unknown, fallback: AppLabels): AppLabels {
     heart: normalizeString(input.heart, fallback.heart),
     chat: normalizeString(input.chat, fallback.chat),
     list: normalizeString(input.list, fallback.list),
+    fitness: normalizeString(input.fitness, fallback.fitness),
   };
 }
 

@@ -32,6 +32,7 @@ import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chat
 import type { ChatProfile } from './lib/chatDB';
 import { HeartWallPage } from './pages/HeartWallPage';
 import { ListPage } from './pages/ListPage';
+import { FitnessPage } from './pages/FitnessPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
@@ -44,7 +45,7 @@ type ImportStatus = {
   kind: 'idle' | 'working' | 'success' | 'error';
   message: string;
 };
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -70,6 +71,7 @@ const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
   letters: '💌',
   heart: '💗',
   list: '🎴',
+  fitness: '🏋️',
   settings: '⚙️',
 };
 
@@ -200,6 +202,7 @@ function App() {
       heart: fallbackLabel(settings.appLabels.heart, '心牆'),
       chat: fallbackLabel(settings.appLabels.chat, '對話'),
       list: fallbackLabel(settings.appLabels.list, '清單'),
+      fitness: fallbackLabel(settings.appLabels.fitness, '健身'),
     }),
     [settings.appLabels],
   );
@@ -1034,6 +1037,27 @@ function App() {
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
                   <ListPage />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'fitness' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ← 返回
+                  </button>
+                  <p className="text-sm text-white/85">{appLabels.fitness}</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+                  <FitnessPage />
                 </div>
               </div>
             </div>
