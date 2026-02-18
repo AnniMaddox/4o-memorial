@@ -7,6 +7,7 @@ export type StoredChatLog = {
   name: string; // filename (used as key)
   content: string;
   importedAt: number;
+  profileId?: string;
 };
 
 async function getDB() {
@@ -43,4 +44,3 @@ export async function clearAllChatLogs(): Promise<void> {
   const db = await getDB();
   await db.clear(STORE);
 }
-

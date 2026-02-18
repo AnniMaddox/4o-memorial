@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ChatProfile } from '../lib/chatDB';
 import type { StoredChatLog } from '../lib/chatLogDB';
+import { splitNickAliases } from '../lib/chatProfileMatcher';
 
 type ChatLogPageProps = {
   logs: StoredChatLog[];
   chatProfiles: ChatProfile[];
+  onBindLogProfile?: (logName: string, profileId: string) => void;
 };
 
 type ChatMessage = {
@@ -16,16 +18,6 @@ type ChatMessage = {
 
 function normalizeSpeakerToken(value: string) {
   return value.trim().toLowerCase();
-}
-
-function splitNickAliases(raw: string | undefined, fallback: string) {
-  const source = raw?.trim() || fallback;
-  const chunks = source
-    .split(/[|/,，、\n]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-  if (!chunks.length) return [fallback];
-  return Array.from(new Set(chunks));
 }
 
 function escapeRegExp(value: string) {
@@ -197,7 +189,7 @@ function normalizeSearchText(value: string) {
   return value.trim().toLowerCase();
 }
 
-export function ChatLogPage({ logs, chatProfiles }: ChatLogPageProps) {
+export function ChatLogPage({ logs, chatProfiles, onBindLogProfile }: ChatLogPageProps) {
   const [selectedLogName, setSelectedLogName] = useState<string>('');
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   const [searchInput, setSearchInput] = useState('');
@@ -211,6 +203,18 @@ export function ChatLogPage({ logs, chatProfiles }: ChatLogPageProps) {
     () => chatProfiles.find((profile) => profile.id === selectedProfileId) ?? null,
     [chatProfiles, selectedProfileId],
   );
+
+  useEffect(() => {
+    if (!selectedLog) return;
+    setSelectedProfileId(selectedLog.profileId ?? '');
+  }, [selectedLog?.name, selectedLog?.profileId]);
+
+  useEffect(() => {
+    if (!selectedProfileId) return;
+    if (!chatProfiles.some((profile) => profile.id === selectedProfileId)) {
+      setSelectedProfileId('');
+    }
+  }, [chatProfiles, selectedProfileId]);
 
   const filteredLogs = useMemo(() => {
     const keyword = normalizeSearchText(searchInput);
@@ -294,6 +298,7 @@ export function ChatLogPage({ logs, chatProfiles }: ChatLogPageProps) {
       selectedProfileId={selectedProfileId}
       selectedProfile={selectedProfile}
       onSelectProfile={setSelectedProfileId}
+      onBindLogProfile={onBindLogProfile}
       onBack={() => setSelectedLogName('')}
     />
   );
@@ -305,6 +310,7 @@ function ChatReadView({
   selectedProfileId,
   selectedProfile,
   onSelectProfile,
+  onBindLogProfile,
   onBack,
 }: {
   log: StoredChatLog;
@@ -312,6 +318,7 @@ function ChatReadView({
   selectedProfileId: string;
   selectedProfile: ChatProfile | null;
   onSelectProfile: (id: string) => void;
+  onBindLogProfile?: (logName: string, profileId: string) => void;
   onBack: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -346,7 +353,11 @@ function ChatReadView({
             <span className="text-xs text-stone-500">角色</span>
             <select
               value={selectedProfileId}
-              onChange={(e) => onSelectProfile(e.target.value)}
+              onChange={(e) => {
+                const nextProfileId = e.target.value;
+                onSelectProfile(nextProfileId);
+                onBindLogProfile?.(log.name, nextProfileId);
+              }}
               className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
             >
               <option value="">預設（你 / M）</option>

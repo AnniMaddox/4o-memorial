@@ -27,6 +27,7 @@ import type { StoredChatLog } from './lib/chatLogDB';
 import { clearAllLetters, loadLetters, saveLetters } from './lib/letterDB';
 import type { StoredLetter } from './lib/letterDB';
 import { readLetterContent } from './lib/letterReader';
+import { detectBestChatProfileId } from './lib/chatProfileMatcher';
 import { APP_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import type { ChatProfile } from './lib/chatDB';
@@ -361,7 +362,13 @@ function App() {
       try {
         const content = await readLetterContent(file);
         if (content.trim()) {
-          imported.push({ name: file.name, content, importedAt: now });
+          const detectedProfileId = detectBestChatProfileId(content, chatProfiles);
+          imported.push({
+            name: file.name,
+            content,
+            importedAt: now,
+            profileId: detectedProfileId || undefined,
+          });
         }
       } catch {
         // skip unreadable files
@@ -371,7 +378,7 @@ function App() {
     await saveChatLogs(imported);
     const updated = await loadChatLogs();
     setChatLogs(updated);
-  }, []);
+  }, [chatProfiles]);
 
   const handleImportChatLogFolderFiles = useCallback(async (files: File[]) => {
     const now = Date.now();
@@ -380,7 +387,13 @@ function App() {
       try {
         const content = await readLetterContent(file);
         if (content.trim()) {
-          imported.push({ name: file.name, content, importedAt: now });
+          const detectedProfileId = detectBestChatProfileId(content, chatProfiles);
+          imported.push({
+            name: file.name,
+            content,
+            importedAt: now,
+            profileId: detectedProfileId || undefined,
+          });
         }
       } catch {
         // skip unreadable files
@@ -390,7 +403,7 @@ function App() {
     await saveChatLogs(imported);
     const updated = await loadChatLogs();
     setChatLogs(updated);
-  }, []);
+  }, [chatProfiles]);
 
   const handleClearAllChatLogs = useCallback(async () => {
     await clearAllChatLogs();
@@ -432,6 +445,25 @@ function App() {
     await deleteChatProfile(id);
     setChatProfiles((prev) => prev.filter((p) => p.id !== id));
   }, []);
+
+  const handleBindChatLogProfile = useCallback(
+    async (logName: string, profileId: string) => {
+      const currentLog = chatLogs.find((log) => log.name === logName);
+      if (!currentLog) return;
+
+      const normalizedProfileId = profileId || undefined;
+      if (currentLog.profileId === normalizedProfileId) return;
+
+      const updatedLog: StoredChatLog = {
+        ...currentLog,
+        profileId: normalizedProfileId,
+      };
+
+      await saveChatLogs([updatedLog]);
+      setChatLogs((prev) => prev.map((log) => (log.name === logName ? updatedLog : log)));
+    },
+    [chatLogs],
+  );
 
   useEffect(() => {
     const onVisibilityOrFocus = () => refreshNotificationPermission();
@@ -996,7 +1028,11 @@ function App() {
                   <span className="w-16" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-                  <ChatLogPage logs={chatLogs} chatProfiles={chatProfiles} />
+                  <ChatLogPage
+                    logs={chatLogs}
+                    chatProfiles={chatProfiles}
+                    onBindLogProfile={(logName, profileId) => void handleBindChatLogProfile(logName, profileId)}
+                  />
                 </div>
               </div>
             </div>
