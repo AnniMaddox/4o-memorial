@@ -34,8 +34,8 @@ function getNotificationPermission(): BrowserNotificationPermission {
 }
 
 function formatNotificationBody(email: EmailViewRecord) {
-  const sender = email.fromName || email.fromAddress || 'Unknown sender';
-  const subject = email.subject || '(No subject)';
+  const sender = email.fromName || email.fromAddress || '未知寄件人';
+  const subject = email.subject || '（無主旨）';
   return `${sender}\n${subject}`;
 }
 
@@ -72,16 +72,18 @@ function summarizeImport(
   label: 'EML' | 'Calendar',
   result: { imported: number; failed: number; messages: string[] },
 ): ImportStatus {
+  const labelText = label === 'EML' ? 'EML 信件' : '月曆';
+
   if (result.imported === 0 && result.failed > 0) {
     return {
       kind: 'error',
-      message: `${label} import failed (${result.failed} file${result.failed > 1 ? 's' : ''}). ${result.messages[0] ?? ''}`,
+      message: `${labelText} 匯入失敗（失敗 ${result.failed} 個檔案）。${result.messages[0] ? ` ${result.messages[0]}` : ''}`,
     };
   }
 
   const kind: ImportStatus['kind'] = result.failed > 0 ? 'error' : 'success';
-  const message = `${label} import complete: ${result.imported} imported, ${result.failed} failed${
-    result.messages.length ? ` (${result.messages[0]})` : ''
+  const message = `${labelText} 匯入完成：成功 ${result.imported}、失敗 ${result.failed}${
+    result.messages.length ? `（${result.messages[0]}）` : ''
   }`;
 
   return {
@@ -249,7 +251,7 @@ function App() {
 
   const onImportEmlFiles = useCallback(
     async (files: File[]) => {
-      setImportStatus({ kind: 'working', message: `Importing ${files.length} EML file(s)...` });
+      setImportStatus({ kind: 'working', message: `正在匯入 ${files.length} 個 EML 檔案...` });
 
       try {
         const result = await importEmlFiles(files);
@@ -261,7 +263,7 @@ function App() {
       } catch (error) {
         setImportStatus({
           kind: 'error',
-          message: `EML import failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+          message: `EML 匯入失敗：${error instanceof Error ? error.message : '未知錯誤'}`,
         });
       }
     },
@@ -270,7 +272,7 @@ function App() {
 
   const onImportCalendarFiles = useCallback(
     async (files: File[]) => {
-      setImportStatus({ kind: 'working', message: `Importing ${files.length} calendar JSON file(s)...` });
+      setImportStatus({ kind: 'working', message: `正在匯入 ${files.length} 個月曆 JSON 檔案...` });
 
       try {
         const result = await importCalendarFiles(files);
@@ -282,7 +284,7 @@ function App() {
       } catch (error) {
         setImportStatus({
           kind: 'error',
-          message: `Calendar import failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+          message: `月曆匯入失敗：${error instanceof Error ? error.message : '未知錯誤'}`,
         });
       }
     },
@@ -316,7 +318,7 @@ function App() {
       },
       {
         id: 'settings',
-        label: 'Settings',
+        label: '設定',
         node: (
           <SettingsPage
             settings={settings}

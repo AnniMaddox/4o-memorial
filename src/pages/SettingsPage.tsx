@@ -32,44 +32,44 @@ export function SettingsPage({
 }: SettingsPageProps) {
   const notificationLabel =
     notificationPermission === 'unsupported'
-      ? 'Not supported by this browser'
+      ? '此瀏覽器不支援'
       : notificationPermission === 'granted'
-        ? 'Allowed'
+        ? '已允許'
         : notificationPermission === 'denied'
-          ? 'Blocked'
-          : 'Not decided';
+          ? '已封鎖'
+          : '尚未決定';
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-4">
       <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
-        <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Settings</p>
-        <h1 className="mt-1 text-2xl text-stone-900">Control room</h1>
-        <p className="mt-2 text-sm text-stone-600">This page configures local view behavior. Upload and sync controls are planned for next stage.</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-stone-500">設定</p>
+        <h1 className="mt-1 text-2xl text-stone-900">控制中心</h1>
+        <p className="mt-2 text-sm text-stone-600">這裡可調整閱讀樣式、通知與本機匯入設定。</p>
       </header>
 
       <section className="rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">
-        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">Local data snapshot</h2>
+        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">本機資料概況</h2>
         <dl className="mt-3 grid grid-cols-2 gap-3 text-sm text-stone-700">
           <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
-            <dt className="text-xs text-stone-500">Visible letters</dt>
+            <dt className="text-xs text-stone-500">可見信件</dt>
             <dd className="text-lg text-stone-900">{visibleEmailCount}</dd>
           </div>
           <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
-            <dt className="text-xs text-stone-500">Total letters</dt>
+            <dt className="text-xs text-stone-500">信件總數</dt>
             <dd className="text-lg text-stone-900">{totalEmailCount}</dd>
           </div>
           <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
-            <dt className="text-xs text-stone-500">Calendar months</dt>
+            <dt className="text-xs text-stone-500">月曆月份數</dt>
             <dd className="text-lg text-stone-900">{monthCount}</dd>
           </div>
         </dl>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">
-        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">View behavior</h2>
+        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">顯示與操作</h2>
 
         <label className="block space-y-2 text-sm text-stone-700">
-          <span>Theme accent color</span>
+          <span>主題強調色</span>
           <input
             type="color"
             value={settings.themeMonthColor}
@@ -79,7 +79,7 @@ export function SettingsPage({
         </label>
 
         <label className="block space-y-2 text-sm text-stone-700">
-          <span>Font scale: {settings.fontScale.toFixed(2)}x</span>
+          <span>字體大小：{settings.fontScale.toFixed(2)}x</span>
           <input
             type="range"
             min={0.9}
@@ -92,7 +92,7 @@ export function SettingsPage({
         </label>
 
         <label className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
-          <span>Enable swipe navigation</span>
+          <span>啟用左右滑分頁</span>
           <input
             type="checkbox"
             checked={settings.swipeEnabled}
@@ -101,7 +101,7 @@ export function SettingsPage({
         </label>
 
         <label className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
-          <span>Enable unlock notifications</span>
+          <span>啟用解鎖通知</span>
           <input
             type="checkbox"
             checked={settings.localNotificationsEnabled}
@@ -110,23 +110,23 @@ export function SettingsPage({
         </label>
 
         <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
-          <p>Notification permission: {notificationLabel}</p>
+          <p>通知權限：{notificationLabel}</p>
           <button
             type="button"
             onClick={onRequestNotificationPermission}
             disabled={notificationPermission === 'unsupported' || notificationPermission === 'granted'}
             className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:bg-stone-400"
           >
-            Request permission
+            申請通知權限
           </button>
         </div>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">
-        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">Local import</h2>
+        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">本機匯入</h2>
 
         <label className="block space-y-2 text-sm text-stone-700">
-          <span>Import EML letters</span>
+          <span>匯入 EML 信件</span>
           <input
             type="file"
             multiple
@@ -143,7 +143,7 @@ export function SettingsPage({
         </label>
 
         <label className="block space-y-2 text-sm text-stone-700">
-          <span>Import calendar JSON</span>
+          <span>匯入月曆 JSON</span>
           <input
             type="file"
             multiple
@@ -175,16 +175,16 @@ export function SettingsPage({
       </section>
 
       <section className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">
-        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">Manual actions</h2>
+        <h2 className="text-sm uppercase tracking-[0.16em] text-stone-500">手動操作</h2>
         <button
           type="button"
           onClick={onRefresh}
           className="rounded-lg bg-stone-900 px-4 py-2 text-sm text-white"
         >
-          Refresh local cache
+          重新整理本機資料
         </button>
         <p className="text-xs text-stone-500">
-          Last local refresh: {settings.lastSyncAt ? new Date(settings.lastSyncAt).toLocaleString() : 'never'}
+          上次更新：{settings.lastSyncAt ? new Date(settings.lastSyncAt).toLocaleString() : '尚未更新'}
         </p>
       </section>
     </div>
