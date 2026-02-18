@@ -404,7 +404,7 @@ function LetterReadView({
               src={chibiSrc}
               alt="回主頁"
               draggable={false}
-              className="w-20 select-none drop-shadow"
+              className="w-24 select-none drop-shadow"
             />
             <span className="text-[10px] text-stone-400">回主頁</span>
           </button>
