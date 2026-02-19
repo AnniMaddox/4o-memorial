@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type PeriodTab = 'overview' | 'calendar' | 'records';
@@ -98,6 +98,8 @@ const DEFAULT_POST_END_PHRASES = [
   '經期結束了，今天多補一點元氣。',
   '這次也平安走過來了，妳很棒。',
 ];
+const PERIOD_TAB_ORDER: PeriodTab[] = ['overview', 'calendar', 'records'];
+const PERIOD_SWIPE_THRESHOLD = 52;
 
 const PANEL_STYLE_OPTIONS: Array<{ id: PeriodPanelStyle; label: string }> = [
   { id: 'soft', label: '柔和' },
@@ -331,8 +333,13 @@ function buildMonthGrid(viewMonth: Date): CalendarCell[] {
 }
 
 function loadHoverPhrasesFromRaw(raw: unknown): HoverPhraseMap | null {
+  const normalizeText = (value: string) => value.replace(/\/n/g, '\n').replace(/\\n/g, '\n').trim();
+
   if (Array.isArray(raw)) {
-    const values = raw.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
+    const values = raw
+      .filter((i): i is string => typeof i === 'string')
+      .map(normalizeText)
+      .filter((i) => i.length > 0);
     if (!values.length) return null;
     return { ...DEFAULT_HOVER_PHRASES, period: values };
   }
@@ -342,7 +349,10 @@ function loadHoverPhrasesFromRaw(raw: unknown): HoverPhraseMap | null {
   for (const key of Object.keys(next) as Array<keyof HoverPhraseMap>) {
     const val = src[key];
     if (!Array.isArray(val)) continue;
-    const rows = val.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
+    const rows = val
+      .filter((i): i is string => typeof i === 'string')
+      .map(normalizeText)
+      .filter((i) => i.length > 0);
     if (rows.length) next[key] = rows;
   }
   return next;
@@ -350,13 +360,17 @@ function loadHoverPhrasesFromRaw(raw: unknown): HoverPhraseMap | null {
 
 function loadChibiPhrasesFromRaw(raw: unknown): ChibiPhraseMap | null {
   if (!raw || typeof raw !== 'object') return null;
+  const normalizeText = (value: string) => value.replace(/\/n/g, '\n').replace(/\\n/g, '\n').trim();
   const src = raw as Partial<Record<keyof ChibiPhraseMap, unknown>>;
   const next: ChibiPhraseMap = { ...DEFAULT_CHIBI_PHRASES };
 
   for (const key of Object.keys(next) as Array<keyof ChibiPhraseMap>) {
     const val = src[key];
     if (!Array.isArray(val)) continue;
-    const rows = val.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
+    const rows = val
+      .filter((i): i is string => typeof i === 'string')
+      .map(normalizeText)
+      .filter((i) => i.length > 0);
     if (rows.length) next[key] = rows;
   }
 
@@ -364,14 +378,22 @@ function loadChibiPhrasesFromRaw(raw: unknown): ChibiPhraseMap | null {
 }
 
 function loadPostEndPhrasesFromRaw(raw: unknown): string[] {
+  const normalizeText = (value: string) => value.replace(/\/n/g, '\n').replace(/\\n/g, '\n').trim();
+
   if (Array.isArray(raw)) {
-    return raw.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
+    return raw
+      .filter((i): i is string => typeof i === 'string')
+      .map(normalizeText)
+      .filter((i) => i.length > 0);
   }
 
   if (raw && typeof raw === 'object') {
     const phrases = (raw as { phrases?: unknown }).phrases;
     if (Array.isArray(phrases)) {
-      return phrases.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
+      return phrases
+        .filter((i): i is string => typeof i === 'string')
+        .map(normalizeText)
+        .filter((i) => i.length > 0);
     }
   }
 
@@ -697,6 +719,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [postEndPopup, setPostEndPopup] = useState<PostEndPopupState | null>(null);
   const chibiSources = PERIOD_CHIBI_SOURCES;
   const [chibiSrc, setChibiSrc] = useState('');
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const panelTheme = PANEL_STYLE_THEME[store.panelStyle];
 
   const today = new Date();
@@ -954,6 +977,48 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
     setPostEndPopup(null);
   }
 
+  function handleSwipeGesture(deltaX: number, deltaY: number) {
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+    if (absX < PERIOD_SWIPE_THRESHOLD || absX <= absY) return;
+    if (selectedDateKey || showPeriodSettings || postEndPopup) return;
+
+    if (activeTab === 'calendar') {
+      if (deltaX < 0) {
+        setViewMonth((cur) => new Date(cur.getFullYear(), cur.getMonth() + 1, 1));
+      } else {
+        setViewMonth((cur) => new Date(cur.getFullYear(), cur.getMonth() - 1, 1));
+      }
+      return;
+    }
+
+    const currentIndex = PERIOD_TAB_ORDER.indexOf(activeTab);
+    if (currentIndex < 0) return;
+    const direction = deltaX < 0 ? 1 : -1;
+    const nextIndex = Math.max(0, Math.min(PERIOD_TAB_ORDER.length - 1, currentIndex + direction));
+    if (nextIndex !== currentIndex) {
+      setActiveTab(PERIOD_TAB_ORDER[nextIndex]!);
+    }
+  }
+
+  function onTouchStart(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function onTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    handleSwipeGesture(touch.clientX - start.x, touch.clientY - start.y);
+  }
+
+  function onTouchCancel() {
+    swipeStartRef.current = null;
+  }
+
   // Last completed period
   const lastPeriod = completed[completed.length - 1] ?? null;
 
@@ -1011,7 +1076,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
       </header>
 
       {/* ── Content ─────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={onTouchCancel}>
 
         {/* ── 總覽 ─────────────────────────────── */}
         {activeTab === 'overview' && (
@@ -1478,7 +1543,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             <p className="text-lg text-stone-900">本次經期結束</p>
             <div className="mt-3 flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
               <img src={postEndPopup.chibiUrl} alt="" draggable={false} className="h-16 w-16 shrink-0 object-contain" />
-              <p className="text-sm text-stone-700">{postEndPopup.text}</p>
+              <p className="whitespace-pre-line text-sm text-stone-700">{postEndPopup.text}</p>
             </div>
           </div>
         </div>
