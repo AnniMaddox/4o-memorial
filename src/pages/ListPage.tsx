@@ -192,8 +192,10 @@ export function ListPage() {
               type="button"
               onClick={goBack}
               className="rounded-xl border border-stone-200 bg-white/80 px-3 py-1.5 text-xs text-stone-500 transition active:scale-95"
+              aria-label="返回"
+              title="返回"
             >
-              ← 牌組
+              ‹
             </button>
             <span className="text-xs text-stone-400">
               {currentIndex + 1} / {queue.length}

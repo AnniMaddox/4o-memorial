@@ -1060,7 +1060,7 @@ function App() {
                     className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
-                    ← 返回
+                    ‹
                   </button>
                   <p className="text-sm text-white/85">{appLabels.tarot}</p>
                   <span className="w-16" />
@@ -1081,7 +1081,7 @@ function App() {
                     className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
-                    ← 返回
+                    ‹
                   </button>
                   <p className="text-sm text-white/85">{appLabels.letters}</p>
                   <span className="w-16" />
@@ -1094,26 +1094,14 @@ function App() {
           )}
 
           {launcherApp === 'chat' && (
-            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
-              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
-                    onClick={() => setLauncherApp(null)}
-                  >
-                    ← 返回
-                  </button>
-                  <p className="text-sm text-white/85">{appLabels.chat}</p>
-                  <span className="w-16" />
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-                  <ChatLogPage
-                    logs={chatLogs}
-                    chatProfiles={chatProfiles}
-                    onBindLogProfile={(logName, profileId) => void handleBindChatLogProfile(logName, profileId)}
-                  />
-                </div>
+            <div className="fixed inset-0 z-30 bg-[#efeff4]">
+              <div className="mx-auto h-full w-full max-w-xl">
+                <ChatLogPage
+                  logs={chatLogs}
+                  chatProfiles={chatProfiles}
+                  onBindLogProfile={(logName, profileId) => void handleBindChatLogProfile(logName, profileId)}
+                  onExit={() => setLauncherApp(null)}
+                />
               </div>
             </div>
           )}
@@ -1127,7 +1115,7 @@ function App() {
                     className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
-                    ← 返回
+                    ‹
                   </button>
                   <p className="text-sm text-white/85">{appLabels.heart}</p>
                   <span className="w-16" />
@@ -1148,7 +1136,7 @@ function App() {
                     className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
-                    ← 返回
+                    ‹
                   </button>
                   <p className="text-sm text-white/85">{appLabels.list}</p>
                   <span className="w-16" />
@@ -1169,7 +1157,7 @@ function App() {
                     className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
-                    ← 返回
+                    ‹
                   </button>
                   <p className="text-sm text-white/85">{appLabels.fitness}</p>
                   <span className="w-16" />
@@ -1190,7 +1178,7 @@ function App() {
                     className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
-                    ← 返回
+                    ‹
                   </button>
                   <p className="text-sm text-white/85">{appLabels.diary}</p>
                   <span className="w-16" />

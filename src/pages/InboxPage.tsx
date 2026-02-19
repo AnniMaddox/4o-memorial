@@ -175,8 +175,10 @@ export function InboxPage({
               type="button"
               onClick={() => setFavoritesOnly(false)}
               className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1 text-sm text-stone-700"
+              aria-label="返回"
+              title="返回"
             >
-              ← 回信箱
+              ‹
             </button>
             <p className="text-xs tracking-[0.08em] text-stone-600">我的最愛</p>
           </div>

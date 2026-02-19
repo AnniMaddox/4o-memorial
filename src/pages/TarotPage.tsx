@@ -201,8 +201,10 @@ function TarotGallery({
             type="button"
             onClick={onBack}
             className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-xs text-stone-600 transition active:scale-95"
+            aria-label="返回"
+            title="返回"
           >
-            ← 返回
+            ‹
           </button>
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Tarot Gallery</p>

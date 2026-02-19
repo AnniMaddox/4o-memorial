@@ -8,13 +8,16 @@ type ChatLogPageProps = {
   logs: StoredChatLog[];
   chatProfiles: ChatProfile[];
   onBindLogProfile?: (logName: string, profileId: string) => void;
+  onExit?: () => void;
 };
 
 type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
-  time?: string; // displayed below bubble
+  time?: string;
 };
+
+type ChatHomeTab = 'messages' | 'discover' | 'me';
 
 function normalizeSpeakerToken(value: string) {
   return value.trim().toLowerCase();
@@ -74,7 +77,6 @@ function parseChatContent(text: string, profile: ChatProfile | null): ChatMessag
   const leftAliases = splitNickAliases(profile?.leftNick, 'M');
   const rightAliases = splitNickAliases(profile?.rightNick, '你');
 
-  // Try JSON array format first
   const trimmed = text.trim();
   if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
     try {
@@ -105,11 +107,10 @@ function parseChatContent(text: string, profile: ChatProfile | null): ChatMessag
       }
       if (msgs.length > 0) return msgs;
     } catch {
-      // not valid JSON, fall through
+      // fall through to line mode
     }
   }
 
-  // TXT line-by-line format
   const lines = text.split('\n');
   const msgs: ChatMessage[] = [];
   let currentRole: 'user' | 'assistant' | null = null;
@@ -128,14 +129,12 @@ function parseChatContent(text: string, profile: ChatProfile | null): ChatMessag
     const line = rawLine.trim();
     if (!line) continue;
 
-    // Timestamp patterns: [YYYY-MM-DD HH:MM:SS] or inline after role marker
     const stampMatch = line.match(/^\[(\d{4}-\d{2}-\d{2}[\sT]\d{2}:\d{2}(?::\d{2})?)\]/);
     if (stampMatch) {
       currentTime = stampMatch[1].replace('T', ' ').slice(0, 16);
       continue;
     }
 
-    // 【user】 or 【assistant】 markers (possibly followed by [timestamp])
     const roleTagMatch = line.match(/^【(user|assistant)】\s*(?:\[([^\]]+)\])?(.*)$/i);
     if (roleTagMatch) {
       flush();
@@ -148,7 +147,6 @@ function parseChatContent(text: string, profile: ChatProfile | null): ChatMessag
       continue;
     }
 
-    // "你：" / "M：" / alias list (profile nicks can be "你/Anni")
     const rightContent = stripAliasPrefix(line, rightAliases);
     if (rightContent !== null) {
       flush();
@@ -164,7 +162,6 @@ function parseChatContent(text: string, profile: ChatProfile | null): ChatMessag
       continue;
     }
 
-    // Bracket name markers: 【Anni】message / 【Michael】message
     const namedTagMatch = line.match(/^【([^】]+)】\s*(.*)$/);
     if (namedTagMatch) {
       const role = mapSpeakerToRole(namedTagMatch[1], rightAliases, leftAliases);
@@ -176,7 +173,6 @@ function parseChatContent(text: string, profile: ChatProfile | null): ChatMessag
       continue;
     }
 
-    // Continuation line
     if (currentContent) currentContent += '\n';
     currentContent += line;
   }
@@ -189,10 +185,20 @@ function normalizeSearchText(value: string) {
   return value.trim().toLowerCase();
 }
 
-export function ChatLogPage({ logs, chatProfiles, onBindLogProfile }: ChatLogPageProps) {
+function displayLogName(fileName: string) {
+  return fileName.replace(/\.(txt|md|docx|json)$/i, '');
+}
+
+function primaryAlias(value: string | undefined, fallback: string) {
+  const aliases = splitNickAliases(value, fallback);
+  return aliases[0] ?? fallback;
+}
+
+export function ChatLogPage({ logs, chatProfiles, onBindLogProfile, onExit }: ChatLogPageProps) {
   const [selectedLogName, setSelectedLogName] = useState<string>('');
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   const [searchInput, setSearchInput] = useState('');
+  const [activeTab, setActiveTab] = useState<ChatHomeTab>('messages');
 
   const selectedLog = useMemo(
     () => logs.find((log) => log.name === selectedLogName) ?? null,
@@ -204,9 +210,11 @@ export function ChatLogPage({ logs, chatProfiles, onBindLogProfile }: ChatLogPag
     [chatProfiles, selectedProfileId],
   );
 
+  const primaryProfile = useMemo(() => chatProfiles[0] ?? null, [chatProfiles]);
+
   useEffect(() => {
     if (!selectedLog) return;
-    setSelectedProfileId(selectedLog.profileId ?? '');
+    setSelectedProfileId((current) => selectedLog.profileId ?? current);
   }, [selectedLog?.name, selectedLog?.profileId]);
 
   useEffect(() => {
@@ -222,85 +230,201 @@ export function ChatLogPage({ logs, chatProfiles, onBindLogProfile }: ChatLogPag
     return logs.filter((log) => normalizeSearchText(log.name).includes(keyword));
   }, [logs, searchInput]);
 
+  const openLog = useCallback((logName: string) => {
+    setSelectedLogName(logName);
+  }, []);
+
   const openRandomLog = useCallback(() => {
     if (!logs.length) return;
     const pick = logs[Math.floor(Math.random() * logs.length)];
     setSelectedLogName(pick.name);
   }, [logs]);
 
-  if (!selectedLog) {
+  if (selectedLog) {
     return (
-      <div className="mx-auto w-full max-w-xl space-y-4">
-        <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Chats</p>
-          <h1 className="mt-1 text-2xl text-stone-900">對話紀錄</h1>
-          <p className="mt-0.5 text-sm text-stone-500">
-            {logs.length ? `已匯入 ${logs.length} 份` : '從設定頁匯入對話紀錄'}
-          </p>
-        </header>
+      <ChatReadView
+        log={selectedLog}
+        chatProfiles={chatProfiles}
+        selectedProfileId={selectedProfileId}
+        selectedProfile={selectedProfile}
+        onSelectProfile={setSelectedProfileId}
+        onBindLogProfile={onBindLogProfile}
+        onBack={() => setSelectedLogName('')}
+        onExit={onExit}
+      />
+    );
+  }
 
-        {!logs.length ? (
-          <div className="rounded-2xl border border-stone-300/70 bg-white/90 px-6 py-10 text-center shadow-sm">
-            <div className="text-5xl opacity-25">💬</div>
-            <p className="mt-3 text-sm text-stone-500">請至「設定」頁面匯入對話紀錄檔案</p>
+  const contactName = primaryAlias(primaryProfile?.leftNick, 'Michael');
+  const contactSubtitle = primaryProfile
+    ? `${primaryAlias(primaryProfile.rightNick, '你')} ♡`
+    : '🥺 ❤️';
+  const contactAvatar = primaryProfile?.leftAvatarDataUrl || primaryProfile?.rightAvatarDataUrl;
+
+  return (
+    <div className="mx-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-[#efeff4]">
+      <header className="shrink-0 border-b border-stone-200/70 bg-white/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
+        <div className="flex items-center justify-between gap-3">
+          {onExit ? (
+            <button
+              type="button"
+              onClick={onExit}
+              className="h-9 w-9 rounded-full border border-stone-300 bg-white text-xl leading-none text-stone-700 transition active:scale-95"
+              aria-label="返回"
+              title="返回"
+            >
+              ‹
+            </button>
+          ) : (
+            <span className="h-9 w-9" />
+          )}
+          <h1 className="text-2xl font-semibold tracking-wide text-stone-900">
+            {activeTab === 'messages' ? '消息' : activeTab === 'discover' ? '發現' : '我'}
+          </h1>
+          <button
+            type="button"
+            onClick={openRandomLog}
+            disabled={!logs.length}
+            className="h-9 w-9 rounded-full border border-stone-300 bg-white text-xl leading-none text-stone-700 transition active:scale-95 disabled:opacity-40"
+            aria-label="隨機打開"
+            title="隨機打開"
+          >
+            ＋
+          </button>
+        </div>
+      </header>
+
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        {activeTab === 'messages' && (
+          <div className="space-y-3 px-3 py-3">
+            <button
+              type="button"
+              onClick={openRandomLog}
+              disabled={!logs.length}
+              className="flex w-full items-center gap-3 rounded-2xl border border-stone-200 bg-white px-3 py-3 text-left shadow-sm transition active:scale-[0.99] disabled:opacity-40"
+            >
+              {contactAvatar ? (
+                <img
+                  src={contactAvatar}
+                  alt=""
+                  className="h-16 w-16 rounded-2xl border border-stone-200 object-cover"
+                />
+              ) : (
+                <div className="grid h-16 w-16 place-items-center rounded-2xl border border-stone-200 bg-stone-100 text-2xl text-stone-500">
+                  💬
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-3xl font-medium text-stone-900">{contactName}</p>
+                <p className="mt-1 text-lg text-stone-500">{contactSubtitle}</p>
+              </div>
+              <span className="text-2xl text-stone-400">›</span>
+            </button>
+
+            {!logs.length && (
+              <div className="rounded-2xl border border-stone-200 bg-white px-4 py-8 text-center text-sm text-stone-500 shadow-sm">
+                請先到設定頁匯入對話紀錄
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="space-y-3 rounded-2xl border border-stone-300/70 bg-white/90 p-4 shadow-sm">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={openRandomLog}
-                className="shrink-0 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-900 transition active:scale-95"
-              >
-                隨機打開
-              </button>
+        )}
+
+        {activeTab === 'discover' && (
+          <div className="space-y-3 px-3 py-3">
+            <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
               <input
                 type="search"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="搜尋檔名"
-                className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800 outline-none focus:border-stone-500"
+                className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 outline-none focus:border-stone-500"
               />
             </div>
 
-            <div className="max-h-[55dvh] overflow-y-auto rounded-xl border border-stone-200 bg-white">
+            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
               <ul className="divide-y divide-stone-100">
                 {filteredLogs.map((log) => (
                   <li key={log.name}>
                     <button
                       type="button"
-                      onClick={() => setSelectedLogName(log.name)}
-                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-stone-50 active:bg-stone-100"
+                      onClick={() => openLog(log.name)}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition active:bg-stone-100"
                     >
-                      <span className="min-w-0 flex-1 truncate text-sm text-stone-800">
-                        {log.name.replace(/\.(txt|md|docx|json)$/i, '')}
-                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm text-stone-800">{displayLogName(log.name)}</span>
                       <span className="text-xs text-stone-400">›</span>
                     </button>
                   </li>
                 ))}
               </ul>
+              {!filteredLogs.length && (
+                <p className="px-4 py-6 text-center text-sm text-stone-400">沒有符合的紀錄</p>
+              )}
             </div>
           </div>
         )}
 
-        <p className="px-2 text-center text-[11px] text-stone-400">
-          對話紀錄儲存在本機，不會上傳到任何地方
-        </p>
-      </div>
-    );
-  }
+        {activeTab === 'me' && (
+          <div className="space-y-3 px-3 py-3">
+            <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+              <p className="text-sm text-stone-500">已匯入對話紀錄</p>
+              <p className="mt-1 text-3xl font-semibold text-stone-900">{logs.length}</p>
+            </section>
 
-  return (
-    <ChatReadView
-      log={selectedLog}
-      chatProfiles={chatProfiles}
-      selectedProfileId={selectedProfileId}
-      selectedProfile={selectedProfile}
-      onSelectProfile={setSelectedProfileId}
-      onBindLogProfile={onBindLogProfile}
-      onBack={() => setSelectedLogName('')}
-    />
+            <section className="space-y-2 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+              <p className="text-sm text-stone-700">預設角色組合</p>
+              <select
+                value={selectedProfileId}
+                onChange={(e) => setSelectedProfileId(e.target.value)}
+                className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+              >
+                <option value="">預設（你 / M）</option>
+                {chatProfiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}（{p.rightNick} / {p.leftNick}）
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-stone-400">這組設定會在沒有綁定角色時作為閱讀預設。</p>
+            </section>
+          </div>
+        )}
+      </main>
+
+      <nav className="shrink-0 border-t border-stone-200 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('messages')}
+            className={`flex flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-xs transition ${
+              activeTab === 'messages' ? 'text-black' : 'text-stone-400'
+            }`}
+          >
+            <span className="text-2xl leading-none">◉</span>
+            <span>消息</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('discover')}
+            className={`flex flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-xs transition ${
+              activeTab === 'discover' ? 'text-black' : 'text-stone-400'
+            }`}
+          >
+            <span className="text-2xl leading-none">◎</span>
+            <span>發現</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('me')}
+            className={`flex flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-xs transition ${
+              activeTab === 'me' ? 'text-black' : 'text-stone-400'
+            }`}
+          >
+            <span className="text-2xl leading-none">◯</span>
+            <span>我</span>
+          </button>
+        </div>
+      </nav>
+    </div>
   );
 }
 
@@ -312,6 +436,7 @@ function ChatReadView({
   onSelectProfile,
   onBindLogProfile,
   onBack,
+  onExit,
 }: {
   log: StoredChatLog;
   chatProfiles: ChatProfile[];
@@ -320,32 +445,46 @@ function ChatReadView({
   onSelectProfile: (id: string) => void;
   onBindLogProfile?: (logName: string, profileId: string) => void;
   onBack: () => void;
+  onExit?: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const displayName = log.name.replace(/\.(txt|md|docx|json)$/i, '');
+  const displayName = displayLogName(log.name);
   const messages = useMemo(() => parseChatContent(log.content, selectedProfile), [log.content, selectedProfile]);
 
   useEffect(() => {
-    // Chat view usually opens at the bottom.
     const node = scrollRef.current;
     if (!node) return;
     node.scrollTo({ top: node.scrollHeight });
   }, [log.name, selectedProfileId]);
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col" style={{ height: 'calc(100dvh - 72px)' }}>
-      <div className="shrink-0 space-y-2 rounded-2xl border border-stone-200 bg-white/90 p-3 shadow-sm">
+    <div className="mx-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-[#efeff4]">
+      <div className="shrink-0 space-y-2 border-b border-stone-200 bg-white px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onBack}
-            className="rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-700 transition active:scale-95"
+            className="h-9 w-9 rounded-full border border-stone-300 bg-white text-xl leading-none text-stone-700 transition active:scale-95"
+            aria-label="返回"
+            title="返回"
           >
-            ← 清單
+            ‹
           </button>
           <p className="min-w-0 flex-1 truncate text-center text-sm text-stone-700">{displayName}</p>
-          <span className="w-16" />
+          {onExit ? (
+            <button
+              type="button"
+              onClick={onExit}
+              className="h-9 w-9 rounded-full border border-stone-300 bg-white text-xl leading-none text-stone-700 transition active:scale-95"
+              aria-label="離開"
+              title="離開"
+            >
+              ×
+            </button>
+          ) : (
+            <span className="h-9 w-9" />
+          )}
         </div>
 
         {chatProfiles.length > 0 && (
@@ -374,14 +513,13 @@ function ChatReadView({
       <div
         ref={scrollRef}
         id="chat-messages"
-        className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-stone-200 bg-white/82 p-3 shadow-sm"
+        className="min-h-0 flex-1 overflow-y-auto px-3 py-3"
       >
         {messages.length > 0 ? (
           <ChatBubbles messages={messages} profile={selectedProfile} />
         ) : (
-          <p className="px-2 py-8 text-center text-sm text-stone-400">
-            無法解析為聊天格式，將以純文字顯示。
-            <br />
+          <p className="rounded-2xl border border-stone-200 bg-white px-3 py-4 text-sm text-stone-500">
+            無法解析為聊天格式，以下是原文：
             <span className="mt-2 block whitespace-pre-wrap rounded-xl border border-stone-200 bg-white p-3 text-left text-xs text-stone-700">
               {log.content}
             </span>
@@ -399,7 +537,6 @@ function ChatBubbles({ messages, profile }: { messages: ChatMessage[]; profile: 
         const isUser = msg.role === 'user';
         const avatarUrl = isUser ? profile?.rightAvatarDataUrl : profile?.leftAvatarDataUrl;
 
-        // Date divider
         const dateDivider =
           msg.time && (i === 0 || messages[i - 1]?.time?.slice(0, 10) !== msg.time.slice(0, 10))
             ? msg.time.slice(0, 10)
@@ -407,9 +544,7 @@ function ChatBubbles({ messages, profile }: { messages: ChatMessage[]; profile: 
 
         return (
           <div key={`${i}-${msg.time ?? ''}`}>
-            {dateDivider && (
-              <div className="my-3 text-center text-[11px] text-stone-400">{dateDivider}</div>
-            )}
+            {dateDivider && <div className="my-3 text-center text-[11px] text-stone-400">{dateDivider}</div>}
 
             <div className={`flex items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className="mb-4 shrink-0">

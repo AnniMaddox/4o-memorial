@@ -490,51 +490,52 @@ export function CalendarPage({
           </button>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={goToCurrentMonth}
-            disabled={monthKey === currentMonthKey}
-            className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
-            aria-label="回當月"
-            title="回當月"
-          >
-            ◎
-          </button>
-          <button
-            type="button"
-            onClick={() => setMonthPickerOpen((open) => !open)}
-            className={`calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700 ${
-              monthPickerOpen ? 'calendar-nav-btn-active' : ''
-            }`}
-            aria-label={monthPickerOpen ? '收起月份' : '選擇月份'}
-            title={monthPickerOpen ? '收起月份' : '選擇月份'}
-          >
-            {monthPickerOpen ? '▴' : '▾'}
-          </button>
-        </div>
-
-        <div className="mt-2 inline-flex items-center gap-1 rounded-xl border border-stone-300/80 bg-white/70 p-1 text-xs text-stone-700">
-          <span className="px-2 text-[0.7rem] tracking-[0.08em] text-stone-500">日曆磚色</span>
-          <button
-            type="button"
-            onClick={() => onCalendarColorModeChange('month')}
-            disabled={!monthColorAvailable}
-            className={`calendar-color-mode-btn rounded-lg px-2.5 py-1 ${
-              calendarColorMode === 'month' ? 'calendar-color-mode-btn-active' : ''
-            }`}
-          >
-            月份色
-          </button>
-          <button
-            type="button"
-            onClick={() => onCalendarColorModeChange('custom')}
-            className={`calendar-color-mode-btn rounded-lg px-2.5 py-1 ${
-              calendarColorMode === 'custom' ? 'calendar-color-mode-btn-active' : ''
-            }`}
-          >
-            自訂色
-          </button>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-2">
+          <div className="inline-flex items-center gap-1 rounded-xl border border-stone-300/80 bg-white/70 p-1 text-xs text-stone-700">
+            <span className="px-2 text-[0.7rem] tracking-[0.08em] text-stone-500">日曆磚色</span>
+            <button
+              type="button"
+              onClick={() => onCalendarColorModeChange('month')}
+              disabled={!monthColorAvailable}
+              className={`calendar-color-mode-btn rounded-lg px-2.5 py-1 ${
+                calendarColorMode === 'month' ? 'calendar-color-mode-btn-active' : ''
+              }`}
+            >
+              月份色
+            </button>
+            <button
+              type="button"
+              onClick={() => onCalendarColorModeChange('custom')}
+              className={`calendar-color-mode-btn rounded-lg px-2.5 py-1 ${
+                calendarColorMode === 'custom' ? 'calendar-color-mode-btn-active' : ''
+              }`}
+            >
+              自訂色
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={goToCurrentMonth}
+              disabled={monthKey === currentMonthKey}
+              className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+              aria-label="回當月"
+              title="回當月"
+            >
+              ◎
+            </button>
+            <button
+              type="button"
+              onClick={() => setMonthPickerOpen((open) => !open)}
+              className={`calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700 ${
+                monthPickerOpen ? 'calendar-nav-btn-active' : ''
+              }`}
+              aria-label={monthPickerOpen ? '收起月份' : '選擇月份'}
+              title={monthPickerOpen ? '收起月份' : '選擇月份'}
+            >
+              {monthPickerOpen ? '▴' : '▾'}
+            </button>
+          </div>
         </div>
 
         {monthPickerOpen && (

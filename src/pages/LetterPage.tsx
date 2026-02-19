@@ -229,18 +229,21 @@ function LetterReadView({
             onClick={onClose}
             draggable={false}
             className="flex flex-col items-center gap-0.5 transition active:scale-90"
-            title="回主頁"
+            title="返回"
+            aria-label="返回"
           >
-            <img src={chibiSrc} alt="回主頁" draggable={false} className="w-24 select-none drop-shadow" />
-            <span className="text-[10px] text-stone-400">回主頁</span>
+            <img src={chibiSrc} alt="返回" draggable={false} className="w-24 select-none drop-shadow" />
+            <span className="text-[10px] text-stone-400">‹</span>
           </button>
         ) : (
           <button
             type="button"
             onClick={onClose}
             className="rounded-xl border border-stone-300 bg-white/80 px-8 py-3 text-sm text-stone-600 transition active:scale-95"
+            aria-label="返回"
+            title="返回"
           >
-            回主頁
+            ‹
           </button>
         )}
       </div>
