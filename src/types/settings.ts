@@ -10,7 +10,7 @@ export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type DiaryCoverFitMode = 'cover' | 'contain';
-export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'fitness' | 'diary' | 'settings';
+export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'fitness' | 'diary' | 'album' | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
 export type AppLabelKey =
   | 'home'
@@ -23,7 +23,8 @@ export type AppLabelKey =
   | 'chat'
   | 'list'
   | 'fitness'
-  | 'diary';
+  | 'diary'
+  | 'album';
 export type AppLabels = Record<AppLabelKey, string>;
 
 export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
@@ -36,6 +37,7 @@ export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   list: '',
   fitness: '',
   diary: '',
+  album: '',
   settings: '',
 };
 
@@ -51,6 +53,7 @@ export const DEFAULT_APP_LABELS: AppLabels = {
   list: '清單',
   fitness: '健身',
   diary: '日記',
+  album: '相冊',
 };
 
 export type AppSettings = {
@@ -67,6 +70,11 @@ export type AppSettings = {
   chatAiBubbleBorderColor: string;
   chatAiBubbleTextColor: string;
   chatBubbleRadius: number;
+  chatAppMessagesIcon: string;
+  chatAppDiscoverIcon: string;
+  chatAppMeIcon: string;
+  chatAppShowLabels: boolean;
+  chatAppDefaultProfileId: string;
   customFontCssUrl: string;
   customFontFileUrl: string;
   customFontFamily: string;
@@ -121,6 +129,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   chatAiBubbleBorderColor: '#A8C0CC',
   chatAiBubbleTextColor: '#000000',
   chatBubbleRadius: 24,
+  chatAppMessagesIcon: '◉',
+  chatAppDiscoverIcon: '◎',
+  chatAppMeIcon: '◯',
+  chatAppShowLabels: false,
+  chatAppDefaultProfileId: '',
   customFontCssUrl: '',
   customFontFileUrl: '',
   customFontFamily: '',

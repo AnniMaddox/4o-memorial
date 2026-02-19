@@ -34,6 +34,7 @@ import { detectBestChatProfileId } from './lib/chatProfileMatcher';
 import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import type { ChatProfile } from './lib/chatDB';
+import { AlbumPage } from './pages/AlbumPage';
 import { HeartWallPage } from './pages/HeartWallPage';
 import { ListPage } from './pages/ListPage';
 import { FitnessPage } from './pages/FitnessPage';
@@ -49,7 +50,7 @@ type ImportStatus = {
   kind: 'idle' | 'working' | 'success' | 'error';
   message: string;
 };
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'diary';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'diary' | 'album';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -77,6 +78,7 @@ const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
   list: '🎴',
   fitness: '🏋️',
   diary: '📓',
+  album: '📷',
   settings: '⚙️',
 };
 
@@ -209,6 +211,7 @@ function App() {
       list: fallbackLabel(settings.appLabels.list, '清單'),
       fitness: fallbackLabel(settings.appLabels.fitness, '健身'),
       diary: fallbackLabel(settings.appLabels.diary, '日記'),
+      album: fallbackLabel(settings.appLabels.album, '相冊'),
     }),
     [settings.appLabels],
   );
@@ -1099,6 +1102,13 @@ function App() {
                 <ChatLogPage
                   logs={chatLogs}
                   chatProfiles={chatProfiles}
+                  settings={settings}
+                  onSettingChange={(partial) => void onSettingChange(partial)}
+                  onImportChatLogFiles={(files) => void handleImportChatLogFiles(files)}
+                  onImportChatLogFolderFiles={(files) => void handleImportChatLogFolderFiles(files)}
+                  onClearAllChatLogs={() => void handleClearAllChatLogs()}
+                  onSaveChatProfile={(profile) => void handleSaveChatProfile(profile)}
+                  onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
                   onBindLogProfile={(logName, profileId) => void handleBindChatLogProfile(logName, profileId)}
                   onExit={() => setLauncherApp(null)}
                 />
@@ -1189,6 +1199,27 @@ function App() {
                     diaryFontFamily={diaryFontFamily}
                     diaryCoverFitMode={settings.diaryCoverFitMode}
                   />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'album' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ‹
+                  </button>
+                  <p className="text-sm text-white/85">{appLabels.album}</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden pt-3">
+                  <AlbumPage />
                 </div>
               </div>
             </div>

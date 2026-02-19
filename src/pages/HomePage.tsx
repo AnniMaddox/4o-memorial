@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 
 import type { AppLabels, TabIconUrls } from '../types/settings';
 
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'diary';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'diary' | 'album';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -287,13 +287,13 @@ export function HomePage({
       iconUrl: tabIconUrls.diary.trim() || undefined,
       launch: 'diary',
     };
-
-    const placeholder = (id: string): HomeAppSlot => ({
-      id,
-      label: '',
-      icon: ' ',
-      disabled: true,
-    });
+    const albumSlot: HomeAppSlot = {
+      id: 'album',
+      label: launcherLabels.album,
+      icon: '📷',
+      iconUrl: tabIconUrls.album.trim() || undefined,
+      launch: 'album',
+    };
 
     // Screen 1: main apps, plus reserved empty slots.
     const screen1: HomeAppSlot[] = [
@@ -304,7 +304,7 @@ export function HomePage({
       listSlot,
       fitnessSlot,
       diarySlot,
-      placeholder('slot-1-6'),
+      albumSlot,
     ];
 
     const builtScreens: HomeScreen[] = [
@@ -342,12 +342,14 @@ export function HomePage({
     launcherLabels.list,
     launcherLabels.fitness,
     launcherLabels.tarot,
+    launcherLabels.album,
     tabIconUrls.fitness,
     tabIconUrls.diary,
     tabIconUrls.heart,
     tabIconUrls.letters,
     tabIconUrls.list,
     tabIconUrls.tarot,
+    tabIconUrls.album,
   ]);
 
   useEffect(() => {

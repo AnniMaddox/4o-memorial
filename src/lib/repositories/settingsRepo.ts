@@ -23,6 +23,10 @@ function normalizeString(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
 
+function normalizeBoolean(value: unknown, fallback: boolean) {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 function normalizeCalendarColorMode(value: unknown, fallback: CalendarColorMode): CalendarColorMode {
   return value === 'custom' || value === 'month' ? value : fallback;
 }
@@ -51,6 +55,7 @@ function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrl
     list: normalizeString(input.list, fallback.list),
     fitness: normalizeString(input.fitness, fallback.fitness),
     diary: normalizeString(input.diary, fallback.diary),
+    album: normalizeString(input.album, fallback.album),
     settings: normalizeString(input.settings, fallback.settings),
   };
 }
@@ -69,6 +74,7 @@ function normalizeAppLabels(value: unknown, fallback: AppLabels): AppLabels {
     list: normalizeString(input.list, fallback.list),
     fitness: normalizeString(input.fitness, fallback.fitness),
     diary: normalizeString(input.diary, fallback.diary),
+    album: normalizeString(input.album, fallback.album),
   };
 }
 
@@ -129,6 +135,11 @@ export async function getSettings() {
       36,
       DEFAULT_SETTINGS.chatBubbleRadius,
     ),
+    chatAppMessagesIcon: normalizeString(persisted.chatAppMessagesIcon, DEFAULT_SETTINGS.chatAppMessagesIcon),
+    chatAppDiscoverIcon: normalizeString(persisted.chatAppDiscoverIcon, DEFAULT_SETTINGS.chatAppDiscoverIcon),
+    chatAppMeIcon: normalizeString(persisted.chatAppMeIcon, DEFAULT_SETTINGS.chatAppMeIcon),
+    chatAppShowLabels: normalizeBoolean(persisted.chatAppShowLabels, DEFAULT_SETTINGS.chatAppShowLabels),
+    chatAppDefaultProfileId: normalizeString(persisted.chatAppDefaultProfileId, DEFAULT_SETTINGS.chatAppDefaultProfileId),
     calendarHoverBubbleTextColor: normalizeString(
       persisted.calendarHoverBubbleTextColor,
       DEFAULT_SETTINGS.calendarHoverBubbleTextColor,

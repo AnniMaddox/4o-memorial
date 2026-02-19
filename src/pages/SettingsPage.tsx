@@ -64,6 +64,7 @@ const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   list: '🎴',
   fitness: '🏋️',
   diary: '📓',
+  album: '📷',
   settings: '⚙️',
 };
 
@@ -77,6 +78,7 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'list', label: 'List 清單' },
   { key: 'fitness', label: 'Fitness 健身' },
   { key: 'diary', label: 'Diary 日記' },
+  { key: 'album', label: 'Album 相冊' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -92,6 +94,7 @@ const APP_LABEL_FIELDS: Array<{ key: AppLabelKey; label: string }> = [
   { key: 'list', label: '首頁入口：清單' },
   { key: 'fitness', label: '首頁入口：健身' },
   { key: 'diary', label: '首頁入口：日記' },
+  { key: 'album', label: '首頁入口：相冊' },
 ];
 
 type AppearancePresetPayload = {
@@ -325,6 +328,7 @@ export function SettingsPage({
       list: tabIconDrafts.list.trim(),
       fitness: tabIconDrafts.fitness.trim(),
       diary: tabIconDrafts.diary.trim(),
+      album: tabIconDrafts.album.trim(),
       settings: tabIconDrafts.settings.trim(),
     };
 
@@ -350,6 +354,7 @@ export function SettingsPage({
       list: labelDrafts.list.trim(),
       fitness: labelDrafts.fitness.trim(),
       diary: labelDrafts.diary.trim(),
+      album: labelDrafts.album.trim(),
     };
 
     onSettingChange({ appLabels: next });
@@ -483,6 +488,7 @@ export function SettingsPage({
           list: typeof input.list === 'string' ? input.list.trim() : '',
           fitness: typeof input.fitness === 'string' ? input.fitness.trim() : '',
           diary: typeof input.diary === 'string' ? input.diary.trim() : '',
+          album: typeof input.album === 'string' ? input.album.trim() : '',
           settings: typeof input.settings === 'string' ? input.settings.trim() : '',
         };
       }
@@ -545,6 +551,7 @@ export function SettingsPage({
           list: typeof input.list === 'string' ? input.list.trim() : '',
           fitness: typeof input.fitness === 'string' ? input.fitness.trim() : '',
           diary: typeof input.diary === 'string' ? input.diary.trim() : '',
+          album: typeof input.album === 'string' ? input.album.trim() : '',
         };
       }
 
