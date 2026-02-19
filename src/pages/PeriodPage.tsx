@@ -36,8 +36,15 @@ type ChibiPhraseMap = {
   recovery: string[];
 };
 
+type PostEndPopupState = {
+  endDate: string;
+  text: string;
+  chibiUrl: string;
+};
+
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'memorial-period-diary-v1';
+const POST_END_SEEN_KEY = 'memorial-period-post-end-seen-v1';
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'] as const;
 
 const C = {
@@ -84,6 +91,11 @@ const DEFAULT_CHIBI_PHRASES: ChibiPhraseMap = {
     '你每次都撐過來了，這次也是。',
   ],
 };
+const DEFAULT_POST_END_PHRASES = [
+  '這一輪辛苦了，收工抱抱。',
+  '經期結束了，今天多補一點元氣。',
+  '這次也平安走過來了，妳很棒。',
+];
 
 const DEFAULT_STORE: PeriodStore = {
   records: [],
@@ -301,6 +313,41 @@ function loadChibiPhrasesFromRaw(raw: unknown): ChibiPhraseMap | null {
   }
 
   return next;
+}
+
+function loadPostEndPhrasesFromRaw(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
+  }
+
+  if (raw && typeof raw === 'object') {
+    const phrases = (raw as { phrases?: unknown }).phrases;
+    if (Array.isArray(phrases)) {
+      return phrases.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
+    }
+  }
+
+  return [];
+}
+
+function loadSeenPostEndDates() {
+  try {
+    const raw = window.localStorage.getItem(POST_END_SEEN_KEY);
+    if (!raw) return new Set<string>();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set<string>();
+    const dates = parsed.filter((item): item is string => typeof item === 'string' && !!parseDateKey(item));
+    return new Set(dates);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function markPostEndDateSeen(endDate: string) {
+  const seen = loadSeenPostEndDates();
+  if (seen.has(endDate)) return;
+  seen.add(endDate);
+  window.localStorage.setItem(POST_END_SEEN_KEY, JSON.stringify(Array.from(seen)));
 }
 
 function pickPhraseByDate(
@@ -585,6 +632,8 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [showPeriodSettings, setShowPeriodSettings] = useState(false);
   const [hoverPhrases, setHoverPhrases] = useState<HoverPhraseMap>(DEFAULT_HOVER_PHRASES);
   const [chibiPhrases, setChibiPhrases] = useState<ChibiPhraseMap>(DEFAULT_CHIBI_PHRASES);
+  const [postEndPhrases, setPostEndPhrases] = useState<string[]>(DEFAULT_POST_END_PHRASES);
+  const [postEndPopup, setPostEndPopup] = useState<PostEndPopupState | null>(null);
   const [chibiSrc] = useState(() => randomPick(CHIBI_SOURCES) ?? '');
 
   const today = new Date();
@@ -610,6 +659,24 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
       })
       .catch(() => {});
     return () => { active = false; };
+  }, []);
+
+  // Load special phrase after period end
+  useEffect(() => {
+    let active = true;
+    const base = import.meta.env.BASE_URL ?? '/';
+    const url = `${base.replace(/\/?$/, '/')}data/period/period_post_end_phrases.json`;
+    void fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!active || !json) return;
+        const parsed = loadPostEndPhrasesFromRaw(json);
+        if (parsed.length) setPostEndPhrases(parsed);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Load custom chibi phrases
@@ -704,6 +771,38 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
     return `距下次月經 · 還有 ${daysUntilNext} 天`;
   }, [daysUntilNext]);
 
+  // Trigger one-time popup for each finished period
+  useEffect(() => {
+    if (!completed.length || postEndPopup || !postEndPhrases.length) return;
+    const seen = loadSeenPostEndDates();
+    const latestUnseen = completed
+      .map((record) => record.endDate)
+      .filter((endDate) => endDate <= todayKey && !seen.has(endDate))
+      .sort()
+      .at(-1);
+
+    if (!latestUnseen) return;
+
+    const text = randomPick(postEndPhrases) ?? '';
+    const popupChibi = randomPick(CHIBI_SOURCES) ?? chibiSrc;
+    if (!text || !popupChibi) return;
+
+    setPostEndPopup({
+      endDate: latestUnseen,
+      text,
+      chibiUrl: popupChibi,
+    });
+  }, [chibiSrc, completed, postEndPhrases, postEndPopup, todayKey]);
+
+  useEffect(() => {
+    if (!postEndPopup) return;
+    const timer = window.setTimeout(() => {
+      markPostEndDateSeen(postEndPopup.endDate);
+      setPostEndPopup(null);
+    }, 4500);
+    return () => window.clearTimeout(timer);
+  }, [postEndPopup]);
+
   // Selected date info
   const selectedDateInfo = useMemo(() => {
     if (!selectedDateKey) return null;
@@ -777,6 +876,13 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
     if (!selectedDateKey || !selectedDateInfo?.matchedRecord) return;
     deleteRecord(selectedDateInfo.matchedRecord.id);
     setSelectedDateKey(null);
+  }
+
+  function closePostEndPopup() {
+    if (postEndPopup) {
+      markPostEndDateSeen(postEndPopup.endDate);
+    }
+    setPostEndPopup(null);
   }
 
   // Last completed period
@@ -1273,6 +1379,29 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
         phrase={chibiPhrase}
         onClickSettings={() => setShowPeriodSettings(true)}
       />
+
+      {postEndPopup && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40" onClick={closePostEndPopup} />
+          <div className="relative w-full max-w-sm rounded-2xl border border-stone-300 bg-white p-4 shadow-xl">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-stone-500">Period Update</p>
+              <button
+                type="button"
+                onClick={closePostEndPopup}
+                className="rounded-lg border border-stone-300 px-2 py-1 text-xs text-stone-600"
+              >
+                關閉
+              </button>
+            </div>
+            <p className="text-lg text-stone-900">本次經期結束</p>
+            <div className="mt-3 flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
+              <img src={postEndPopup.chibiUrl} alt="" draggable={false} className="h-16 w-16 shrink-0 object-contain" />
+              <p className="text-sm text-stone-700">{postEndPopup.text}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Date sheet ───────────────────────────────────────────── */}
       {selectedDateKey && selectedDateInfo && (

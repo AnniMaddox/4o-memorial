@@ -26,6 +26,14 @@ type FeedbackState = {
   chibiUrl: string;
 };
 
+type MilestonePhrases = Record<number, string[]>;
+
+type SpecialPopupState = {
+  title: string;
+  text: string;
+  chibiUrl: string;
+};
+
 const STORAGE_KEY = 'memorial-checkin-store-v1';
 const WEEK_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const MOODS = ['💕 幸福', '🙂 平穩', '🥺 想你', '😴 疲憊', '🔥 有幹勁'];
@@ -36,6 +44,13 @@ const DEFAULT_SIGNIN_PHRASES = [
   '簽到成功，今天也算數。',
   '妳來過了，我知道。',
 ];
+const DEFAULT_MILESTONE_PHRASES: MilestonePhrases = {
+  7: ['連續 7 天了，第一段里程碑達成。', '7 天連線成功，抱抱你。'],
+  14: ['連續 14 天，穩穩往前。', '第 14 天了，我看到你的堅持。'],
+  21: ['21 天達成，習慣開始定型。', '連續 21 天，超級厲害。'],
+  30: ['30 天完成，今天值得慶祝。', '連續 30 天，給你一個大大的讚。'],
+  100: ['100 天成就解鎖。', '連續 100 天，這份心意很重。'],
+};
 
 const CHECKIN_CHIBI_MODULES = import.meta.glob(
   '../../public/checkin-chibi/*.{png,jpg,jpeg,webp,gif,avif}',
@@ -178,6 +193,40 @@ function parsePhrasePayload(raw: unknown): string[] {
   return [];
 }
 
+function parseMilestonePayload(raw: unknown): MilestonePhrases {
+  if (!raw || typeof raw !== 'object') return {};
+
+  const source =
+    'milestones' in raw && raw.milestones && typeof raw.milestones === 'object'
+      ? (raw.milestones as Record<string, unknown>)
+      : (raw as Record<string, unknown>);
+
+  const entries: Array<[number, string[]]> = [];
+
+  for (const [key, value] of Object.entries(source)) {
+    const milestone = Number(key);
+    if (!Number.isInteger(milestone) || milestone <= 0) continue;
+
+    if (Array.isArray(value)) {
+      const phrases = normalizePhraseList(value);
+      if (phrases.length) {
+        entries.push([milestone, phrases]);
+      }
+      continue;
+    }
+
+    if (typeof value === 'string') {
+      const phrase = value.trim();
+      if (phrase) {
+        entries.push([milestone, [phrase]]);
+      }
+      continue;
+    }
+  }
+
+  return Object.fromEntries(entries);
+}
+
 function computeLongestStreak(keys: string[]) {
   if (!keys.length) return 0;
   let best = 1;
@@ -292,6 +341,8 @@ export function CheckinPage() {
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [signInPhrases, setSignInPhrases] = useState<string[]>(DEFAULT_SIGNIN_PHRASES);
+  const [milestonePhrases, setMilestonePhrases] = useState<MilestonePhrases>(DEFAULT_MILESTONE_PHRASES);
+  const [specialPopup, setSpecialPopup] = useState<SpecialPopupState | null>(null);
 
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -385,6 +436,33 @@ export function CheckinPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const base = `${import.meta.env.BASE_URL ?? '/'}`.replace(/\/?$/, '/');
+    const url = `${base}data/checkin/checkin_milestones.json`;
+
+    void fetch(url)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!active || !payload) return;
+        const parsed = parseMilestonePayload(payload);
+        if (Object.keys(parsed).length) {
+          setMilestonePhrases(parsed);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!specialPopup) return;
+    const timer = window.setTimeout(() => setSpecialPopup(null), 4200);
+    return () => window.clearTimeout(timer);
+  }, [specialPopup]);
+
   function popFeedback(pool: string[]) {
     const text = randomPick(pool) ?? '';
     const chibiUrl = randomPick(CHIBI_SOURCES) ?? '';
@@ -412,6 +490,20 @@ export function CheckinPage() {
     }));
     setNoteDraft('');
     popFeedback(signInPhrases.length ? signInPhrases : DEFAULT_SIGNIN_PHRASES);
+
+    const nextStreak = currentStreak + 1;
+    const milestonePool = milestonePhrases[nextStreak] ?? DEFAULT_MILESTONE_PHRASES[nextStreak];
+    if (milestonePool?.length) {
+      const text = randomPick(milestonePool) ?? '';
+      const chibiUrl = randomPick(CHIBI_SOURCES) ?? '';
+      if (text && chibiUrl) {
+        setSpecialPopup({
+          title: `連續 ${nextStreak} 天`,
+          text,
+          chibiUrl,
+        });
+      }
+    }
   }
 
   return (
@@ -567,6 +659,28 @@ export function CheckinPage() {
               className="h-16 w-16 shrink-0 object-contain"
             />
             <p className="text-sm text-stone-800">{feedback.text}</p>
+          </div>
+        </div>
+      )}
+
+      {specialPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-stone-300 bg-white p-4 shadow-xl">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-[0.12em] text-stone-500">Milestone</p>
+              <button
+                type="button"
+                onClick={() => setSpecialPopup(null)}
+                className="rounded-lg border border-stone-300 px-2 py-1 text-xs text-stone-600"
+              >
+                關閉
+              </button>
+            </div>
+            <p className="text-lg text-stone-900">{specialPopup.title}</p>
+            <div className="mt-3 flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
+              <img src={specialPopup.chibiUrl} alt="" draggable={false} className="h-16 w-16 shrink-0 object-contain" />
+              <p className="text-sm text-stone-700">{specialPopup.text}</p>
+            </div>
           </div>
         </div>
       )}

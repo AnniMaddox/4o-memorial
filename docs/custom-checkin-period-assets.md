@@ -26,7 +26,22 @@
 
 `checkin_phrases.txt`：一行一句。
 
-## 4) 經期頁語句（日期 hover）
+## 4) 打卡頁連續簽到里程碑語句（額外彈窗）
+- 檔案：`public/data/checkin/checkin_milestones.json`
+- 里程碑數字可自訂（例如 7/14/21/30/100）
+- 格式：
+
+```json
+{
+  "7": ["..."],
+  "14": ["..."],
+  "21": ["..."],
+  "30": ["..."],
+  "100": ["..."]
+}
+```
+
+## 5) 經期頁語句（日期 hover）
 - 檔案：`public/data/period/period_hover_phrases.json`
 - 格式：
 
@@ -39,7 +54,7 @@
 }
 ```
 
-## 5) 經期頁語句（小人氣泡）
+## 6) 經期頁語句（小人氣泡）
 - 檔案：`public/data/period/period_chibi_phrases.json`
 - 格式：
 
@@ -49,6 +64,16 @@
   "menstrual": ["..."],
   "ovulation": ["..."],
   "recovery": ["..."]
+}
+```
+
+## 7) 經期頁「本次經期結束」額外語句（彈窗）
+- 檔案：`public/data/period/period_post_end_phrases.json`
+- 格式：
+
+```json
+{
+  "phrases": ["...", "..."]
 }
 ```
 
