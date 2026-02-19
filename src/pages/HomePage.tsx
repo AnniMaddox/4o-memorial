@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 
 import type { AppLabels, TabIconUrls } from '../types/settings';
 
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'pomodoro' | 'diary' | 'album';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'pomodoro' | 'diary' | 'album' | 'notes';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -14,6 +14,7 @@ type HomePageProps = {
   widgetIconDataUrl: string;
   memorialStartDate: string;
   onLaunchApp: (appId: LauncherAppId) => void;
+  onOpenCheckin: () => void;
   onWidgetIconChange: (dataUrl: string) => void;
 };
 
@@ -153,6 +154,7 @@ export function HomePage({
   widgetIconDataUrl,
   memorialStartDate,
   onLaunchApp,
+  onOpenCheckin,
   onWidgetIconChange,
 }: HomePageProps) {
   const [now, setNow] = useState(() => new Date());
@@ -578,12 +580,27 @@ export function HomePage({
                           </div>
                         </div>
                       </div>
-                      <div className="mb-6 rounded-[2.25rem] border border-white/55 bg-white/25 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.12)] backdrop-blur">
+                      <div
+                        className="mb-6 cursor-pointer rounded-[2.25rem] border border-white/55 bg-white/25 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.12)] backdrop-blur transition active:scale-[0.995]"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="開啟打卡簽到"
+                        onClick={() => onOpenCheckin()}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            onOpenCheckin();
+                          }
+                        }}
+                      >
                         <div className="flex items-center gap-4">
                           <button
                             type="button"
                             className="grid h-16 w-16 place-items-center rounded-2xl bg-white/40 shadow-sm transition active:scale-95"
-                            onClick={() => widgetIconInputRef.current?.click()}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              widgetIconInputRef.current?.click();
+                            }}
                             aria-label="更換小圖"
                             title="點一下更換小圖"
                           >
@@ -593,6 +610,7 @@ export function HomePage({
                               accept="image/*"
                               className="hidden"
                               onChange={(event) => {
+                                event.stopPropagation();
                                 const file = event.target.files?.[0];
                                 event.currentTarget.value = '';
                                 if (!file) return;
@@ -603,6 +621,7 @@ export function HomePage({
                                 };
                                 reader.readAsDataURL(file);
                               }}
+                              onClick={(event) => event.stopPropagation()}
                             />
                             {widgetIconDataUrl.trim() ? (
                               <img
