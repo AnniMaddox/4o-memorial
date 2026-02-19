@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
+// ─── Types ─────────────────────────────────────────────────────────────────────
 type PeriodTab = 'overview' | 'calendar' | 'records';
-type PeriodStyle = 'glass' | 'soft' | 'minimal';
 
 type PeriodRecord = {
   id: string;
@@ -13,7 +13,6 @@ type PeriodRecord = {
 
 type PeriodStore = {
   records: PeriodRecord[];
-  style: PeriodStyle;
   accentColor: string;
 };
 
@@ -23,11 +22,6 @@ type CalendarCell = {
   inMonth: boolean;
 };
 
-type FeedbackState = {
-  text: string;
-  chibiUrl: string;
-};
-
 type HoverPhraseMap = {
   period: string[];
   prePeriod: string[];
@@ -35,8 +29,28 @@ type HoverPhraseMap = {
   safe: string[];
 };
 
+type ChibiPhraseMap = {
+  pms: string[];
+  menstrual: string[];
+  ovulation: string[];
+  recovery: string[];
+};
+
+// ─── Constants ─────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'memorial-period-diary-v1';
-const WEEK_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'] as const;
+
+const C = {
+  bg:          '#fdf7f4',
+  period:      '#e5738a',
+  predicted:   '#f5c0cc',
+  fertile:     '#c5e8d4',
+  ovulation:   '#f5b849',
+  today:       '#1c1917',
+  accent:      '#d4607a',
+  accentMid:   '#c45070',
+  fertileText: '#2a6048',
+} as const;
 
 const DEFAULT_HOVER_PHRASES: HoverPhraseMap = {
   period: ['今天先慢慢來，我陪妳。', '辛苦了，今天多休息一點。', '抱抱，今天不要太逞強。'],
@@ -44,16 +58,48 @@ const DEFAULT_HOVER_PHRASES: HoverPhraseMap = {
   ovulation: ['今天狀態看起來不錯。', '今天的妳很有光。'],
   safe: ['今天也是平穩的一天。', '我在這裡，陪妳過日子。'],
 };
+const DEFAULT_CHIBI_PHRASES: ChibiPhraseMap = {
+  pms: [
+    '有點焦躁是正常的，深呼吸。',
+    '胸口有點重？先喝杯熱茶。',
+    '今天想哭就哭，沒有理由也沒關係。',
+    '有點累是真的，不用硬撐。',
+  ],
+  menstrual: [
+    '子宮很努力，你也是。',
+    '今天能躺著就不坐著。',
+    '喝熱水、喝熱水、喝熱水。',
+    '今天對自己溫柔一點。',
+  ],
+  ovulation: [
+    '今天特別有活力是真的！',
+    '排卵期的你最有光彩。',
+    '今天適合做讓自己開心的事。',
+    '身體在說 yes，你也說 yes 吧。',
+  ],
+  recovery: [
+    '慢慢恢復中，不用急。',
+    '最難的部分已經過去了。',
+    '身體謝謝你這個月的陪伴。',
+    '你每次都撐過來了，這次也是。',
+  ],
+};
 
-const PERIOD_CHIBI_MODULES = import.meta.glob('../../public/period-chibi/*.{png,jpg,jpeg,webp,avif}', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
+const DEFAULT_STORE: PeriodStore = {
+  records: [],
+  accentColor: C.period,
+};
 
-const DEFAULT_CHIBI_MODULES = import.meta.glob('../../public/chibi/chibi-*.png', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
+// ─── Chibi sources ─────────────────────────────────────────────────────────────
+const PERIOD_CHIBI_MODULES = import.meta.glob(
+  '../../public/period-chibi/*.{png,jpg,jpeg,webp,avif}',
+  { eager: true, import: 'default' },
+) as Record<string, string>;
+
+const DEFAULT_CHIBI_MODULES = import.meta.glob(
+  '../../public/chibi/chibi-*.png',
+  { eager: true, import: 'default' },
+) as Record<string, string>;
 
 const CHIBI_SOURCES = [
   ...Object.entries(PERIOD_CHIBI_MODULES)
@@ -64,33 +110,24 @@ const CHIBI_SOURCES = [
     .map(([, url]) => url),
 ];
 
-const DEFAULT_STORE: PeriodStore = {
-  records: [],
-  style: 'glass',
-  accentColor: '#D35A7B',
-};
-
+// ─── Utilities ─────────────────────────────────────────────────────────────────
 function toDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function parseDateKey(value: string) {
   const matched = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!matched) return null;
-  const year = Number(matched[1]);
-  const month = Number(matched[2]);
-  const day = Number(matched[3]);
-  const parsed = new Date(year, month - 1, day);
+  const [, y, m, d] = matched.map(Number);
+  const parsed = new Date(y!, m! - 1, d!);
   if (
-    parsed.getFullYear() !== year ||
-    parsed.getMonth() !== month - 1 ||
-    parsed.getDate() !== day
-  ) {
-    return null;
-  }
+    parsed.getFullYear() !== y ||
+    parsed.getMonth() !== m! - 1 ||
+    parsed.getDate() !== d
+  ) return null;
   return parsed;
 }
 
@@ -106,85 +143,21 @@ function dayDiff(from: Date, to: Date) {
   return Math.round((b - a) / 86_400_000);
 }
 
-function toMonthLabel(date: Date) {
-  return `${date.getFullYear()} / ${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function randomPick<T>(items: T[]) {
+function randomPick<T>(items: T[]): T | null {
   if (!items.length) return null;
   return items[Math.floor(Math.random() * items.length)]!;
 }
 
-function buildMonthGrid(viewMonth: Date) {
-  const year = viewMonth.getFullYear();
-  const month = viewMonth.getMonth();
-  const first = new Date(year, month, 1);
-  const firstWeekday = first.getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells: CalendarCell[] = [];
-
-  for (let i = firstWeekday; i > 0; i -= 1) {
-    const date = addDays(first, -i);
-    cells.push({
-      key: toDateKey(date),
-      day: date.getDate(),
-      inMonth: false,
-    });
-  }
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(year, month, day);
-    cells.push({
-      key: toDateKey(date),
-      day,
-      inMonth: true,
-    });
-  }
-
-  while (cells.length % 7 !== 0) {
-    const date = addDays(parseDateKey(cells[cells.length - 1]!.key)!, 1);
-    cells.push({
-      key: toDateKey(date),
-      day: date.getDate(),
-      inMonth: false,
-    });
-  }
-
-  return cells;
+function toMonthLabel(date: Date) {
+  return `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
 }
 
-function getVariantClasses(style: PeriodStyle) {
-  if (style === 'soft') {
-    return {
-      page: 'bg-rose-50/85',
-      card: 'bg-white/92 border-stone-200',
-      muted: 'text-stone-500',
-      cell: 'bg-white',
-    };
-  }
-
-  if (style === 'minimal') {
-    return {
-      page: 'bg-white',
-      card: 'bg-stone-50 border-stone-200',
-      muted: 'text-stone-500',
-      cell: 'bg-white',
-    };
-  }
-
-  return {
-    page: 'bg-white/35 backdrop-blur-xl',
-    card: 'bg-white/70 border-white/65',
-    muted: 'text-stone-600',
-    cell: 'bg-white/70',
-  };
-}
-
-function loadStore() {
+// ─── Data helpers ──────────────────────────────────────────────────────────────
+function loadStore(): PeriodStore {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_STORE;
@@ -192,20 +165,15 @@ function loadStore() {
     return {
       records: Array.isArray(parsed.records)
         ? parsed.records.filter(
-            (record): record is PeriodRecord =>
-              !!record &&
-              typeof record === 'object' &&
-              typeof record.id === 'string' &&
-              typeof record.startDate === 'string' &&
-              typeof record.endDate === 'string' &&
-              typeof record.note === 'string' &&
-              typeof record.createdAt === 'string',
+            (r): r is PeriodRecord =>
+              !!r && typeof r === 'object' &&
+              typeof r.id === 'string' &&
+              typeof r.startDate === 'string' &&
+              typeof r.endDate === 'string' &&
+              typeof r.note === 'string' &&
+              typeof r.createdAt === 'string',
           )
         : [],
-      style:
-        parsed.style === 'glass' || parsed.style === 'soft' || parsed.style === 'minimal'
-          ? parsed.style
-          : DEFAULT_STORE.style,
       accentColor:
         typeof parsed.accentColor === 'string' && parsed.accentColor.trim()
           ? parsed.accentColor
@@ -218,11 +186,10 @@ function loadStore() {
 
 function normalizeRecords(records: PeriodRecord[]) {
   return records
-    .filter((record) => {
-      const start = parseDateKey(record.startDate);
-      const end = parseDateKey(record.endDate);
-      if (!start || !end) return false;
-      return dayDiff(start, end) >= 0;
+    .filter((r) => {
+      const s = parseDateKey(r.startDate);
+      const e = parseDateKey(r.endDate);
+      return s && e && dayDiff(s, e) >= 0;
     })
     .sort((a, b) => a.startDate.localeCompare(b.startDate));
 }
@@ -240,67 +207,96 @@ function calcPrediction(records: PeriodRecord[]) {
     };
   }
 
-  const durations = completed.map((record) => {
-    const start = parseDateKey(record.startDate)!;
-    const end = parseDateKey(record.endDate)!;
-    return dayDiff(start, end) + 1;
+  const durations = completed.map((r) => {
+    const s = parseDateKey(r.startDate)!;
+    const e = parseDateKey(r.endDate)!;
+    return dayDiff(s, e) + 1;
   });
-  const avgDuration = clamp(Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length), 3, 10);
+  const avgDuration = clamp(
+    Math.round(durations.reduce((a, b) => a + b, 0) / durations.length),
+    3, 10,
+  );
 
   const cycleDiffs: number[] = [];
-  for (let i = 1; i < completed.length; i += 1) {
-    const previousStart = parseDateKey(completed[i - 1]!.startDate)!;
-    const currentStart = parseDateKey(completed[i]!.startDate)!;
-    const diff = dayDiff(previousStart, currentStart);
-    if (diff >= 15 && diff <= 60) {
-      cycleDiffs.push(diff);
-    }
+  for (let i = 1; i < completed.length; i++) {
+    const prev = parseDateKey(completed[i - 1]!.startDate)!;
+    const curr = parseDateKey(completed[i]!.startDate)!;
+    const diff = dayDiff(prev, curr);
+    if (diff >= 15 && diff <= 60) cycleDiffs.push(diff);
   }
   const avgCycleLength = cycleDiffs.length
-    ? clamp(Math.round(cycleDiffs.reduce((sum, value) => sum + value, 0) / cycleDiffs.length), 21, 40)
+    ? clamp(Math.round(cycleDiffs.reduce((a, b) => a + b, 0) / cycleDiffs.length), 21, 40)
     : 28;
 
-  const lastStartDate = parseDateKey(completed[completed.length - 1]!.startDate)!;
+  const lastStart = parseDateKey(completed[completed.length - 1]!.startDate)!;
   const predictedStarts: string[] = [];
-  for (let i = 1; i <= 6; i += 1) {
-    predictedStarts.push(toDateKey(addDays(lastStartDate, avgCycleLength * i)));
+  for (let i = 1; i <= 6; i++) {
+    predictedStarts.push(toDateKey(addDays(lastStart, avgCycleLength * i)));
   }
 
-  const nextStartDate = addDays(lastStartDate, avgCycleLength);
-  const nextEndDate = addDays(nextStartDate, avgDuration - 1);
+  const nextStart = addDays(lastStart, avgCycleLength);
+  const nextEnd = addDays(nextStart, avgDuration - 1);
 
   return {
     completed,
     avgCycleLength,
     avgDuration,
-    nextStartKey: toDateKey(nextStartDate),
-    nextEndKey: toDateKey(nextEndDate),
+    nextStartKey: toDateKey(nextStart),
+    nextEndKey: toDateKey(nextEnd),
     predictedStarts,
   };
 }
 
-function loadHoverPhrasesFromRaw(raw: unknown) {
-  if (Array.isArray(raw)) {
-    const values = raw.filter(
-      (item): item is string => typeof item === 'string' && item.trim().length > 0,
-    );
-    if (!values.length) return null;
-    return {
-      ...DEFAULT_HOVER_PHRASES,
-      period: values,
-    } satisfies HoverPhraseMap;
+function buildMonthGrid(viewMonth: Date): CalendarCell[] {
+  const year = viewMonth.getFullYear();
+  const month = viewMonth.getMonth();
+  const first = new Date(year, month, 1);
+  const firstWeekday = first.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: CalendarCell[] = [];
+
+  for (let i = firstWeekday; i > 0; i--) {
+    const date = addDays(first, -i);
+    cells.push({ key: toDateKey(date), day: date.getDate(), inMonth: false });
   }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    cells.push({ key: toDateKey(date), day, inMonth: true });
+  }
+  while (cells.length % 7 !== 0) {
+    const date = addDays(parseDateKey(cells[cells.length - 1]!.key)!, 1);
+    cells.push({ key: toDateKey(date), day: date.getDate(), inMonth: false });
+  }
+  return cells;
+}
 
+function loadHoverPhrasesFromRaw(raw: unknown): HoverPhraseMap | null {
+  if (Array.isArray(raw)) {
+    const values = raw.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
+    if (!values.length) return null;
+    return { ...DEFAULT_HOVER_PHRASES, period: values };
+  }
   if (!raw || typeof raw !== 'object') return null;
-  const source = raw as Partial<Record<keyof HoverPhraseMap, unknown>>;
+  const src = raw as Partial<Record<keyof HoverPhraseMap, unknown>>;
   const next: HoverPhraseMap = { ...DEFAULT_HOVER_PHRASES };
-
   for (const key of Object.keys(next) as Array<keyof HoverPhraseMap>) {
-    const value = source[key];
-    if (!Array.isArray(value)) continue;
-    const rows = value.filter(
-      (item): item is string => typeof item === 'string' && item.trim().length > 0,
-    );
+    const val = src[key];
+    if (!Array.isArray(val)) continue;
+    const rows = val.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
+    if (rows.length) next[key] = rows;
+  }
+  return next;
+}
+
+function loadChibiPhrasesFromRaw(raw: unknown): ChibiPhraseMap | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const src = raw as Partial<Record<keyof ChibiPhraseMap, unknown>>;
+  const next: ChibiPhraseMap = { ...DEFAULT_CHIBI_PHRASES };
+
+  for (const key of Object.keys(next) as Array<keyof ChibiPhraseMap>) {
+    const val = src[key];
+    if (!Array.isArray(val)) continue;
+    const rows = val.filter((i): i is string => typeof i === 'string' && i.trim().length > 0);
     if (rows.length) next[key] = rows;
   }
 
@@ -311,37 +307,273 @@ function pickPhraseByDate(
   dateKey: string,
   actualSet: Set<string>,
   nextStartKey: string,
-  ovulationStartKey: string,
-  ovulationEndKey: string,
+  ovulStart: string,
+  ovulEnd: string,
   pool: HoverPhraseMap,
-) {
+): string {
   const date = parseDateKey(dateKey);
   if (!date) return randomPick(pool.safe) ?? '';
 
-  if (actualSet.has(dateKey)) {
-    return randomPick(pool.period) ?? '';
-  }
+  if (actualSet.has(dateKey)) return randomPick(pool.period) ?? '';
 
   if (nextStartKey) {
-    const nextStartDate = parseDateKey(nextStartKey);
-    if (nextStartDate) {
-      const gap = dayDiff(date, nextStartDate);
-      if (gap >= 1 && gap <= 3) {
-        return randomPick(pool.prePeriod) ?? '';
-      }
+    const nextDate = parseDateKey(nextStartKey);
+    if (nextDate) {
+      const gap = dayDiff(date, nextDate);
+      if (gap >= 1 && gap <= 3) return randomPick(pool.prePeriod) ?? '';
     }
   }
 
-  if (ovulationStartKey && ovulationEndKey) {
-    if (dateKey >= ovulationStartKey && dateKey <= ovulationEndKey) {
-      return randomPick(pool.ovulation) ?? '';
-    }
+  if (ovulStart && ovulEnd && dateKey >= ovulStart && dateKey <= ovulEnd) {
+    return randomPick(pool.ovulation) ?? '';
   }
 
   return randomPick(pool.safe) ?? '';
 }
 
-export function PeriodPage() {
+// Phase → periodPhrases key mapping
+function phaseToPhraseKey(phase: string): keyof ChibiPhraseMap {
+  if (phase === '經期中') return 'menstrual';
+  if (phase === '經前期') return 'pms';
+  if (phase === '排卵窗') return 'ovulation';
+  return 'recovery';
+}
+
+// ─── SpeechBubble ──────────────────────────────────────────────────────────────
+function SpeechBubble({ countdown, phrase }: { countdown: string; phrase: string }) {
+  return (
+    <div
+      className="relative max-w-[11.5rem] rounded-2xl bg-white px-3 py-2.5"
+      style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
+    >
+      {/* Countdown line */}
+      <p className="text-[10px] leading-tight text-stone-400">{countdown}</p>
+      {/* Phase phrase */}
+      <p className="mt-1 text-[12px] leading-snug text-stone-600">{phrase}</p>
+      {/* Tail — bottom-left, toward chibi */}
+      <div
+        className="absolute -bottom-[7px] left-5"
+        style={{
+          width: 0, height: 0,
+          borderLeft: '7px solid transparent',
+          borderRight: '7px solid transparent',
+          borderTop: '7px solid white',
+        }}
+      />
+    </div>
+  );
+}
+
+// ─── FloatingChibi ────────────────────────────────────────────────────────────
+function FloatingChibi({
+  chibiSrc,
+  countdown,
+  phrase,
+  onClickSettings,
+}: {
+  chibiSrc: string;
+  countdown: string;
+  phrase: string;
+  onClickSettings: () => void;
+}) {
+  return (
+    <div
+      className="pointer-events-none absolute left-3 z-20 flex flex-col items-start gap-2"
+      style={{ bottom: '88px' }}
+    >
+      {/* Bubble */}
+      <div className="pointer-events-auto">
+        <SpeechBubble countdown={countdown} phrase={phrase} />
+      </div>
+
+      {/* Chibi */}
+      <button
+        type="button"
+        onClick={onClickSettings}
+        className="pointer-events-auto transition active:scale-90"
+        aria-label="週期設定"
+      >
+        {chibiSrc ? (
+          <img
+            src={chibiSrc}
+            alt=""
+            draggable={false}
+            className="w-[10.5rem] select-none drop-shadow-md"
+          />
+        ) : (
+          <div
+            className="flex items-center justify-center rounded-2xl text-4xl drop-shadow-md"
+            style={{
+              width: '10.5rem', height: '9rem',
+              background: 'linear-gradient(145deg,#fde9d7,#f0ddd0)',
+            }}
+          >
+            🧸
+          </div>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// ─── DateSheet ────────────────────────────────────────────────────────────────
+function DateSheet({
+  dateKey,
+  isActual,
+  phrase,
+  onMarkStart,
+  onMarkEnd,
+  onClear,
+  onClose,
+}: {
+  dateKey: string;
+  isActual: boolean;
+  phrase: string;
+  onMarkStart: () => void;
+  onMarkEnd: () => void;
+  onClear: () => void;
+  onClose: () => void;
+}) {
+  const parsed = parseDateKey(dateKey);
+  const diffDays = parsed ? dayDiff(new Date(), parsed) : 0;
+  const diffLabel =
+    diffDays === 0 ? '今天'
+    : diffDays > 0 ? `距今 ${diffDays} 天後`
+    : `${Math.abs(diffDays)} 天前`;
+
+  const parts = dateKey.split('-');
+  const displayDate = parts.length === 3 ? `${parts[0]} / ${parts[1]} / ${parts[2]}` : dateKey;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 z-30 rounded-[44px]"
+        style={{ background: 'rgba(0,0,0,0.28)' }}
+        onClick={onClose}
+      />
+      {/* Sheet */}
+      <div
+        className="absolute bottom-0 left-0 right-0 z-40 rounded-t-3xl px-5 pb-8 pt-3.5"
+        style={{ background: 'white', boxShadow: '0 -6px 28px rgba(0,0,0,0.12)' }}
+      >
+        {/* Handle */}
+        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-stone-300" />
+
+        {/* Date display */}
+        <div
+          className="mb-5 border-b pb-4 text-center"
+          style={{ borderColor: '#f4f3f2' }}
+        >
+          <p className="mb-1 text-[11px] uppercase tracking-[0.12em] text-stone-400">選擇的日期</p>
+          <p className="text-[22px] font-bold tracking-[-0.5px]" style={{ color: C.today }}>
+            {displayDate}
+          </p>
+          <p className="mt-1 text-[11px] text-stone-400">{diffLabel}</p>
+          {!!phrase && (
+            <p className="mt-2 text-[11px] italic text-stone-400">「{phrase}」</p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <button
+          type="button"
+          onClick={onMarkStart}
+          className="mb-2 w-full rounded-2xl border p-3 text-left text-sm font-medium transition active:scale-[0.98]"
+          style={{ background: '#fde4ec', color: C.accent, borderColor: 'rgba(212,96,122,0.18)' }}
+        >
+          🩸 記錄為月經開始日
+        </button>
+        <button
+          type="button"
+          onClick={onMarkEnd}
+          className="mb-2 w-full rounded-2xl p-3 text-left text-sm transition active:scale-[0.98]"
+          style={{ background: '#f5f5f4', color: '#44403c' }}
+        >
+          ✓ 記錄為月經結束日
+        </button>
+        {isActual && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="mb-2 w-full rounded-2xl border p-3 text-left text-sm transition active:scale-[0.98]"
+            style={{ background: 'white', color: '#b8b0a8', borderColor: '#e7e5e4' }}
+          >
+            🗑️ 清除此日期的標記
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-2xl p-3 text-sm text-stone-400 transition active:scale-[0.98]"
+        >
+          取消
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─── PeriodSettingsSheet ──────────────────────────────────────────────────────
+function PeriodSettingsSheet({
+  avgCycleLength,
+  avgDuration,
+  onClearAll,
+  onClose,
+}: {
+  avgCycleLength: number;
+  avgDuration: number;
+  onClearAll: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div
+        className="absolute inset-0 z-30 rounded-[44px]"
+        style={{ background: 'rgba(0,0,0,0.28)' }}
+        onClick={onClose}
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0 z-40 rounded-t-3xl px-5 pb-10 pt-3.5"
+        style={{ background: 'white', boxShadow: '0 -6px 28px rgba(0,0,0,0.12)' }}
+      >
+        <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-stone-300" />
+        <p className="mb-5 text-center text-base font-semibold text-stone-800">週期設定</p>
+
+        <div className="mb-4 rounded-2xl bg-stone-50 p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-stone-500">目前平均週期</span>
+            <span className="text-sm font-medium text-stone-700">{avgCycleLength} 天</span>
+          </div>
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-xs text-stone-500">目前平均經期</span>
+            <span className="text-sm font-medium text-stone-700">{avgDuration} 天</span>
+          </div>
+          <p className="mt-2 text-[10px] text-stone-400">預測依歷史紀錄自動計算，新增更多紀錄會更準確。</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="mt-2 w-full rounded-2xl border p-3 text-sm transition active:scale-[0.98]"
+          style={{ background: 'white', color: '#b8b0a8', borderColor: '#e7e5e4' }}
+        >
+          🗑️ 清除所有紀錄
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-2 w-full rounded-2xl p-3 text-sm text-stone-400 transition active:scale-[0.98]"
+        >
+          關閉
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─── PeriodPage ────────────────────────────────────────────────────────────────
+export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [store, setStore] = useState<PeriodStore>(loadStore);
   const [activeTab, setActiveTab] = useState<PeriodTab>('overview');
   const [viewMonth, setViewMonth] = useState(() => new Date());
@@ -350,108 +582,140 @@ export function PeriodPage() {
   const [noteDraft, setNoteDraft] = useState('');
   const [statusText, setStatusText] = useState('');
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [showPeriodSettings, setShowPeriodSettings] = useState(false);
   const [hoverPhrases, setHoverPhrases] = useState<HoverPhraseMap>(DEFAULT_HOVER_PHRASES);
+  const [chibiPhrases, setChibiPhrases] = useState<ChibiPhraseMap>(DEFAULT_CHIBI_PHRASES);
+  const [chibiSrc] = useState(() => randomPick(CHIBI_SOURCES) ?? '');
 
   const today = new Date();
   const todayKey = toDateKey(today);
   const monthCells = useMemo(() => buildMonthGrid(viewMonth), [viewMonth]);
-  const variant = getVariantClasses(store.style);
 
+  // Persist store
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   }, [store]);
 
+  // Load custom hover phrases
   useEffect(() => {
     let active = true;
-
     const base = import.meta.env.BASE_URL ?? '/';
     const url = `${base.replace(/\/?$/, '/')}data/period/period_hover_phrases.json`;
-
     void fetch(url)
-      .then((response) => (response.ok ? response.json() : null))
+      .then((r) => (r.ok ? r.json() : null))
       .then((json) => {
         if (!active || !json) return;
         const parsed = loadHoverPhrasesFromRaw(json);
-        if (parsed) {
-          setHoverPhrases(parsed);
-        }
+        if (parsed) setHoverPhrases(parsed);
       })
-      .catch(() => {
-        // keep default phrases if custom file is absent
-      });
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
+  // Load custom chibi phrases
+  useEffect(() => {
+    let active = true;
+    const base = import.meta.env.BASE_URL ?? '/';
+    const url = `${base.replace(/\/?$/, '/')}data/period/period_chibi_phrases.json`;
+    void fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!active || !json) return;
+        const parsed = loadChibiPhrasesFromRaw(json);
+        if (parsed) setChibiPhrases(parsed);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
   }, []);
 
-  const {
-    completed,
-    avgCycleLength,
-    avgDuration,
-    nextStartKey,
-    nextEndKey,
-    predictedStarts,
-  } = useMemo(() => calcPrediction(store.records), [store.records]);
+  // Prediction
+  const { completed, avgCycleLength, avgDuration, nextStartKey, predictedStarts } =
+    useMemo(() => calcPrediction(store.records), [store.records]);
 
+  // Actual period day set
   const actualPeriodSet = useMemo(() => {
     const set = new Set<string>();
-    for (const record of completed) {
-      const start = parseDateKey(record.startDate)!;
-      const end = parseDateKey(record.endDate)!;
-      for (let offset = 0; offset <= dayDiff(start, end); offset += 1) {
-        set.add(toDateKey(addDays(start, offset)));
+    for (const r of completed) {
+      const s = parseDateKey(r.startDate)!;
+      const e = parseDateKey(r.endDate)!;
+      for (let offset = 0; offset <= dayDiff(s, e); offset++) {
+        set.add(toDateKey(addDays(s, offset)));
       }
     }
     return set;
   }, [completed]);
 
+  // Predicted period day set
   const predictedPeriodSet = useMemo(() => {
     const set = new Set<string>();
-    if (!predictedStarts.length) return set;
     for (const startKey of predictedStarts) {
       const startDate = parseDateKey(startKey);
       if (!startDate) continue;
-      for (let offset = 0; offset < avgDuration; offset += 1) {
+      for (let offset = 0; offset < avgDuration; offset++) {
         set.add(toDateKey(addDays(startDate, offset)));
       }
     }
     return set;
   }, [avgDuration, predictedStarts]);
 
+  // Ovulation window
   const ovulationWindow = useMemo(() => {
-    if (!nextStartKey) {
-      return {
-        start: '',
-        end: '',
-      };
-    }
-    const nextStartDate = parseDateKey(nextStartKey);
-    if (!nextStartDate) {
-      return {
-        start: '',
-        end: '',
-      };
-    }
-    const ovulationDay = addDays(nextStartDate, -14);
-    const start = toDateKey(addDays(ovulationDay, -2));
-    const end = toDateKey(addDays(ovulationDay, 2));
-    return { start, end };
+    if (!nextStartKey) return { start: '', end: '', peak: '' };
+    const nextDate = parseDateKey(nextStartKey);
+    if (!nextDate) return { start: '', end: '', peak: '' };
+    const peak = addDays(nextDate, -14);
+    return {
+      start: toDateKey(addDays(peak, -2)),
+      end: toDateKey(addDays(peak, 2)),
+      peak: toDateKey(peak),
+    };
   }, [nextStartKey]);
 
+  // Today phase
+  const todayPhase = useMemo(() => {
+    if (actualPeriodSet.has(todayKey)) return '經期中';
+    if (nextStartKey) {
+      const nextDate = parseDateKey(nextStartKey);
+      if (nextDate && dayDiff(today, nextDate) >= 1 && dayDiff(today, nextDate) <= 3) return '經前期';
+    }
+    if (ovulationWindow.start && ovulationWindow.end &&
+        todayKey >= ovulationWindow.start && todayKey <= ovulationWindow.end) return '排卵窗';
+    return '平穩期';
+  }, [actualPeriodSet, nextStartKey, ovulationWindow, today, todayKey]);
+
+  // Days until next
+  const daysUntilNext = useMemo(() => {
+    const nextDate = parseDateKey(nextStartKey);
+    return nextDate ? dayDiff(today, nextDate) : null;
+  }, [nextStartKey, today]);
+
+  // Chibi bubble content (from periodPhrases.ts)
+  const chibiPhrase = useMemo(() => {
+    const key = phaseToPhraseKey(todayPhase);
+    return randomPick(chibiPhrases[key]) ?? '';
+  }, [chibiPhrases, todayPhase]);
+
+  const chibiCountdown = useMemo(() => {
+    if (daysUntilNext === null) return '週期追蹤中';
+    if (daysUntilNext === 0) return '今天是預測開始日';
+    if (daysUntilNext < 0) return `超過預測 ${Math.abs(daysUntilNext)} 天`;
+    return `距下次月經 · 還有 ${daysUntilNext} 天`;
+  }, [daysUntilNext]);
+
+  // Selected date info
   const selectedDateInfo = useMemo(() => {
     if (!selectedDateKey) return null;
     const matchedRecord = completed.find(
-      (record) => selectedDateKey >= record.startDate && selectedDateKey <= record.endDate,
+      (r) => selectedDateKey >= r.startDate && selectedDateKey <= r.endDate,
     );
-
     return {
       dateKey: selectedDateKey,
       isActual: actualPeriodSet.has(selectedDateKey),
-      isPredicted: predictedPeriodSet.has(selectedDateKey),
       isFuture: selectedDateKey > todayKey,
       note: matchedRecord?.note ?? '',
+      matchedRecord,
       phrase: pickPhraseByDate(
         selectedDateKey,
         actualPeriodSet,
@@ -461,422 +725,577 @@ export function PeriodPage() {
         hoverPhrases,
       ),
     };
-  }, [
-    actualPeriodSet,
-    completed,
-    hoverPhrases,
-    nextStartKey,
-    ovulationWindow.end,
-    ovulationWindow.start,
-    predictedPeriodSet,
-    selectedDateKey,
-    todayKey,
-  ]);
+  }, [actualPeriodSet, completed, hoverPhrases, nextStartKey, ovulationWindow, selectedDateKey, todayKey]);
 
-  const todayPhase = useMemo(() => {
-    if (actualPeriodSet.has(todayKey)) return '經期中';
-    if (nextStartKey) {
-      const nextStartDate = parseDateKey(nextStartKey);
-      if (nextStartDate) {
-        const daysUntil = dayDiff(today, nextStartDate);
-        if (daysUntil >= 1 && daysUntil <= 3) {
-          return '經前期';
-        }
-      }
-    }
-    if (ovulationWindow.start && ovulationWindow.end && todayKey >= ovulationWindow.start && todayKey <= ovulationWindow.end) {
-      return '排卵窗';
-    }
-    return '平穩期';
-  }, [actualPeriodSet, nextStartKey, ovulationWindow.end, ovulationWindow.start, today, todayKey]);
-
-  function popFeedback(kind: keyof HoverPhraseMap) {
-    const phrase = randomPick(hoverPhrases[kind]) ?? randomPick(hoverPhrases.safe) ?? '';
-    const chibiUrl = randomPick(CHIBI_SOURCES) ?? '';
-    if (!phrase || !chibiUrl) return;
-    setFeedback({
-      text: phrase,
-      chibiUrl,
-    });
-    window.setTimeout(() => {
-      setFeedback((current) => (current?.text === phrase ? null : current));
-    }, 3500);
-  }
-
+  // Handlers
   function savePeriodRecord() {
-    const start = parseDateKey(startDraft);
-    const end = parseDateKey(endDraft);
-    if (!start || !end) {
-      setStatusText('請先選擇開始日和結束日。');
-      return;
-    }
-    if (dayDiff(start, end) < 0) {
-      setStatusText('結束日不能早於開始日。');
-      return;
-    }
-    if (toDateKey(end) > todayKey) {
-      setStatusText('結束日不能超過今天。');
-      return;
-    }
+    const s = parseDateKey(startDraft);
+    const e = parseDateKey(endDraft);
+    if (!s || !e) { setStatusText('請先選擇開始日和結束日。'); return; }
+    if (dayDiff(s, e) < 0) { setStatusText('結束日不能早於開始日。'); return; }
+    if (toDateKey(e) > todayKey) { setStatusText('結束日不能超過今天。'); return; }
 
-    const nextRecord: PeriodRecord = {
-      id: `${toDateKey(start)}-${Date.now()}`,
-      startDate: toDateKey(start),
-      endDate: toDateKey(end),
+    const newRecord: PeriodRecord = {
+      id: `${toDateKey(s)}-${Date.now()}`,
+      startDate: toDateKey(s),
+      endDate: toDateKey(e),
       note: noteDraft.trim(),
       createdAt: new Date().toISOString(),
     };
-
-    setStore((current) => ({
-      ...current,
-      records: [...current.records, nextRecord],
-    }));
+    setStore((cur) => ({ ...cur, records: [...cur.records, newRecord] }));
     setStatusText('已儲存這次經期紀錄。');
     setNoteDraft('');
     setStartDraft('');
     setEndDraft('');
-    popFeedback('period');
   }
 
   function deleteRecord(id: string) {
-    setStore((current) => ({
-      ...current,
-      records: current.records.filter((record) => record.id !== id),
-    }));
-    setStatusText('已刪除一筆紀錄。');
+    setStore((cur) => ({ ...cur, records: cur.records.filter((r) => r.id !== id) }));
   }
 
-  const daysUntilNext = useMemo(() => {
-    const nextStartDate = parseDateKey(nextStartKey);
-    if (!nextStartDate) return null;
-    return dayDiff(today, nextStartDate);
-  }, [nextStartKey, today]);
+  function clearAllRecords() {
+    setStore((cur) => ({ ...cur, records: [] }));
+    setShowPeriodSettings(false);
+  }
+
+  // Date sheet handlers
+  function handleMarkStart() {
+    if (!selectedDateKey) return;
+    setStartDraft(selectedDateKey);
+    setActiveTab('records');
+    setSelectedDateKey(null);
+  }
+
+  function handleMarkEnd() {
+    if (!selectedDateKey) return;
+    setEndDraft(selectedDateKey);
+    setActiveTab('records');
+    setSelectedDateKey(null);
+  }
+
+  function handleClearDateMark() {
+    if (!selectedDateKey || !selectedDateInfo?.matchedRecord) return;
+    deleteRecord(selectedDateInfo.matchedRecord.id);
+    setSelectedDateKey(null);
+  }
+
+  // Last completed period
+  const lastPeriod = completed[completed.length - 1] ?? null;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  const TAB_ITEMS: { id: PeriodTab; label: string }[] = [
+    { id: 'overview', label: '總覽' },
+    { id: 'calendar', label: '月曆' },
+    { id: 'records',  label: '紀錄' },
+  ];
 
   return (
-    <div className={`mx-auto h-full w-full max-w-xl overflow-y-auto ${variant.page}`}>
-      <div className="space-y-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
-        <header className={`rounded-2xl border p-4 shadow-sm ${variant.card}`}>
-          <p className={`text-xs uppercase tracking-[0.16em] ${variant.muted}`}>Period Diary</p>
-          <h1 className="mt-0.5 text-2xl text-stone-900">經期日記</h1>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <MetricCard title="目前狀態" value={todayPhase} />
-            <MetricCard title="平均週期" value={`${avgCycleLength} 天`} />
-            <MetricCard title="平均經期" value={`${avgDuration} 天`} />
+    <div
+      className="relative flex h-full flex-col overflow-hidden"
+      style={{ background: C.bg }}
+    >
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <header
+        className="shrink-0 border-b"
+        style={{ background: C.bg, borderColor: 'rgba(0,0,0,0.06)' }}
+      >
+        <div className="flex items-center gap-3 px-4 pb-2.5 pt-4">
+          <button
+            type="button"
+            onClick={onExit}
+            className="rounded-xl border border-stone-300 bg-white/80 px-3 py-1.5 text-sm text-stone-600 transition active:scale-95"
+          >
+            ‹
+          </button>
+          <div className="flex-1 text-center">
+            <p className="text-[9px] uppercase tracking-[0.28em] text-stone-400">PERIOD</p>
+            <h1 className="mt-0.5 text-base leading-tight text-stone-800">經期追蹤</h1>
           </div>
-        </header>
+          {/* Spacer */}
+          <div className="w-10" />
+        </div>
 
-        <section className={`rounded-2xl border p-3 shadow-sm ${variant.card}`}>
-          <div className="grid grid-cols-3 gap-2">
-            {([
-              { id: 'overview', label: '總覽' },
-              { id: 'calendar', label: '月曆' },
-              { id: 'records', label: '紀錄' },
-            ] as const).map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => setActiveTab(entry.id)}
-                className={`rounded-xl border px-3 py-2 text-sm transition active:scale-95 ${
-                  activeTab === entry.id
-                    ? 'text-white'
-                    : 'border-stone-300 bg-white/80 text-stone-700'
-                }`}
-                style={activeTab === entry.id ? { backgroundColor: store.accentColor, borderColor: store.accentColor } : undefined}
-              >
-                {entry.label}
-              </button>
-            ))}
-          </div>
-        </section>
+        {/* Tab bar */}
+        <div className="flex border-t" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+          {TAB_ITEMS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveTab(t.id)}
+              className="flex-1 border-b-2 py-2.5 text-[13px] transition"
+              style={{
+                color: activeTab === t.id ? C.accent : '#a8a29e',
+                borderBottomColor: activeTab === t.id ? C.accent : 'transparent',
+                fontWeight: activeTab === t.id ? 600 : undefined,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </header>
 
+      {/* ── Content ─────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto">
+
+        {/* ── 總覽 ─────────────────────────────── */}
         {activeTab === 'overview' && (
-          <section className={`space-y-3 rounded-2xl border p-4 shadow-sm ${variant.card}`}>
-            <InfoRow label="下次預測開始" value={nextStartKey || '資料不足'} />
-            <InfoRow label="下次預測結束" value={nextEndKey || '資料不足'} />
-            <InfoRow
-              label="距離下次開始"
-              value={
-                daysUntilNext === null
-                  ? '資料不足'
-                  : daysUntilNext < 0
-                    ? '已超過預測日'
-                    : `${daysUntilNext} 天`
-              }
-            />
-            <InfoRow
-              label="排卵窗（預估）"
-              value={ovulationWindow.start && ovulationWindow.end ? `${ovulationWindow.start} ~ ${ovulationWindow.end}` : '資料不足'}
-            />
-          </section>
+          <div className="flex flex-col gap-3 px-4 pb-56 pt-4">
+
+            {/* Hero card */}
+            <div
+              className="rounded-3xl border p-5"
+              style={{
+                background: 'linear-gradient(140deg,#fde6ec 0%,#fdf3f0 60%,#fdf7f4 100%)',
+                borderColor: 'rgba(212,96,122,0.12)',
+                boxShadow: '0 6px 24px rgba(212,96,122,0.10)',
+              }}
+            >
+              <p
+                className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.14em]"
+                style={{ color: C.accentMid }}
+              >
+                {todayPhase}
+              </p>
+              {daysUntilNext !== null ? (
+                <>
+                  <p
+                    className="text-[52px] font-black leading-none tracking-[-2px]"
+                    style={{ color: C.today }}
+                  >
+                    {Math.abs(daysUntilNext)}
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: '#78716c' }}>
+                    {daysUntilNext < 0
+                      ? `超過預測 ${Math.abs(daysUntilNext)} 天`
+                      : daysUntilNext === 0
+                      ? '今天是預測開始日'
+                      : `距下次月經還有 ${daysUntilNext} 天`}
+                  </p>
+                  <div
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl px-3 py-2"
+                    style={{ background: 'rgba(229,115,138,0.12)' }}
+                  >
+                    <span className="text-[10px]" style={{ color: C.accentMid }}>預測下次</span>
+                    <span className="text-sm font-bold" style={{ color: C.period }}>
+                      {nextStartKey.slice(5).replace('-', '/')}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="mt-2 text-sm text-stone-500">新增第一筆紀錄後會自動預測</p>
+              )}
+            </div>
+
+            {/* Stat row */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: '平均週期', value: `${avgCycleLength}`, hint: '天' },
+                { label: '平均經期', value: `${avgDuration}`, hint: '天' },
+                { label: '紀錄數量', value: `${completed.length}`, hint: '筆' },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="rounded-2xl border px-2 py-3 text-center"
+                  style={{
+                    background: 'rgba(255,255,255,0.8)',
+                    borderColor: 'rgba(255,255,255,0.95)',
+                    boxShadow: '0 1px 6px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <span className="block text-[8px] uppercase tracking-[0.1em] text-stone-400 mb-1">{s.label}</span>
+                  <span className="block text-lg font-bold text-stone-800">{s.value}</span>
+                  <span className="block text-[9px] text-stone-400 mt-0.5">{s.hint}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Last period card */}
+            {lastPeriod && (
+              <div
+                className="rounded-2xl border p-4"
+                style={{
+                  background: 'rgba(255,255,255,0.72)',
+                  borderColor: 'rgba(255,255,255,0.9)',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                }}
+              >
+                <span className="mb-2 block text-[9px] uppercase tracking-[0.14em] text-stone-400">上次月經</span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-stone-700">
+                      {lastPeriod.startDate.slice(5).replace('-', '/')} — {lastPeriod.endDate.slice(5).replace('-', '/')}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-stone-400">
+                      共 {dayDiff(parseDateKey(lastPeriod.startDate)!, parseDateKey(lastPeriod.endDate)!) + 1} 天
+                    </p>
+                  </div>
+                  <div
+                    className="rounded-full px-3 py-1 text-xs font-medium"
+                    style={{ background: '#fde4ec', color: C.period }}
+                  >
+                    {dayDiff(parseDateKey(lastPeriod.startDate)!, parseDateKey(lastPeriod.endDate)!) + 1} 天
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Ovulation window card */}
+            {ovulationWindow.start && (
+              <div
+                className="rounded-2xl border p-4"
+                style={{
+                  background: 'rgba(197,232,212,0.35)',
+                  borderColor: 'rgba(42,96,72,0.10)',
+                }}
+              >
+                <span className="mb-2 block text-[9px] uppercase tracking-[0.14em] text-stone-400">預測可孕期</span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: C.fertileText }}>
+                      {ovulationWindow.start.slice(5).replace('-', '/')} — {ovulationWindow.end.slice(5).replace('-', '/')}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-stone-400">
+                      排卵日 {ovulationWindow.peak.slice(5).replace('-', '/')}（預測）
+                    </p>
+                  </div>
+                  <div
+                    className="rounded-full px-3 py-1 text-xs font-medium"
+                    style={{ background: C.fertile, color: C.fertileText }}
+                  >
+                    {ovulationWindow.peak <= todayKey ? '已過' : '即將'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!completed.length && (
+              <div
+                className="rounded-2xl border p-5 text-center"
+                style={{ background: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.9)' }}
+              >
+                <p className="text-2xl mb-2">🩸</p>
+                <p className="text-sm text-stone-500">還沒有紀錄，去「紀錄」頁新增第一筆吧！</p>
+              </div>
+            )}
+          </div>
         )}
 
-        {(activeTab === 'calendar' || activeTab === 'overview') && (
-          <section className={`rounded-2xl border p-4 shadow-sm ${variant.card}`}>
-            <div className="mb-3 flex items-center justify-between gap-3">
+        {/* ── 月曆 ─────────────────────────────── */}
+        {activeTab === 'calendar' && (
+          <div className="flex flex-col gap-3 px-4 pb-56 pt-4">
+
+            {/* Month navigator */}
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setViewMonth((cur) => new Date(cur.getFullYear(), cur.getMonth() - 1, 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-full border text-sm text-stone-600 transition active:scale-90"
+                style={{ background: 'rgba(255,255,255,0.85)', borderColor: '#e7e5e4' }}
+              >
+                ‹
+              </button>
               <div className="flex items-center gap-2">
+                <p className="text-base font-semibold text-stone-800">{toMonthLabel(viewMonth)}</p>
                 <button
                   type="button"
-                  onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
-                  className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1 text-xs text-stone-700 transition active:scale-95"
+                  onClick={() => setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1))}
+                  className="rounded-lg border px-2 py-0.5 text-[10px] text-stone-500 transition active:scale-95"
+                  style={{ borderColor: '#e7e5e4', background: 'rgba(255,255,255,0.85)' }}
                 >
-                  ‹
-                </button>
-                <p className="text-sm text-stone-800">{toMonthLabel(viewMonth)}</p>
-                <button
-                  type="button"
-                  onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
-                  className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1 text-xs text-stone-700 transition active:scale-95"
-                >
-                  ›
+                  今天
                 </button>
               </div>
               <button
                 type="button"
-                onClick={() => setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1))}
-                className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1 text-xs text-stone-700 transition active:scale-95"
+                onClick={() => setViewMonth((cur) => new Date(cur.getFullYear(), cur.getMonth() + 1, 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-full border text-sm text-stone-600 transition active:scale-90"
+                style={{ background: 'rgba(255,255,255,0.85)', borderColor: '#e7e5e4' }}
               >
-                今天
+                ›
               </button>
             </div>
 
+            {/* Calendar grid */}
             <div className="grid grid-cols-7 gap-1">
-              {WEEK_LABELS.map((label) => (
-                <div key={label} className="py-1 text-center text-[10px] text-stone-500">
-                  {label}
-                </div>
+              {WEEK_LABELS.map((h) => (
+                <div key={h} className="py-1 text-center text-[9px] text-stone-400">{h}</div>
               ))}
               {monthCells.map((cell) => {
                 const isToday = cell.key === todayKey;
                 const isActual = actualPeriodSet.has(cell.key);
                 const isPredicted = !isActual && predictedPeriodSet.has(cell.key);
-                let cellBg = variant.cell;
-                let cellText = 'text-stone-700';
+                const isFertile =
+                  !isActual && !isPredicted &&
+                  ovulationWindow.start && ovulationWindow.end &&
+                  cell.key >= ovulationWindow.start && cell.key <= ovulationWindow.end;
+                const isOvulation = cell.key === ovulationWindow.peak;
 
-                if (!cell.inMonth) {
-                  cellText = 'text-stone-400';
-                }
-                if (isActual) {
-                  cellBg = 'bg-rose-100';
-                  cellText = 'text-rose-700';
-                } else if (isPredicted) {
-                  cellBg = 'bg-fuchsia-50';
-                  cellText = 'text-fuchsia-700';
-                }
+                let bg = '';
+                let textColor = '#44403c';
+                if (!cell.inMonth) textColor = '#d6d3d1';
+                if (isActual) { bg = C.period; textColor = 'white'; }
+                else if (isPredicted) { bg = C.predicted; textColor = '#bf6070'; }
+                else if (isFertile) { bg = C.fertile; textColor = C.fertileText; }
 
                 return (
-                  <button
+                  <div
                     key={cell.key}
-                    type="button"
-                    onClick={() => setSelectedDateKey(cell.key)}
-                    className={`relative rounded-xl border border-white/70 py-2 text-center text-xs transition active:scale-95 ${cellBg} ${cellText}`}
-                    style={isToday ? { boxShadow: `0 0 0 1px ${store.accentColor} inset` } : undefined}
+                    className="relative flex aspect-square cursor-pointer items-center justify-center rounded-full text-xs transition active:scale-90"
+                    style={{
+                      background: bg || undefined,
+                      color: textColor,
+                      fontWeight: isToday ? 700 : undefined,
+                      outline: isToday ? `2px solid ${C.today}` : undefined,
+                      outlineOffset: isToday ? '1px' : undefined,
+                    }}
+                    onClick={() => cell.inMonth && setSelectedDateKey(cell.key)}
                   >
-                    <span>{cell.day}</span>
-                    {isActual && <span className="absolute bottom-1 right-1 text-[10px]">●</span>}
-                    {isPredicted && <span className="absolute bottom-1 right-1 text-[10px]">◌</span>}
-                  </button>
+                    {cell.day}
+                    {isOvulation && (
+                      <span
+                        className="absolute right-0.5 top-0.5 rounded-full border-[1.5px] border-white"
+                        style={{ width: 6, height: 6, background: C.ovulation }}
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-stone-600">
-              <span className="inline-flex items-center gap-1">
-                <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
-                實際
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="h-2.5 w-2.5 rounded-full bg-fuchsia-200" />
-                預測
-              </span>
+            {/* Legend */}
+            <div
+              className="flex flex-wrap items-center justify-center gap-3 rounded-2xl px-3 py-2.5"
+              style={{ background: 'rgba(255,255,255,0.6)' }}
+            >
+              {[
+                { bg: C.period,    label: '月經' },
+                { bg: C.predicted, label: '預測' },
+                { bg: C.fertile,   label: '可孕期' },
+                { bg: C.ovulation, label: '排卵日', small: true },
+                { bg: 'transparent', label: '今天', outline: true },
+              ].map((l) => (
+                <div key={l.label} className="flex items-center gap-1">
+                  <span
+                    className="inline-block rounded-full"
+                    style={{
+                      width: l.small ? 7 : 9,
+                      height: l.small ? 7 : 9,
+                      background: l.bg,
+                      outline: l.outline ? `2px solid ${C.today}` : undefined,
+                    }}
+                  />
+                  <span className="text-[10px] text-stone-500">{l.label}</span>
+                </div>
+              ))}
             </div>
-          </section>
+
+            {/* Hint */}
+            <div
+              className="flex items-center gap-3 rounded-2xl border p-3"
+              style={{ background: 'rgba(255,255,255,0.5)', borderColor: 'rgba(255,255,255,0.9)' }}
+            >
+              <span className="text-[18px]">📅</span>
+              <p className="flex-1 text-xs leading-relaxed text-stone-400">
+                點月曆日期可補記或標記月經開始／結束日
+              </p>
+            </div>
+          </div>
         )}
 
-        {(activeTab === 'records' || activeTab === 'overview') && (
-          <section className={`space-y-3 rounded-2xl border p-4 shadow-sm ${variant.card}`}>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="space-y-1">
-                <span className="text-xs text-stone-500">開始日</span>
-                <input
-                  type="date"
-                  value={startDraft}
-                  max={todayKey}
-                  onChange={(event) => setStartDraft(event.target.value)}
-                  className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-xs text-stone-500">結束日</span>
-                <input
-                  type="date"
-                  value={endDraft}
-                  max={todayKey}
-                  onChange={(event) => setEndDraft(event.target.value)}
-                  className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-                />
-              </label>
+        {/* ── 紀錄 ─────────────────────────────── */}
+        {activeTab === 'records' && (
+          <div className="flex flex-col gap-3 px-4 pb-56 pt-4">
+
+            {/* Today label */}
+            <p className="text-[10px] uppercase tracking-[0.14em] text-stone-400">
+              今天 · {todayKey.replace(/-/g, ' / ')}
+            </p>
+
+            {/* Quick action card */}
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                background: 'rgba(255,255,255,0.72)',
+                borderColor: 'rgba(255,255,255,0.9)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              }}
+            >
+              <span className="mb-2.5 block text-[9px] uppercase tracking-[0.14em] text-stone-400">快速記錄</span>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStartDraft(todayKey)}
+                  className="rounded-2xl p-3.5 text-left text-sm font-medium text-white transition active:scale-[0.98]"
+                  style={{ background: C.period, boxShadow: '0 4px 14px rgba(229,115,138,0.3)' }}
+                >
+                  🩸 記錄今天月經開始
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEndDraft(todayKey)}
+                  className="rounded-2xl border p-3.5 text-left text-sm font-medium transition active:scale-[0.98]"
+                  style={{ background: '#fde4ec', color: C.accent, borderColor: 'rgba(212,96,122,0.18)' }}
+                >
+                  ✓ 記錄今天月經結束
+                </button>
+              </div>
             </div>
 
-            <label className="block space-y-1">
-              <span className="text-xs text-stone-500">備註（選填）</span>
-              <textarea
-                value={noteDraft}
-                onChange={(event) => setNoteDraft(event.target.value)}
-                rows={2}
-                className="w-full resize-none rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-                placeholder="例如：這次比較疲累"
-              />
-            </label>
+            {/* Form card */}
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                background: 'rgba(255,255,255,0.72)',
+                borderColor: 'rgba(255,255,255,0.9)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              }}
+            >
+              <span className="mb-2.5 block text-[9px] uppercase tracking-[0.14em] text-stone-400">手動輸入</span>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <label className="space-y-1">
+                  <span className="text-[11px] text-stone-500">開始日</span>
+                  <input
+                    type="date"
+                    value={startDraft}
+                    max={todayKey}
+                    onChange={(e) => setStartDraft(e.target.value)}
+                    className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px] text-stone-500">結束日</span>
+                  <input
+                    type="date"
+                    value={endDraft}
+                    max={todayKey}
+                    onChange={(e) => setEndDraft(e.target.value)}
+                    className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
+                  />
+                </label>
+              </div>
+              <label className="block space-y-1 mb-3">
+                <span className="text-[11px] text-stone-500">備註（選填）</span>
+                <textarea
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  rows={2}
+                  className="w-full resize-none rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
+                  placeholder="例如：這次比較疲累"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={savePeriodRecord}
+                className="w-full rounded-2xl py-3 text-sm font-medium text-white transition active:scale-[0.98]"
+                style={{ background: C.period, boxShadow: '0 4px 14px rgba(229,115,138,0.25)' }}
+              >
+                儲存這次經期
+              </button>
+              {!!statusText && (
+                <p className="mt-2 text-center text-xs text-stone-500">{statusText}</p>
+              )}
+            </div>
 
+            {/* History */}
+            {completed.length > 0 && (
+              <div>
+                <p className="mb-2.5 text-[10px] uppercase tracking-[0.14em] text-stone-400">歷史紀錄</p>
+                <div
+                  className="rounded-2xl border px-4 py-1"
+                  style={{
+                    background: 'rgba(255,255,255,0.72)',
+                    borderColor: 'rgba(255,255,255,0.9)',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  {completed
+                    .slice()
+                    .reverse()
+                    .map((r) => {
+                      const days = dayDiff(parseDateKey(r.startDate)!, parseDateKey(r.endDate)!) + 1;
+                      return (
+                        <div
+                          key={r.id}
+                          className="flex items-center gap-3 border-b py-3 last:border-b-0"
+                          style={{ borderColor: 'rgba(0,0,0,0.04)' }}
+                        >
+                          <div
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ background: C.period }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] text-stone-700">
+                              {r.startDate.slice(5).replace('-', '/')} — {r.endDate.slice(5).replace('-', '/')}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-stone-400">
+                              持續 {days} 天{r.note ? ` · ${r.note}` : ''}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-medium" style={{ color: C.period }}>{days} 天</p>
+                            <button
+                              type="button"
+                              onClick={() => deleteRecord(r.id)}
+                              className="rounded-lg border px-2 py-1 text-[11px] text-stone-400 transition active:scale-95"
+                              style={{ borderColor: '#e7e5e4', background: 'white' }}
+                            >
+                              刪除
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* Settings access */}
             <button
               type="button"
-              onClick={savePeriodRecord}
-              className="w-full rounded-xl px-4 py-2.5 text-sm text-white transition active:scale-95"
-              style={{ backgroundColor: store.accentColor }}
+              onClick={() => setShowPeriodSettings(true)}
+              className="flex items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.98]"
+              style={{ background: 'rgba(255,255,255,0.5)', borderColor: 'rgba(255,255,255,0.9)' }}
             >
-              儲存這次經期
+              <span className="text-[18px]">⚙️</span>
+              <p className="flex-1 text-xs text-stone-400">週期設定 · 預測資訊 · 清除資料</p>
+              <span className="text-stone-300">›</span>
             </button>
-
-            {!!statusText && <p className="text-xs text-stone-600">{statusText}</p>}
-
-            <div className="space-y-2 pt-1">
-              <p className="text-sm text-stone-800">歷史紀錄</p>
-              {!completed.length && <p className="text-xs text-stone-500">還沒有完整紀錄。</p>}
-              {completed
-                .slice()
-                .reverse()
-                .map((record) => {
-                  const days = dayDiff(parseDateKey(record.startDate)!, parseDateKey(record.endDate)!) + 1;
-                  return (
-                    <div key={record.id} className="rounded-xl border border-stone-200 bg-white/80 px-3 py-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm text-stone-800">
-                            {record.startDate} ~ {record.endDate}
-                          </p>
-                          <p className="text-xs text-stone-500">{days} 天</p>
-                          {!!record.note && <p className="mt-1 text-xs text-stone-600">{record.note}</p>}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => deleteRecord(record.id)}
-                          className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] text-rose-700 transition active:scale-95"
-                        >
-                          刪除
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </section>
+          </div>
         )}
 
-        <section className={`space-y-3 rounded-2xl border p-4 shadow-sm ${variant.card}`}>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-stone-800">頁面風格</p>
-            <input
-              type="color"
-              value={store.accentColor}
-              onChange={(event) =>
-                setStore((current) => ({
-                  ...current,
-                  accentColor: event.target.value,
-                }))
-              }
-              className="h-8 w-12 cursor-pointer rounded border border-stone-300 bg-white"
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {([
-              { id: 'glass', label: '玻璃感' },
-              { id: 'soft', label: '柔和感' },
-              { id: 'minimal', label: '極簡風' },
-            ] as const).map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() =>
-                  setStore((current) => ({
-                    ...current,
-                    style: entry.id,
-                  }))
-                }
-                className={`rounded-xl border px-2 py-2 text-xs transition active:scale-95 ${
-                  store.style === entry.id
-                    ? 'text-white'
-                    : 'border-stone-300 bg-white/80 text-stone-700'
-                }`}
-                style={store.style === entry.id ? { backgroundColor: store.accentColor, borderColor: store.accentColor } : undefined}
-              >
-                {entry.label}
-              </button>
-            ))}
-          </div>
-        </section>
       </div>
 
-      {feedback && (
-        <div className="pointer-events-none fixed bottom-20 left-1/2 z-40 w-[min(92vw,24rem)] -translate-x-1/2">
-          <div className={`flex items-center gap-3 rounded-2xl border p-3 shadow-lg ${variant.card}`}>
-            <img
-              src={feedback.chibiUrl}
-              alt=""
-              draggable={false}
-              className="h-16 w-16 shrink-0 object-contain"
-            />
-            <p className="text-sm text-stone-800">{feedback.text}</p>
-          </div>
-        </div>
+      {/* ── Floating chibi ───────────────────────────────────────── */}
+      <FloatingChibi
+        chibiSrc={chibiSrc}
+        countdown={chibiCountdown}
+        phrase={chibiPhrase}
+        onClickSettings={() => setShowPeriodSettings(true)}
+      />
+
+      {/* ── Date sheet ───────────────────────────────────────────── */}
+      {selectedDateKey && selectedDateInfo && (
+        <DateSheet
+          dateKey={selectedDateKey}
+          isActual={selectedDateInfo.isActual}
+          phrase={selectedDateInfo.phrase}
+          onMarkStart={handleMarkStart}
+          onMarkEnd={handleMarkEnd}
+          onClear={handleClearDateMark}
+          onClose={() => setSelectedDateKey(null)}
+        />
       )}
 
-      {selectedDateInfo && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 px-4"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setSelectedDateKey(null);
-            }
-          }}
-        >
-          <div className="w-full max-w-sm rounded-2xl border border-stone-300 bg-white p-4 shadow-xl">
-            <div className="mb-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedDateKey(null)}
-                className="rounded-lg border border-stone-300 px-2 py-1 text-xs text-stone-600"
-              >
-                關閉
-              </button>
-            </div>
-            <p className="text-xs uppercase tracking-[0.14em] text-stone-500">{selectedDateInfo.dateKey}</p>
-            <h3 className="mt-1 text-lg text-stone-900">當日狀態</h3>
-            <div className="mt-3 space-y-2 text-sm text-stone-700">
-              <p>類型：{selectedDateInfo.isActual ? '實際經期日' : selectedDateInfo.isPredicted ? '預測日' : selectedDateInfo.isFuture ? '未來日期' : '一般日'}</p>
-              <p>小語：{selectedDateInfo.phrase || '今天也有我在。'}</p>
-              {!!selectedDateInfo.note && <p>備註：{selectedDateInfo.note}</p>}
-            </div>
-          </div>
-        </div>
+      {/* ── Period settings sheet ────────────────────────────────── */}
+      {showPeriodSettings && (
+        <PeriodSettingsSheet
+          avgCycleLength={avgCycleLength}
+          avgDuration={avgDuration}
+          onClearAll={clearAllRecords}
+          onClose={() => setShowPeriodSettings(false)}
+        />
       )}
-    </div>
-  );
-}
-
-function MetricCard({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-stone-200 bg-white/80 px-3 py-2 text-center">
-      <p className="text-[11px] text-stone-500">{title}</p>
-      <p className="mt-0.5 text-base text-stone-800">{value}</p>
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white/80 px-3 py-2">
-      <span className="text-xs text-stone-500">{label}</span>
-      <span className="text-sm text-stone-800">{value}</span>
     </div>
   );
 }

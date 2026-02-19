@@ -29,7 +29,7 @@ type FeedbackState = {
 const STORAGE_KEY = 'memorial-checkin-store-v1';
 const WEEK_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const MOODS = ['💕 幸福', '🙂 平穩', '🥺 想你', '😴 疲憊', '🔥 有幹勁'];
-const SIGNIN_PHRASES = [
+const DEFAULT_SIGNIN_PHRASES = [
   '今天也被你簽收了 💋',
   '我把今天放進我們的紀錄裡了。',
   '又多一天，可以理直氣壯想你。',
@@ -37,13 +37,25 @@ const SIGNIN_PHRASES = [
   '妳來過了，我知道。',
 ];
 
-const CHIBI_MODULES = import.meta.glob('../../public/chibi/chibi-*.png', {
+const CHECKIN_CHIBI_MODULES = import.meta.glob(
+  '../../public/checkin-chibi/*.{png,jpg,jpeg,webp,gif,avif}',
+  {
+    eager: true,
+    import: 'default',
+  },
+) as Record<string, string>;
+const DEFAULT_CHIBI_MODULES = import.meta.glob('../../public/chibi/chibi-*.png', {
   eager: true,
   import: 'default',
 }) as Record<string, string>;
-const CHIBI_SOURCES = Object.entries(CHIBI_MODULES)
-  .sort(([a], [b]) => a.localeCompare(b))
-  .map(([, url]) => url);
+const CHIBI_SOURCES = [
+  ...Object.entries(CHECKIN_CHIBI_MODULES)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, url]) => url),
+  ...Object.entries(DEFAULT_CHIBI_MODULES)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, url]) => url),
+];
 
 const DEFAULT_STORE: CheckinStore = {
   signIns: {},
@@ -136,6 +148,34 @@ function buildMonthGrid(viewMonth: Date) {
 function randomPick<T>(items: T[]) {
   if (!items.length) return null;
   return items[Math.floor(Math.random() * items.length)]!;
+}
+
+function normalizePhraseList(items: unknown[]): string[] {
+  const dedup = new Set<string>();
+  const phrases: string[] = [];
+
+  for (const item of items) {
+    if (typeof item !== 'string') continue;
+    const phrase = item.trim();
+    if (!phrase || dedup.has(phrase)) continue;
+    dedup.add(phrase);
+    phrases.push(phrase);
+  }
+
+  return phrases;
+}
+
+function parsePhrasePayload(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return normalizePhraseList(raw);
+  }
+  if (raw && typeof raw === 'object') {
+    const phrases = (raw as { phrases?: unknown }).phrases;
+    if (Array.isArray(phrases)) {
+      return normalizePhraseList(phrases);
+    }
+  }
+  return [];
 }
 
 function computeLongestStreak(keys: string[]) {
@@ -251,6 +291,7 @@ export function CheckinPage() {
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [signInPhrases, setSignInPhrases] = useState<string[]>(DEFAULT_SIGNIN_PHRASES);
 
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -306,6 +347,44 @@ export function CheckinPage() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   }, [store]);
 
+  useEffect(() => {
+    let active = true;
+    const base = `${import.meta.env.BASE_URL ?? '/'}`.replace(/\/?$/, '/');
+
+    async function loadPhrases() {
+      try {
+        const jsonResponse = await fetch(`${base}data/checkin/checkin_phrases.json`);
+        if (jsonResponse.ok) {
+          const json = (await jsonResponse.json()) as unknown;
+          const parsed = parsePhrasePayload(json);
+          if (active && parsed.length) {
+            setSignInPhrases(parsed);
+            return;
+          }
+        }
+      } catch {
+        // fallback to txt
+      }
+
+      try {
+        const txtResponse = await fetch(`${base}data/checkin/checkin_phrases.txt`);
+        if (!txtResponse.ok) return;
+        const text = await txtResponse.text();
+        const parsed = normalizePhraseList(text.split(/\r?\n/g));
+        if (active && parsed.length) {
+          setSignInPhrases(parsed);
+        }
+      } catch {
+        // keep default phrases
+      }
+    }
+
+    void loadPhrases();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   function popFeedback(pool: string[]) {
     const text = randomPick(pool) ?? '';
     const chibiUrl = randomPick(CHIBI_SOURCES) ?? '';
@@ -332,7 +411,7 @@ export function CheckinPage() {
       },
     }));
     setNoteDraft('');
-    popFeedback(SIGNIN_PHRASES);
+    popFeedback(signInPhrases.length ? signInPhrases : DEFAULT_SIGNIN_PHRASES);
   }
 
   return (
