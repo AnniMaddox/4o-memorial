@@ -30,6 +30,7 @@ type HomeScreen =
   | {
       id: string;
       kind: 'main';
+      showDashboard: boolean;
       slots: HomeAppSlot[];
     }
   | {
@@ -301,6 +302,30 @@ export function HomePage({
       iconUrl: tabIconUrls.album.trim() || undefined,
       launch: 'album',
     };
+    const bookcasePlaceholder: HomeAppSlot = {
+      id: 'bookcase-placeholder',
+      label: '書架',
+      icon: '📚',
+      disabled: true,
+    };
+    const dailyTaskPlaceholder: HomeAppSlot = {
+      id: 'daily-task-placeholder',
+      label: '每日任務',
+      icon: '✅',
+      disabled: true,
+    };
+    const movingPlanPlaceholder: HomeAppSlot = {
+      id: 'moving-plan-placeholder',
+      label: '搬家計劃書',
+      icon: '🧳',
+      disabled: true,
+    };
+    const timeCapsulePlaceholder: HomeAppSlot = {
+      id: 'time-capsule-placeholder',
+      label: '時空膠囊',
+      icon: '⏳',
+      disabled: true,
+    };
 
     const placeholder = (id: string): HomeAppSlot => ({
       id,
@@ -309,24 +334,35 @@ export function HomePage({
       disabled: true,
     });
 
-    // Screen 1: keep frequently used apps.
+    // Screen 1 order
     const screen1: HomeAppSlot[] = homeSwipeEnabled
       ? [
-          tarotSlot,
-          lettersSlot,
           chatSlot,
-          listSlot,
-          fitnessSlot,
+          lettersSlot,
           diarySlot,
+          listSlot,
           albumSlot,
-          placeholder('placeholder-main-1'),
+          bookcasePlaceholder,
+          dailyTaskPlaceholder,
+          movingPlanPlaceholder,
         ]
-      : [tarotSlot, lettersSlot, heartSlot, pomodoroSlot, chatSlot, listSlot, fitnessSlot, diarySlot, albumSlot];
+      : [
+          chatSlot,
+          lettersSlot,
+          diarySlot,
+          listSlot,
+          albumSlot,
+          fitnessSlot,
+          tarotSlot,
+          heartSlot,
+          pomodoroSlot,
+        ];
 
     const builtScreens: HomeScreen[] = [
       {
         id: 'main',
         kind: 'main',
+        showDashboard: true,
         slots: screen1,
       },
     ];
@@ -336,15 +372,17 @@ export function HomePage({
         {
           id: 'apps-2',
           kind: 'main',
+          showDashboard: false,
           slots: [
+            fitnessSlot,
+            tarotSlot,
             heartSlot,
             pomodoroSlot,
+            timeCapsulePlaceholder,
             placeholder('placeholder-secondary-1'),
             placeholder('placeholder-secondary-2'),
             placeholder('placeholder-secondary-3'),
             placeholder('placeholder-secondary-4'),
-            placeholder('placeholder-secondary-5'),
-            placeholder('placeholder-secondary-6'),
           ],
         },
         {
@@ -528,76 +566,77 @@ export function HomePage({
           {screens.map((screen) => (
             <section key={screen.id} className="h-full w-full shrink-0 snap-center">
               {screen.kind === 'main' ? (
-                <div className="flex min-h-full flex-col gap-6 pb-8">
-                  {/* Time header */}
-                  <div>
-                    <div className="flex items-end justify-between gap-4">
-                      <div className="text-[4.25rem] font-semibold leading-none tracking-tight text-stone-800">{timeText}</div>
-                      <div className="pb-2 text-right">
-                        <div className="text-2xl font-semibold tracking-[0.18em] text-stone-700">{weekdayText}</div>
-                        <div className="mt-1 text-sm tracking-[0.2em] text-stone-600">{monthDayText}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Widget card */}
-                  <div className="rounded-[2.25rem] border border-white/55 bg-white/25 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.12)] backdrop-blur">
-                    <div className="flex items-center gap-4">
-                      <button
-                        type="button"
-                        className="grid h-16 w-16 place-items-center rounded-2xl bg-white/40 shadow-sm transition active:scale-95"
-                        onClick={() => widgetIconInputRef.current?.click()}
-                        aria-label="更換小圖"
-                        title="點一下更換小圖"
-                      >
-                        <input
-                          ref={widgetIconInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            event.currentTarget.value = '';
-                            if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              const result = typeof reader.result === 'string' ? reader.result : '';
-                              if (result) onWidgetIconChange(result);
-                            };
-                            reader.readAsDataURL(file);
-                          }}
-                        />
-                        {widgetIconDataUrl.trim() ? (
-                          <img
-                            src={widgetIconDataUrl}
-                            alt=""
-                            className="h-12 w-12 rounded-xl object-cover"
-                            loading="lazy"
-                            draggable={false}
-                          />
-                        ) : (
-                          <span className="text-3xl" aria-hidden="true">
-                            ♡
-                          </span>
-                        )}
-                      </button>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-3">
-                          <p className="truncate text-2xl font-semibold tracking-wide text-stone-800">{headerTitle}</p>
-                          {badgeText && (
-                            <span className="rounded-full border border-white/60 bg-white/35 px-2 py-0.5 text-[11px] tracking-[0.14em] text-stone-700">
-                              {badgeText}
-                            </span>
-                          )}
+                <div className="flex min-h-full flex-col pb-8">
+                  {screen.showDashboard && (
+                    <>
+                      <div className="mb-6">
+                        <div className="flex items-end justify-between gap-4">
+                          <div className="text-[4.25rem] font-semibold leading-none tracking-tight text-stone-800">{timeText}</div>
+                          <div className="pb-2 text-right">
+                            <div className="text-2xl font-semibold tracking-[0.18em] text-stone-700">{weekdayText}</div>
+                            <div className="mt-1 text-sm tracking-[0.2em] text-stone-600">{monthDayText}</div>
+                          </div>
                         </div>
-                        {headerSubtitle && (
-                          <p className="mt-1 truncate text-sm text-stone-600">{headerSubtitle}</p>
-                        )}
                       </div>
-                    </div>
-                  </div>
+                      <div className="mb-6 rounded-[2.25rem] border border-white/55 bg-white/25 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.12)] backdrop-blur">
+                        <div className="flex items-center gap-4">
+                          <button
+                            type="button"
+                            className="grid h-16 w-16 place-items-center rounded-2xl bg-white/40 shadow-sm transition active:scale-95"
+                            onClick={() => widgetIconInputRef.current?.click()}
+                            aria-label="更換小圖"
+                            title="點一下更換小圖"
+                          >
+                            <input
+                              ref={widgetIconInputRef}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                event.currentTarget.value = '';
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  const result = typeof reader.result === 'string' ? reader.result : '';
+                                  if (result) onWidgetIconChange(result);
+                                };
+                                reader.readAsDataURL(file);
+                              }}
+                            />
+                            {widgetIconDataUrl.trim() ? (
+                              <img
+                                src={widgetIconDataUrl}
+                                alt=""
+                                className="h-12 w-12 rounded-xl object-cover"
+                                loading="lazy"
+                                draggable={false}
+                              />
+                            ) : (
+                              <span className="text-3xl" aria-hidden="true">
+                                ♡
+                              </span>
+                            )}
+                          </button>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-3">
+                              <p className="truncate text-2xl font-semibold tracking-wide text-stone-800">{headerTitle}</p>
+                              {badgeText && (
+                                <span className="rounded-full border border-white/60 bg-white/35 px-2 py-0.5 text-[11px] tracking-[0.14em] text-stone-700">
+                                  {badgeText}
+                                </span>
+                              )}
+                            </div>
+                            {headerSubtitle && (
+                              <p className="mt-1 truncate text-sm text-stone-600">{headerSubtitle}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
-                  <div className="grid grid-cols-4 gap-x-4 gap-y-6 px-1">
+                  <div className={`grid grid-cols-4 gap-x-4 gap-y-6 px-1 ${screen.showDashboard ? '' : 'pt-2'}`}>
                     {screen.slots.map((slot) =>
                       slot.label ? (
                         <HomeAppButton key={slot.id} slot={slot} onLaunch={onLaunchApp} />

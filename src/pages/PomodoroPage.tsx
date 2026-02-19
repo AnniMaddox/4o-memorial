@@ -26,6 +26,15 @@ const MODE_CONFIG: Record<PomodoroMode, ModeConfig> = {
   },
 };
 
+const CHIBI_MODULES = import.meta.glob('../../public/chibi/chibi-*.png', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+
+const CHIBI_SOURCES = Object.entries(CHIBI_MODULES)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([, url]) => url);
+
 function formatClock(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -39,11 +48,23 @@ function pickNextMode(mode: PomodoroMode, nextFocusCount: number): PomodoroMode 
   return 'focus';
 }
 
+function pickNextChibiIndex(current: number) {
+  if (CHIBI_SOURCES.length <= 1) return 0;
+  let next = current;
+  while (next === current) {
+    next = Math.floor(Math.random() * CHIBI_SOURCES.length);
+  }
+  return next;
+}
+
 export function PomodoroPage() {
   const [mode, setMode] = useState<PomodoroMode>('focus');
   const [isRunning, setIsRunning] = useState(false);
   const [focusCount, setFocusCount] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(MODE_CONFIG.focus.totalSeconds);
+  const [chibiIndex, setChibiIndex] = useState(() =>
+    CHIBI_SOURCES.length ? Math.floor(Math.random() * CHIBI_SOURCES.length) : 0,
+  );
 
   const activeConfig = MODE_CONFIG[mode];
   const progress = useMemo(() => {
@@ -74,6 +95,7 @@ export function PomodoroPage() {
     setFocusCount(nextFocusCount);
     setMode(nextMode);
     setSecondsLeft(MODE_CONFIG[nextMode].totalSeconds);
+    setChibiIndex((current) => pickNextChibiIndex(current));
     setIsRunning(false);
   }, [focusCount, isRunning, mode, secondsLeft]);
 
@@ -97,6 +119,7 @@ export function PomodoroPage() {
     }
     setMode(nextMode);
     setSecondsLeft(MODE_CONFIG[nextMode].totalSeconds);
+    setChibiIndex((current) => pickNextChibiIndex(current));
     setIsRunning(false);
   }
 
@@ -171,6 +194,18 @@ export function PomodoroPage() {
             下一段
           </button>
         </div>
+
+        {CHIBI_SOURCES.length > 0 && (
+          <div className="pointer-events-none mt-5 flex justify-center">
+            <img
+              src={CHIBI_SOURCES[chibiIndex]}
+              alt=""
+              draggable={false}
+              className="h-36 w-auto select-none object-contain opacity-95 drop-shadow-[0_14px_22px_rgba(0,0,0,0.24)]"
+              loading="lazy"
+            />
+          </div>
+        )}
       </section>
     </div>
   );
