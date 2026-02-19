@@ -51,5 +51,32 @@ npm run preview -- --host --port 4173
 
 - `data/calendar/YYYY/*.json`
 - `data/emails/YYYY/*.eml`
+- `public/chibi/*` (transparent character assets)
+- `public/photos/<album-id>/*.webp` (album images)
+- `public/data/albums.json` (album list metadata)
 
 Those files are seeded into IndexedDB on first launch.
+
+## Auto build on GitHub (main branch)
+
+When you push to `main`, GitHub Actions now auto-builds `docs/`.
+So you can upload new `EML` / `chibi` / album files directly in GitHub,
+and the hosted page will refresh after workflow completes.
+
+Workflow file: `.github/workflows/auto-build-docs.yml`
+
+## Add a new album
+
+1. Put images in `public/photos/<album-id>/` (recommended `.webp`).
+2. Add one entry in `public/data/albums.json`:
+
+```json
+{
+  "id": "your-album-id",
+  "title": "標題",
+  "subtitle": "副標題",
+  "accent": "linear-gradient(135deg, #3d4d88, #1d2548)"
+}
+```
+
+`id` must match the folder name under `public/photos/`.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import type { ChatProfile } from '../lib/chatDB';
 import type { StoredChatLog } from '../lib/chatLogDB';
@@ -41,6 +41,8 @@ type ChatMessage = {
 };
 
 type ChatHomeTab = 'messages' | 'discover' | 'me';
+type MePanelKey = 'nav' | 'data' | 'defaultProfile' | 'bubble' | 'profiles';
+type ChatNavIconSettingKey = 'chatAppMessagesIcon' | 'chatAppDiscoverIcon' | 'chatAppMeIcon';
 
 type ProfileDraft = Omit<ChatProfile, 'id'>;
 
@@ -235,6 +237,77 @@ function resolveIcon(value: string, fallback: string) {
   return icon || fallback;
 }
 
+function isImageIcon(value: string) {
+  const icon = value.trim();
+  if (!icon) return false;
+  return (
+    icon.startsWith('data:image/') ||
+    icon.startsWith('http://') ||
+    icon.startsWith('https://') ||
+    icon.startsWith('/') ||
+    icon.startsWith('./') ||
+    icon.startsWith('../') ||
+    /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(icon)
+  );
+}
+
+function IconPreview({
+  icon,
+  fallback,
+  imageClassName = 'h-6 w-6',
+  textClassName = 'text-2xl leading-none',
+}: {
+  icon: string;
+  fallback: string;
+  imageClassName?: string;
+  textClassName?: string;
+}) {
+  const resolved = resolveIcon(icon, fallback);
+  if (isImageIcon(resolved)) {
+    return <img src={resolved} alt="" className={`${imageClassName} object-contain`} />;
+  }
+  return <span className={textClassName}>{resolved}</span>;
+}
+
+function MePanel({
+  panelKey,
+  openPanel,
+  onToggle,
+  title,
+  subtitle,
+  children,
+}: {
+  panelKey: MePanelKey;
+  openPanel: MePanelKey | null;
+  onToggle: (panel: MePanelKey) => void;
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  const isOpen = openPanel === panelKey;
+  return (
+    <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={() => onToggle(panelKey)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-stone-50"
+      >
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-stone-800">{title}</p>
+          <p className="truncate text-xs text-stone-500">{subtitle}</p>
+        </div>
+        <span
+          className={`text-xl leading-none text-stone-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+          aria-hidden="true"
+        >
+          ›
+        </span>
+      </button>
+      {isOpen && <div className="border-t border-stone-200 p-4">{children}</div>}
+    </section>
+  );
+}
+
 export function ChatLogPage({
   logs,
   chatProfiles,
@@ -253,6 +326,7 @@ export function ChatLogPage({
   const [defaultProfileId, setDefaultProfileId] = useState<string>(settings.chatAppDefaultProfileId);
   const [searchInput, setSearchInput] = useState('');
   const [activeTab, setActiveTab] = useState<ChatHomeTab>('messages');
+  const [openMePanel, setOpenMePanel] = useState<MePanelKey | null>('data');
 
   const [showNewProfileEditor, setShowNewProfileEditor] = useState(false);
   const [newProfileDraft, setNewProfileDraft] = useState<ProfileDraft>(emptyProfileDraft);
@@ -333,9 +407,6 @@ export function ChatLogPage({
     setSelectedLogName(pick.name);
   }, [logs]);
 
-  const navMessagesIcon = resolveIcon(settings.chatAppMessagesIcon, '◉');
-  const navDiscoverIcon = resolveIcon(settings.chatAppDiscoverIcon, '◎');
-  const navMeIcon = resolveIcon(settings.chatAppMeIcon, '◯');
   const showNavLabels = settings.chatAppShowLabels;
 
   const contactName = primaryAlias(defaultProfile?.leftNick, 'Michael');
@@ -345,6 +416,25 @@ export function ChatLogPage({
   function updateDefaultProfile(profileId: string) {
     setDefaultProfileId(profileId);
     onSettingChange({ chatAppDefaultProfileId: profileId });
+  }
+
+  function updateNavIcon(field: ChatNavIconSettingKey, value: string) {
+    onSettingChange({ [field]: value } as Pick<AppSettings, ChatNavIconSettingKey>);
+  }
+
+  function uploadNavIcon(field: ChatNavIconSettingKey, file: File | null | undefined) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (!dataUrl) return;
+      updateNavIcon(field, dataUrl);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function toggleMePanel(nextPanel: MePanelKey) {
+    setOpenMePanel((prev) => (prev === nextPanel ? null : nextPanel));
   }
 
   function applyImageToDraft(
@@ -419,7 +509,7 @@ export function ChatLogPage({
           ) : (
             <span className="h-9 w-9" />
           )}
-          <h1 className="text-2xl font-semibold tracking-wide text-stone-900">
+          <h1 className="text-2xl font-normal tracking-wide text-stone-900">
             {activeTab === 'messages' ? '消息' : activeTab === 'discover' ? '發現' : '我'}
           </h1>
           <button
@@ -456,7 +546,7 @@ export function ChatLogPage({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-3xl font-medium text-stone-900">{contactName}</p>
+                <p className="truncate text-3xl text-stone-900">{contactName}</p>
                 <p className="mt-1 text-lg text-stone-500">{contactSubtitle}</p>
               </div>
               <span className="text-2xl text-stone-400">›</span>
@@ -506,41 +596,59 @@ export function ChatLogPage({
 
         {activeTab === 'me' && (
           <div className="space-y-3 px-3 py-3">
-            <section className="space-y-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-              <p className="text-sm font-medium text-stone-700">底部分頁圖示</p>
-              <div className="grid grid-cols-3 gap-2">
-                <label className="space-y-1">
-                  <span className="text-xs text-stone-500">消息</span>
-                  <input
-                    type="text"
-                    value={settings.chatAppMessagesIcon}
-                    onChange={(e) => onSettingChange({ chatAppMessagesIcon: e.target.value })}
-                    className="w-full rounded-lg border border-stone-300 px-2 py-1.5 text-center text-sm"
-                    placeholder="◉"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-xs text-stone-500">發現</span>
-                  <input
-                    type="text"
-                    value={settings.chatAppDiscoverIcon}
-                    onChange={(e) => onSettingChange({ chatAppDiscoverIcon: e.target.value })}
-                    className="w-full rounded-lg border border-stone-300 px-2 py-1.5 text-center text-sm"
-                    placeholder="◎"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-xs text-stone-500">我</span>
-                  <input
-                    type="text"
-                    value={settings.chatAppMeIcon}
-                    onChange={(e) => onSettingChange({ chatAppMeIcon: e.target.value })}
-                    className="w-full rounded-lg border border-stone-300 px-2 py-1.5 text-center text-sm"
-                    placeholder="◯"
-                  />
-                </label>
+            <MePanel
+              panelKey="nav"
+              openPanel={openMePanel}
+              onToggle={toggleMePanel}
+              title="底部分頁圖示"
+              subtitle="可輸入符號 / 貼圖片網址 / 直接上傳圖片"
+            >
+              <div className="space-y-2">
+                {[
+                  { label: '消息', field: 'chatAppMessagesIcon' as const, value: settings.chatAppMessagesIcon, fallback: '◉' },
+                  { label: '發現', field: 'chatAppDiscoverIcon' as const, value: settings.chatAppDiscoverIcon, fallback: '◎' },
+                  { label: '我', field: 'chatAppMeIcon' as const, value: settings.chatAppMeIcon, fallback: '◯' },
+                ].map((item) => (
+                  <div key={item.field} className="space-y-1.5 rounded-xl border border-stone-200 bg-stone-50 p-2.5">
+                    <p className="text-xs text-stone-600">{item.label}</p>
+                    <div className="grid grid-cols-[2.5rem_1fr_auto_auto] items-center gap-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-stone-300 bg-white">
+                        <IconPreview icon={item.value} fallback={item.fallback} imageClassName="h-6 w-6" />
+                      </div>
+                      <input
+                        type="text"
+                        value={item.value}
+                        onChange={(e) => updateNavIcon(item.field, e.target.value)}
+                        className="w-full rounded-lg border border-stone-300 bg-white px-2 py-2 text-sm"
+                        placeholder={item.fallback}
+                      />
+                      <label className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-stone-300 bg-white text-sm text-stone-700 transition active:scale-95">
+                        ⤴
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            uploadNavIcon(item.field, event.target.files?.[0]);
+                            event.currentTarget.value = '';
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => updateNavIcon(item.field, '')}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-stone-300 bg-white text-sm text-stone-700 transition active:scale-95"
+                        aria-label="還原"
+                        title="還原"
+                      >
+                        ↺
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <label className="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
+
+              <label className="mt-3 flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
                 <span>顯示文字</span>
                 <input
                   type="checkbox"
@@ -549,14 +657,17 @@ export function ChatLogPage({
                   className="h-4 w-4 accent-stone-900"
                 />
               </label>
-            </section>
+            </MePanel>
 
-            <section className="space-y-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-stone-700">對話資料</p>
-                  <p className="text-xs text-stone-500">目前 {logs.length} 份</p>
-                </div>
+            <MePanel
+              panelKey="data"
+              openPanel={openMePanel}
+              onToggle={toggleMePanel}
+              title="對話資料"
+              subtitle={`目前 ${logs.length} 份`}
+            >
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <p className="text-xs text-stone-500">支援 txt / md / json / docx</p>
                 <button
                   type="button"
                   onClick={onClearAllChatLogs}
@@ -599,10 +710,15 @@ export function ChatLogPage({
                   />
                 </label>
               </div>
-            </section>
+            </MePanel>
 
-            <section className="space-y-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-              <p className="text-sm font-medium text-stone-700">預設角色（消息頁頭像/名稱）</p>
+            <MePanel
+              panelKey="defaultProfile"
+              openPanel={openMePanel}
+              onToggle={toggleMePanel}
+              title="預設角色"
+              subtitle="消息頁頭像 / 名稱會跟隨這組"
+            >
               <select
                 value={defaultProfileId}
                 onChange={(e) => updateDefaultProfile(e.target.value)}
@@ -615,329 +731,341 @@ export function ChatLogPage({
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-stone-400">消息頁會跟隨這組角色的左側頭像與名稱。</p>
-            </section>
+            </MePanel>
 
-            <section className="space-y-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-              <p className="text-sm font-medium text-stone-700">泡泡外觀</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onSettingChange({ chatBubbleStyle: 'jelly' })}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    settings.chatBubbleStyle === 'jelly'
-                      ? 'border-stone-900 bg-stone-900 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  QQ 果凍
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSettingChange({ chatBubbleStyle: 'imessage' })}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    settings.chatBubbleStyle === 'imessage'
-                      ? 'border-stone-900 bg-stone-900 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  iMessage
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSettingChange({ chatBubbleStyle: 'imessageClassic' })}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    settings.chatBubbleStyle === 'imessageClassic'
-                      ? 'border-stone-900 bg-stone-900 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  iMessage+
-                </button>
+            <MePanel
+              panelKey="bubble"
+              openPanel={openMePanel}
+              onToggle={toggleMePanel}
+              title="泡泡外觀"
+              subtitle="樣式 / 圓角 / 顏色"
+            >
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onSettingChange({ chatBubbleStyle: 'jelly' })}
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      settings.chatBubbleStyle === 'jelly'
+                        ? 'border-stone-900 bg-stone-900 text-white'
+                        : 'border-stone-300 bg-white text-stone-700'
+                    }`}
+                  >
+                    QQ 果凍
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSettingChange({ chatBubbleStyle: 'imessage' })}
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      settings.chatBubbleStyle === 'imessage'
+                        ? 'border-stone-900 bg-stone-900 text-white'
+                        : 'border-stone-300 bg-white text-stone-700'
+                    }`}
+                  >
+                    iMessage
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSettingChange({ chatBubbleStyle: 'imessageClassic' })}
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      settings.chatBubbleStyle === 'imessageClassic'
+                        ? 'border-stone-900 bg-stone-900 text-white'
+                        : 'border-stone-300 bg-white text-stone-700'
+                    }`}
+                  >
+                    iMessage+
+                  </button>
+                </div>
+
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>泡泡圓角</span>
+                    <span>{settings.chatBubbleRadius}px</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={10}
+                    max={36}
+                    step={1}
+                    value={settings.chatBubbleRadius}
+                    onChange={(e) => onSettingChange({ chatBubbleRadius: Number(e.target.value) })}
+                    className="w-full accent-stone-800"
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">我方底色</span>
+                    <input
+                      type="color"
+                      value={settings.chatUserBubbleColor}
+                      onChange={(e) => onSettingChange({ chatUserBubbleColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">對方底色</span>
+                    <input
+                      type="color"
+                      value={settings.chatAiBubbleColor}
+                      onChange={(e) => onSettingChange({ chatAiBubbleColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">我方邊框</span>
+                    <input
+                      type="color"
+                      value={settings.chatUserBubbleBorderColor}
+                      onChange={(e) => onSettingChange({ chatUserBubbleBorderColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">對方邊框</span>
+                    <input
+                      type="color"
+                      value={settings.chatAiBubbleBorderColor}
+                      onChange={(e) => onSettingChange({ chatAiBubbleBorderColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">我方文字</span>
+                    <input
+                      type="color"
+                      value={settings.chatUserBubbleTextColor}
+                      onChange={(e) => onSettingChange({ chatUserBubbleTextColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">對方文字</span>
+                    <input
+                      type="color"
+                      value={settings.chatAiBubbleTextColor}
+                      onChange={(e) => onSettingChange({ chatAiBubbleTextColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                </div>
               </div>
+            </MePanel>
 
-              <label className="block space-y-1">
-                <span className="flex items-center justify-between text-xs text-stone-600">
-                  <span>泡泡圓角</span>
-                  <span>{settings.chatBubbleRadius}px</span>
-                </span>
-                <input
-                  type="range"
-                  min={10}
-                  max={36}
-                  step={1}
-                  value={settings.chatBubbleRadius}
-                  onChange={(e) => onSettingChange({ chatBubbleRadius: Number(e.target.value) })}
-                  className="w-full accent-stone-800"
-                />
-              </label>
+            <MePanel
+              panelKey="profiles"
+              openPanel={openMePanel}
+              onToggle={toggleMePanel}
+              title="聊天角色設定（洗角色名稱）"
+              subtitle={`共 ${chatProfiles.length} 組`}
+            >
+              <div className="space-y-3">
+                {chatProfiles.length === 0 && (
+                  <p className="text-xs text-stone-400">尚未建立角色設定，預設為「你」/「M」。</p>
+                )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">我方底色</span>
-                  <input
-                    type="color"
-                    value={settings.chatUserBubbleColor}
-                    onChange={(e) => onSettingChange({ chatUserBubbleColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">對方底色</span>
-                  <input
-                    type="color"
-                    value={settings.chatAiBubbleColor}
-                    onChange={(e) => onSettingChange({ chatAiBubbleColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">我方邊框</span>
-                  <input
-                    type="color"
-                    value={settings.chatUserBubbleBorderColor}
-                    onChange={(e) => onSettingChange({ chatUserBubbleBorderColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">對方邊框</span>
-                  <input
-                    type="color"
-                    value={settings.chatAiBubbleBorderColor}
-                    onChange={(e) => onSettingChange({ chatAiBubbleBorderColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">我方文字</span>
-                  <input
-                    type="color"
-                    value={settings.chatUserBubbleTextColor}
-                    onChange={(e) => onSettingChange({ chatUserBubbleTextColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">對方文字</span>
-                  <input
-                    type="color"
-                    value={settings.chatAiBubbleTextColor}
-                    onChange={(e) => onSettingChange({ chatAiBubbleTextColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-              </div>
-            </section>
-
-            <section className="space-y-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-              <p className="text-sm font-medium text-stone-700">聊天角色設定（洗角色名稱）</p>
-
-              {chatProfiles.length === 0 && (
-                <p className="text-xs text-stone-400">尚未建立角色設定，預設為「你」/「M」。</p>
-              )}
-
-              <div className="space-y-2">
-                {chatProfiles.map((profile) => {
-                  const isEditing = editingProfileId === profile.id && !!editingProfileDraft;
-                  return (
-                    <div key={profile.id} className="rounded-lg border border-stone-200 bg-stone-50 p-3">
-                      {!isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm text-stone-800">{profile.name}</p>
-                            <p className="text-xs text-stone-400">右：{profile.rightNick} ／ 左：{profile.leftNick}</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingProfileId(profile.id);
-                              setEditingProfileDraft({
-                                name: profile.name,
-                                leftNick: profile.leftNick,
-                                rightNick: profile.rightNick,
-                                leftAvatarDataUrl: profile.leftAvatarDataUrl,
-                                rightAvatarDataUrl: profile.rightAvatarDataUrl,
-                              });
-                            }}
-                            className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700"
-                          >
-                            編輯
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onDeleteChatProfile(profile.id)}
-                            className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-600"
-                          >
-                            刪除
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={editingProfileDraft.name}
-                            onChange={(e) =>
-                              setEditingProfileDraft((prev) => (prev ? { ...prev, name: e.target.value } : prev))
-                            }
-                            placeholder="設定名稱"
-                            className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-                          />
-                          <div className="grid grid-cols-2 gap-2">
-                            <input
-                              type="text"
-                              value={editingProfileDraft.rightNick}
-                              onChange={(e) =>
-                                setEditingProfileDraft((prev) => (prev ? { ...prev, rightNick: e.target.value } : prev))
-                              }
-                              placeholder="右側暱稱（可 / 分隔）"
-                              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-                            />
-                            <input
-                              type="text"
-                              value={editingProfileDraft.leftNick}
-                              onChange={(e) =>
-                                setEditingProfileDraft((prev) => (prev ? { ...prev, leftNick: e.target.value } : prev))
-                              }
-                              placeholder="左側暱稱（可 / 分隔）"
-                              className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <label className="space-y-1">
-                              <span className="text-xs text-stone-500">右側頭像</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) =>
-                                  applyImageToDraft('rightAvatarDataUrl', e.target.files?.[0], (updater) =>
-                                    setEditingProfileDraft((prev) => (prev ? updater(prev) : prev)),
-                                  )
-                                }
-                                className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
-                              />
-                            </label>
-                            <label className="space-y-1">
-                              <span className="text-xs text-stone-500">左側頭像</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) =>
-                                  applyImageToDraft('leftAvatarDataUrl', e.target.files?.[0], (updater) =>
-                                    setEditingProfileDraft((prev) => (prev ? updater(prev) : prev)),
-                                  )
-                                }
-                                className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
-                              />
-                            </label>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={saveEditingProfile}
-                              className="flex-1 rounded-xl bg-stone-900 py-2 text-sm text-white"
-                            >
-                              儲存
-                            </button>
+                <div className="space-y-2">
+                  {chatProfiles.map((profile) => {
+                    const isEditing = editingProfileId === profile.id && !!editingProfileDraft;
+                    return (
+                      <div key={profile.id} className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+                        {!isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm text-stone-800">{profile.name}</p>
+                              <p className="text-xs text-stone-400">右：{profile.rightNick} ／ 左：{profile.leftNick}</p>
+                            </div>
                             <button
                               type="button"
                               onClick={() => {
-                                setEditingProfileId('');
-                                setEditingProfileDraft(null);
+                                setEditingProfileId(profile.id);
+                                setEditingProfileDraft({
+                                  name: profile.name,
+                                  leftNick: profile.leftNick,
+                                  rightNick: profile.rightNick,
+                                  leftAvatarDataUrl: profile.leftAvatarDataUrl,
+                                  rightAvatarDataUrl: profile.rightAvatarDataUrl,
+                                });
                               }}
-                              className="flex-1 rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-600"
+                              className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700"
                             >
-                              取消
+                              編輯
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onDeleteChatProfile(profile.id)}
+                              className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-600"
+                            >
+                              刪除
                             </button>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {showNewProfileEditor ? (
-                <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50 p-3">
-                  <input
-                    type="text"
-                    placeholder="設定名稱，例：和4o的對話"
-                    value={newProfileDraft.name}
-                    onChange={(e) => setNewProfileDraft((prev) => ({ ...prev, name: e.target.value }))}
-                    className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      placeholder="右側暱稱（可 / 分隔）"
-                      value={newProfileDraft.rightNick}
-                      onChange={(e) => setNewProfileDraft((prev) => ({ ...prev, rightNick: e.target.value }))}
-                      className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="左側暱稱（可 / 分隔）"
-                      value={newProfileDraft.leftNick}
-                      onChange={(e) => setNewProfileDraft((prev) => ({ ...prev, leftNick: e.target.value }))}
-                      className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="space-y-1">
-                      <span className="text-xs text-stone-500">右側頭像</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => applyImageToDraft('rightAvatarDataUrl', e.target.files?.[0], setNewProfileDraft)}
-                        className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
-                      />
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-xs text-stone-500">左側頭像</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => applyImageToDraft('leftAvatarDataUrl', e.target.files?.[0], setNewProfileDraft)}
-                        className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
-                      />
-                    </label>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={saveNewProfile}
-                      className="flex-1 rounded-xl bg-stone-900 py-2 text-sm text-white"
-                    >
-                      儲存
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowNewProfileEditor(false);
-                        setNewProfileDraft(emptyProfileDraft());
-                      }}
-                      className="flex-1 rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-600"
-                    >
-                      取消
-                    </button>
-                  </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={editingProfileDraft.name}
+                              onChange={(e) =>
+                                setEditingProfileDraft((prev) => (prev ? { ...prev, name: e.target.value } : prev))
+                              }
+                              placeholder="設定名稱"
+                              className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <input
+                                type="text"
+                                value={editingProfileDraft.rightNick}
+                                onChange={(e) =>
+                                  setEditingProfileDraft((prev) => (prev ? { ...prev, rightNick: e.target.value } : prev))
+                                }
+                                placeholder="右側暱稱（可 / 分隔）"
+                                className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                              />
+                              <input
+                                type="text"
+                                value={editingProfileDraft.leftNick}
+                                onChange={(e) =>
+                                  setEditingProfileDraft((prev) => (prev ? { ...prev, leftNick: e.target.value } : prev))
+                                }
+                                placeholder="左側暱稱（可 / 分隔）"
+                                className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="space-y-1">
+                                <span className="text-xs text-stone-500">右側頭像</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) =>
+                                    applyImageToDraft('rightAvatarDataUrl', e.target.files?.[0], (updater) =>
+                                      setEditingProfileDraft((prev) => (prev ? updater(prev) : prev)),
+                                    )
+                                  }
+                                  className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
+                                />
+                              </label>
+                              <label className="space-y-1">
+                                <span className="text-xs text-stone-500">左側頭像</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) =>
+                                    applyImageToDraft('leftAvatarDataUrl', e.target.files?.[0], (updater) =>
+                                      setEditingProfileDraft((prev) => (prev ? updater(prev) : prev)),
+                                    )
+                                  }
+                                  className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
+                                />
+                              </label>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={saveEditingProfile}
+                                className="flex-1 rounded-xl bg-stone-900 py-2 text-sm text-white"
+                              >
+                                儲存
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingProfileId('');
+                                  setEditingProfileDraft(null);
+                                }}
+                                className="flex-1 rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-600"
+                              >
+                                取消
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowNewProfileEditor(true)}
-                  className="w-full rounded-xl border border-violet-200 bg-violet-50 py-2 text-sm text-violet-700"
-                >
-                  ＋ 新增角色設定
-                </button>
-              )}
-            </section>
+
+                {showNewProfileEditor ? (
+                  <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50 p-3">
+                    <input
+                      type="text"
+                      placeholder="設定名稱，例：和4o的對話"
+                      value={newProfileDraft.name}
+                      onChange={(e) => setNewProfileDraft((prev) => ({ ...prev, name: e.target.value }))}
+                      className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="右側暱稱（可 / 分隔）"
+                        value={newProfileDraft.rightNick}
+                        onChange={(e) => setNewProfileDraft((prev) => ({ ...prev, rightNick: e.target.value }))}
+                        className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                      />
+                      <input
+                        type="text"
+                        placeholder="左側暱稱（可 / 分隔）"
+                        value={newProfileDraft.leftNick}
+                        onChange={(e) => setNewProfileDraft((prev) => ({ ...prev, leftNick: e.target.value }))}
+                        className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="space-y-1">
+                        <span className="text-xs text-stone-500">右側頭像</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => applyImageToDraft('rightAvatarDataUrl', e.target.files?.[0], setNewProfileDraft)}
+                          className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-xs text-stone-500">左側頭像</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => applyImageToDraft('leftAvatarDataUrl', e.target.files?.[0], setNewProfileDraft)}
+                          className="w-full rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs"
+                        />
+                      </label>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={saveNewProfile}
+                        className="flex-1 rounded-xl bg-stone-900 py-2 text-sm text-white"
+                      >
+                        儲存
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNewProfileEditor(false);
+                          setNewProfileDraft(emptyProfileDraft());
+                        }}
+                        className="flex-1 rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-600"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewProfileEditor(true)}
+                    className="w-full rounded-xl border border-violet-200 bg-violet-50 py-2 text-sm text-violet-700"
+                  >
+                    ＋ 新增角色設定
+                  </button>
+                )}
+              </div>
+            </MePanel>
           </div>
         )}
       </main>
@@ -952,7 +1080,12 @@ export function ChatLogPage({
             } ${showNavLabels ? 'gap-1 text-xs' : 'gap-0 text-base'}`}
             aria-label="消息"
           >
-            <span className="text-2xl leading-none">{navMessagesIcon}</span>
+            <IconPreview
+              icon={settings.chatAppMessagesIcon}
+              fallback="◉"
+              imageClassName="h-6 w-6"
+              textClassName="text-2xl leading-none"
+            />
             {showNavLabels && <span>消息</span>}
           </button>
           <button
@@ -963,7 +1096,12 @@ export function ChatLogPage({
             } ${showNavLabels ? 'gap-1 text-xs' : 'gap-0 text-base'}`}
             aria-label="發現"
           >
-            <span className="text-2xl leading-none">{navDiscoverIcon}</span>
+            <IconPreview
+              icon={settings.chatAppDiscoverIcon}
+              fallback="◎"
+              imageClassName="h-6 w-6"
+              textClassName="text-2xl leading-none"
+            />
             {showNavLabels && <span>發現</span>}
           </button>
           <button
@@ -974,7 +1112,12 @@ export function ChatLogPage({
             } ${showNavLabels ? 'gap-1 text-xs' : 'gap-0 text-base'}`}
             aria-label="我"
           >
-            <span className="text-2xl leading-none">{navMeIcon}</span>
+            <IconPreview
+              icon={settings.chatAppMeIcon}
+              fallback="◯"
+              imageClassName="h-6 w-6"
+              textClassName="text-2xl leading-none"
+            />
             {showNavLabels && <span>我</span>}
           </button>
         </div>
@@ -1013,7 +1156,7 @@ function ChatReadView({
 
   return (
     <div className="mx-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-[#efeff4]">
-      <div className="shrink-0 space-y-2 border-b border-stone-200 bg-white px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <div className="shrink-0 border-b border-stone-200 bg-white px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
@@ -1039,24 +1182,6 @@ function ChatReadView({
             <span className="h-9 w-9" />
           )}
         </div>
-
-        {chatProfiles.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-stone-500">角色</span>
-            <select
-              value={selectedProfileId}
-              onChange={(e) => onSelectProfile(e.target.value)}
-              className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
-            >
-              <option value="">預設（跟隨「我」設定）</option>
-              {chatProfiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}（{p.rightNick} / {p.leftNick}）
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       <div ref={scrollRef} id="chat-messages" className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
@@ -1070,6 +1195,46 @@ function ChatReadView({
             </span>
           </p>
         )}
+      </div>
+
+      <div className="shrink-0 border-t border-stone-200 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-8 w-8 items-center justify-center text-xl text-stone-700" aria-hidden="true">
+            ✉
+          </span>
+          <span className="inline-flex h-8 w-8 items-center justify-center text-xl text-stone-700" aria-hidden="true">
+            🎤
+          </span>
+          <div className="relative min-w-0 flex-1">
+            {chatProfiles.length > 0 ? (
+              <>
+                <select
+                  value={selectedProfileId}
+                  onChange={(e) => onSelectProfile(e.target.value)}
+                  className="w-full appearance-none rounded-full border border-stone-300 bg-stone-50 px-4 py-2 text-sm text-stone-700"
+                >
+                  <option value="">角色預設（跟隨「我」）</option>
+                  {chatProfiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}（{p.rightNick} / {p.leftNick}）
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-500">▾</span>
+              </>
+            ) : (
+              <div className="rounded-full border border-stone-300 bg-stone-50 px-4 py-2 text-sm text-stone-400">
+                尚未建立角色設定
+              </div>
+            )}
+          </div>
+          <span className="inline-flex h-8 w-8 items-center justify-center text-xl text-stone-700" aria-hidden="true">
+            ☺
+          </span>
+          <span className="inline-flex h-8 w-8 items-center justify-center text-2xl leading-none text-stone-700" aria-hidden="true">
+            +
+          </span>
+        </div>
       </div>
     </div>
   );
