@@ -57,6 +57,7 @@ function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrl
     pomodoro: normalizeString(input.pomodoro, fallback.pomodoro),
     diary: normalizeString(input.diary, fallback.diary),
     album: normalizeString(input.album, fallback.album),
+    notes: normalizeString(input.notes, fallback.notes),
     settings: normalizeString(input.settings, fallback.settings),
   };
 }
@@ -77,6 +78,7 @@ function normalizeAppLabels(value: unknown, fallback: AppLabels): AppLabels {
     pomodoro: normalizeString(input.pomodoro, fallback.pomodoro),
     diary: normalizeString(input.diary, fallback.diary),
     album: normalizeString(input.album, fallback.album),
+    notes: normalizeString(input.notes, fallback.notes),
   };
 }
 

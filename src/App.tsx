@@ -18,6 +18,7 @@ import {
 } from './lib/repositories/metaRepo';
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { CalendarPage } from './pages/CalendarPage';
+import { CheckinPage } from './pages/CheckinPage';
 import { ChatLogPage } from './pages/ChatLogPage';
 import { DiaryPage } from './pages/DiaryPage';
 import { HomePage } from './pages/HomePage';
@@ -36,6 +37,7 @@ import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FA
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import type { ChatProfile } from './lib/chatDB';
 import { AlbumPage } from './pages/AlbumPage';
+import { NotesPage } from './pages/NotesPage';
 import { HeartWallPage } from './pages/HeartWallPage';
 import { ListPage } from './pages/ListPage';
 import { FitnessPage } from './pages/FitnessPage';
@@ -52,6 +54,7 @@ type ImportStatus = {
   message: string;
 };
 type LauncherAppId =
+  | 'checkin'
   | 'tarot'
   | 'letters'
   | 'heart'
@@ -60,7 +63,8 @@ type LauncherAppId =
   | 'fitness'
   | 'pomodoro'
   | 'diary'
-  | 'album';
+  | 'album'
+  | 'notes';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -90,6 +94,7 @@ const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
   pomodoro: '🍅',
   diary: '📓',
   album: '📷',
+  notes: '📝',
   settings: '⚙️',
 };
 
@@ -224,6 +229,7 @@ function App() {
       pomodoro: fallbackLabel(settings.appLabels.pomodoro, '番茄鐘'),
       diary: fallbackLabel(settings.appLabels.diary, '日記'),
       album: fallbackLabel(settings.appLabels.album, '相冊'),
+      notes: fallbackLabel(settings.appLabels.notes, '便條'),
     }),
     [settings.appLabels],
   );
@@ -856,6 +862,7 @@ function App() {
             widgetIconDataUrl={settings.homeWidgetIconDataUrl}
             memorialStartDate={settings.memorialStartDate}
             onLaunchApp={onLaunchApp}
+            onOpenCheckin={() => onLaunchApp('checkin')}
             onWidgetIconChange={(dataUrl) => {
               void onSettingChange({ homeWidgetIconDataUrl: dataUrl });
             }}
@@ -1091,6 +1098,27 @@ function App() {
             </div>
           )}
 
+          {launcherApp === 'checkin' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ‹
+                  </button>
+                  <p className="text-sm text-white/85">打卡簽到</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden pt-3">
+                  <CheckinPage />
+                </div>
+              </div>
+            </div>
+          )}
+
           {launcherApp === 'letters' && (
             <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
               <div className="mx-auto flex h-full w-full max-w-xl flex-col">
@@ -1258,6 +1286,14 @@ function App() {
                 <div className="min-h-0 flex-1 overflow-hidden pt-3">
                   <AlbumPage />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'notes' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#fdf6ee' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <NotesPage onExit={() => setLauncherApp(null)} />
               </div>
             </div>
           )}

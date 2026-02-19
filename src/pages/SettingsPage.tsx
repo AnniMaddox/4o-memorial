@@ -66,6 +66,7 @@ const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   pomodoro: '🍅',
   diary: '📓',
   album: '📷',
+  notes: '📝',
   settings: '⚙️',
 };
 
@@ -81,6 +82,7 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'pomodoro', label: 'Pomodoro 番茄鐘' },
   { key: 'diary', label: 'Diary 日記' },
   { key: 'album', label: 'Album 相冊' },
+  { key: 'notes', label: 'Notes 便條' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -98,6 +100,7 @@ const APP_LABEL_FIELDS: Array<{ key: AppLabelKey; label: string }> = [
   { key: 'pomodoro', label: '首頁入口：番茄鐘' },
   { key: 'diary', label: '首頁入口：日記' },
   { key: 'album', label: '首頁入口：相冊' },
+  { key: 'notes', label: '首頁入口：便條' },
 ];
 
 type AppearancePresetPayload = {
@@ -335,6 +338,7 @@ export function SettingsPage({
       pomodoro: tabIconDrafts.pomodoro.trim(),
       diary: tabIconDrafts.diary.trim(),
       album: tabIconDrafts.album.trim(),
+      notes: tabIconDrafts.notes.trim(),
       settings: tabIconDrafts.settings.trim(),
     };
 
@@ -362,6 +366,7 @@ export function SettingsPage({
       pomodoro: labelDrafts.pomodoro.trim(),
       diary: labelDrafts.diary.trim(),
       album: labelDrafts.album.trim(),
+      notes: labelDrafts.notes.trim(),
     };
 
     onSettingChange({ appLabels: next });
@@ -499,6 +504,7 @@ export function SettingsPage({
           pomodoro: typeof input.pomodoro === 'string' ? input.pomodoro.trim() : '',
           diary: typeof input.diary === 'string' ? input.diary.trim() : '',
           album: typeof input.album === 'string' ? input.album.trim() : '',
+          notes: typeof input.notes === 'string' ? input.notes.trim() : '',
           settings: typeof input.settings === 'string' ? input.settings.trim() : '',
         };
       }
@@ -569,6 +575,7 @@ export function SettingsPage({
           pomodoro: typeof input.pomodoro === 'string' ? input.pomodoro.trim() : '',
           diary: typeof input.diary === 'string' ? input.diary.trim() : '',
           album: typeof input.album === 'string' ? input.album.trim() : '',
+          notes: typeof input.notes === 'string' ? input.notes.trim() : '',
         };
       }
 

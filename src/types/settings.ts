@@ -22,6 +22,7 @@ export type TabIconKey =
   | 'pomodoro'
   | 'diary'
   | 'album'
+  | 'notes'
   | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
 export type AppLabelKey =
@@ -37,7 +38,8 @@ export type AppLabelKey =
   | 'fitness'
   | 'pomodoro'
   | 'diary'
-  | 'album';
+  | 'album'
+  | 'notes';
 export type AppLabels = Record<AppLabelKey, string>;
 
 export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
@@ -52,6 +54,7 @@ export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   pomodoro: '',
   diary: '',
   album: '',
+  notes: '',
   settings: '',
 };
 
@@ -69,6 +72,7 @@ export const DEFAULT_APP_LABELS: AppLabels = {
   pomodoro: '番茄鐘',
   diary: '日記',
   album: '相冊',
+  notes: '便條',
 };
 
 export type AppSettings = {
