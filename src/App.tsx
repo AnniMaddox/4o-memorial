@@ -1249,22 +1249,9 @@ function App() {
           )}
 
           {launcherApp === 'period' && (
-            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
-              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
-                    onClick={() => setLauncherApp(null)}
-                  >
-                    ‹
-                  </button>
-                  <p className="text-sm text-white/85">{appLabels.period}</p>
-                  <span className="w-16" />
-                </div>
-                <div className="min-h-0 flex-1 overflow-hidden pt-3">
-                  <PeriodPage />
-                </div>
+            <div className="fixed inset-0 z-30" style={{ background: '#fdf7f4' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <PeriodPage onExit={() => setLauncherApp(null)} />
               </div>
             </div>
           )}

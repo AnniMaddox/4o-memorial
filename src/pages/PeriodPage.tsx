@@ -168,6 +168,14 @@ function toMonthLabel(date: Date) {
   return `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
 }
 
+function toMonthDayLabel(dateKey: string) {
+  const parsed = parseDateKey(dateKey);
+  if (!parsed) return 'MM/DD';
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  return `${month}/${day}`;
+}
+
 // ─── Data helpers ──────────────────────────────────────────────────────────────
 function loadStore(): PeriodStore {
   try {
@@ -399,7 +407,7 @@ function SpeechBubble({ countdown, phrase }: { countdown: string; phrase: string
       <p className="mt-1 text-[12px] leading-snug text-stone-600">{phrase}</p>
       {/* Tail — bottom-left, toward chibi */}
       <div
-        className="absolute -bottom-[7px] left-5"
+        className="absolute -bottom-[7px] right-5"
         style={{
           width: 0, height: 0,
           borderLeft: '7px solid transparent',
@@ -425,8 +433,7 @@ function FloatingChibi({
 }) {
   return (
     <div
-      className="pointer-events-none absolute left-3 z-20 flex flex-col items-start gap-2"
-      style={{ bottom: '88px' }}
+      className="pointer-events-none absolute bottom-[54px] right-2 z-20 flex flex-col items-end gap-2 sm:right-3"
     >
       {/* Bubble */}
       <div className="pointer-events-auto">
@@ -1261,23 +1268,35 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <label className="space-y-1">
                   <span className="text-[11px] text-stone-500">開始日</span>
-                  <input
-                    type="date"
-                    value={startDraft}
-                    max={todayKey}
-                    onChange={(e) => setStartDraft(e.target.value)}
-                    className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-                  />
+                  <div className="relative">
+                    <div className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-left text-sm text-stone-800">
+                      {toMonthDayLabel(startDraft)}
+                    </div>
+                    <input
+                      type="date"
+                      value={startDraft}
+                      max={todayKey}
+                      onChange={(e) => setStartDraft(e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      aria-label="開始日"
+                    />
+                  </div>
                 </label>
                 <label className="space-y-1">
                   <span className="text-[11px] text-stone-500">結束日</span>
-                  <input
-                    type="date"
-                    value={endDraft}
-                    max={todayKey}
-                    onChange={(e) => setEndDraft(e.target.value)}
-                    className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-                  />
+                  <div className="relative">
+                    <div className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-left text-sm text-stone-800">
+                      {toMonthDayLabel(endDraft)}
+                    </div>
+                    <input
+                      type="date"
+                      value={endDraft}
+                      max={todayKey}
+                      onChange={(e) => setEndDraft(e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      aria-label="結束日"
+                    />
+                  </div>
                 </label>
               </div>
               <label className="block space-y-1 mb-3">
