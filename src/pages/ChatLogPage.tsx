@@ -1198,8 +1198,8 @@ function ChatReadView({
       </div>
 
       <div className="shrink-0 border-t border-stone-200 bg-white px-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2.5">
-        <div className="flex items-center gap-2.5">
-          <span className="inline-flex h-10 w-10 items-center justify-center text-2xl text-stone-700" aria-hidden="true">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-9 w-9 items-center justify-center text-[1.55rem] text-stone-700" aria-hidden="true">
             ✉
           </span>
           <div className="relative min-w-0 flex-1">
@@ -1208,7 +1208,7 @@ function ChatReadView({
                 <select
                   value={selectedProfileId}
                   onChange={(e) => onSelectProfile(e.target.value)}
-                  className="w-full appearance-none rounded-full border border-stone-300 bg-stone-50 px-4 py-3 text-base text-stone-700"
+                  className="h-11 w-full appearance-none rounded-full border border-stone-300 bg-stone-50 pl-4 pr-8 text-base text-stone-700"
                 >
                   <option value="">角色預設（點我切換）</option>
                   {chatProfiles.map((p) => (
@@ -1220,12 +1220,12 @@ function ChatReadView({
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-500">▾</span>
               </>
             ) : (
-              <div className="rounded-full border border-stone-300 bg-stone-50 px-4 py-3 text-base text-stone-400">
+              <div className="h-11 rounded-full border border-stone-300 bg-stone-50 px-4 text-base leading-[2.75rem] text-stone-400">
                 尚未建立角色設定
               </div>
             )}
           </div>
-          <span className="inline-flex h-10 w-10 items-center justify-center text-[2rem] leading-none text-stone-700" aria-hidden="true">
+          <span className="inline-flex h-9 w-9 items-center justify-center text-[1.8rem] leading-none text-stone-700" aria-hidden="true">
             +
           </span>
         </div>
