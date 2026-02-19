@@ -170,25 +170,32 @@ export function InboxPage({
     <div className="mx-auto w-full max-w-xl space-y-4">
       <header className="themed-header-panel rounded-2xl border p-4 shadow-sm">
         {favoritesOnly ? (
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setFavoritesOnly(false)}
-              className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1 text-sm text-stone-700"
+              className="rounded-full border border-stone-300 bg-white/85 px-2.5 py-1 text-sm text-stone-700"
               aria-label="返回"
               title="返回"
             >
               ‹
             </button>
-            <p className="text-xs tracking-[0.08em] text-stone-600">我的最愛</p>
+            <p className="text-xs tracking-[0.08em] text-stone-600">收藏夾</p>
           </div>
         ) : (
           <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Inbox</p>
         )}
 
-        <h1 className="mt-1 text-2xl text-stone-900">
-          {favoritesOnly ? '我的最愛' : (inboxTitle.trim() || 'Memorial Mailroom')}
-        </h1>
+        {favoritesOnly ? (
+          <div className="mt-1 flex items-center gap-2">
+            <h1 className="text-2xl text-stone-900">我的最愛</h1>
+            <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
+              {starredCount}
+            </span>
+          </div>
+        ) : (
+          <h1 className="mt-1 text-2xl text-stone-900">{inboxTitle.trim() || 'Memorial Mailroom'}</h1>
+        )}
 
         <p className="mt-3 rounded-xl border border-stone-200 bg-white/80 px-3 py-2 text-sm text-stone-700">{dailyHeaderPhrase}</p>
 
@@ -196,13 +203,15 @@ export function InboxPage({
           <button
             type="button"
             onClick={() => setFavoritesOnly((value) => !value)}
-            className={`rounded-lg border px-3 py-1.5 text-sm transition ${
+            className={`h-9 min-w-9 rounded-full border px-3 text-base leading-none transition ${
               favoritesOnly
-                ? 'border-amber-500 bg-amber-100 text-amber-900'
+                ? 'border-amber-500 bg-amber-100 text-amber-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]'
                 : 'border-stone-300 bg-white/80 text-stone-700 hover:bg-white'
             }`}
+            aria-label={favoritesOnly ? '回到收件匣' : '查看我的最愛'}
+            title={favoritesOnly ? '回到收件匣' : '查看我的最愛'}
           >
-            ★ {starredCount}
+            ★
           </button>
           <input
             type="search"

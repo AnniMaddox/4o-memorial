@@ -104,7 +104,7 @@ const PERIOD_SWIPE_THRESHOLD = 52;
 const PANEL_STYLE_OPTIONS: Array<{ id: PeriodPanelStyle; label: string }> = [
   { id: 'soft', label: '柔和' },
   { id: 'glass', label: '玻璃' },
-  { id: 'minimal', label: '極簡' },
+  { id: 'minimal', label: '果凍' },
 ];
 
 const PANEL_STYLE_THEME: Record<
@@ -135,12 +135,12 @@ const PANEL_STYLE_THEME: Record<
     mutedCardBg: 'linear-gradient(160deg, rgba(255,255,255,0.52), rgba(255,255,255,0.32))',
   },
   minimal: {
-    pageBg: '#fafaf9',
-    headerBg: '#fafaf9',
-    cardBg: '#ffffff',
-    cardBorder: 'rgba(0,0,0,0.08)',
-    cardShadow: 'none',
-    mutedCardBg: '#ffffff',
+    pageBg: 'radial-gradient(120% 140% at 10% 0%, #f2f8ff 0%, #fff6fb 48%, #f7f9ff 100%)',
+    headerBg: 'linear-gradient(145deg, rgba(255,255,255,0.78), rgba(232,244,255,0.58))',
+    cardBg: 'linear-gradient(150deg, rgba(255,255,255,0.74), rgba(238,248,255,0.42))',
+    cardBorder: 'rgba(214,236,255,0.92)',
+    cardShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 14px 34px rgba(56,74,112,0.18), 0 6px 12px rgba(255,255,255,0.42)',
+    mutedCardBg: 'linear-gradient(160deg, rgba(255,255,255,0.66), rgba(234,246,255,0.48))',
   },
 };
 
@@ -717,23 +717,28 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [chibiSrc, setChibiSrc] = useState('');
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const panelTheme = PANEL_STYLE_THEME[store.panelStyle];
-  const glassPanelFx =
+  const panelFilterFx =
     store.panelStyle === 'glass'
       ? {
           backdropFilter: 'blur(16px) saturate(145%)',
           WebkitBackdropFilter: 'blur(16px) saturate(145%)',
         }
+      : store.panelStyle === 'minimal'
+        ? {
+            backdropFilter: 'blur(12px) saturate(165%)',
+            WebkitBackdropFilter: 'blur(12px) saturate(165%)',
+          }
       : {};
   const panelCardStyle = {
     background: panelTheme.cardBg,
     borderColor: panelTheme.cardBorder,
     boxShadow: panelTheme.cardShadow,
-    ...glassPanelFx,
+    ...panelFilterFx,
   };
   const panelMutedCardStyle = {
     background: panelTheme.mutedCardBg,
     borderColor: panelTheme.cardBorder,
-    ...glassPanelFx,
+    ...panelFilterFx,
   };
 
   const today = new Date();
@@ -1045,7 +1050,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
       {/* ── Header ──────────────────────────────────────────────── */}
       <header
         className="shrink-0 border-b"
-        style={{ background: panelTheme.headerBg, borderColor: 'rgba(0,0,0,0.06)', ...glassPanelFx }}
+        style={{ background: panelTheme.headerBg, borderColor: 'rgba(0,0,0,0.06)', ...panelFilterFx }}
       >
         <div className="flex items-center gap-3 px-4 pb-2.5 pt-4">
           <button
@@ -1185,8 +1190,11 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             <div
               className="rounded-2xl border p-4"
               style={{
-                background: store.panelStyle === 'minimal' ? '#eef7f1' : 'rgba(197,232,212,0.35)',
-                borderColor: store.panelStyle === 'minimal' ? 'rgba(42,96,72,0.16)' : 'rgba(42,96,72,0.10)',
+                background:
+                  store.panelStyle === 'soft'
+                    ? 'rgba(197,232,212,0.35)'
+                    : 'linear-gradient(145deg, rgba(226,246,237,0.82), rgba(201,236,224,0.48))',
+                borderColor: store.panelStyle === 'soft' ? 'rgba(42,96,72,0.10)' : 'rgba(42,96,72,0.17)',
               }}
             >
                 <span className="mb-2 block text-[9px] uppercase tracking-[0.14em] text-stone-400">預測可孕期</span>

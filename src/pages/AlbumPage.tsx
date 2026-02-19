@@ -344,6 +344,25 @@ function AlbumManager({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setCollapsedMap((previous) => {
+      const next: Record<string, boolean> = {};
+      albums.forEach((album, index) => {
+        next[album.id] = previous[album.id] ?? index !== 0;
+      });
+      return next;
+    });
+  }, [albums]);
+
+  function toggleAlbumCollapse(albumId: string) {
+    setCollapsedMap((previous) => ({
+      ...previous,
+      [albumId]: !previous[albumId],
+    }));
+  }
+
   return (
     <div
       className="mx-auto w-full max-w-xl overflow-y-auto px-4 pb-6 pt-5"
@@ -379,11 +398,19 @@ function AlbumManager({
           const subtitleValue = draft.subtitle ?? '';
           const coverImageValue = draft.coverImage ?? '';
           const coverFitValue = draft.coverFit ?? album.coverFit ?? 'cover';
+          const collapsed = !!collapsedMap[album.id];
 
           return (
             <section key={album.id} className="space-y-2 rounded-2xl border border-stone-300 bg-white/90 p-3 shadow-sm">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-medium text-stone-800">{album.title}</p>
+                <button
+                  type="button"
+                  onClick={() => toggleAlbumCollapse(album.id)}
+                  className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-1 py-0.5 text-left transition active:scale-[0.99]"
+                >
+                  <span className="truncate text-sm font-medium text-stone-800">{album.title}</span>
+                  <span className="text-xs text-stone-500">{collapsed ? '▸' : '▾'}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => onResetAlbum(album.id)}
@@ -393,83 +420,87 @@ function AlbumManager({
                 </button>
               </div>
 
-              <label className="block space-y-1">
-                <span className="text-[11px] text-stone-500">名稱</span>
-                <input
-                  type="text"
-                  value={titleValue}
-                  onChange={(event) => onDraftChange(album.id, { title: event.target.value })}
-                  placeholder={album.title}
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
-                />
-              </label>
+              {!collapsed && (
+                <>
+                  <label className="block space-y-1">
+                    <span className="text-[11px] text-stone-500">名稱</span>
+                    <input
+                      type="text"
+                      value={titleValue}
+                      onChange={(event) => onDraftChange(album.id, { title: event.target.value })}
+                      placeholder={album.title}
+                      className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+                    />
+                  </label>
 
-              <label className="block space-y-1">
-                <span className="text-[11px] text-stone-500">標籤（副標）</span>
-                <input
-                  type="text"
-                  value={subtitleValue}
-                  onChange={(event) => onDraftChange(album.id, { subtitle: event.target.value })}
-                  placeholder={album.subtitle}
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
-                />
-              </label>
+                  <label className="block space-y-1">
+                    <span className="text-[11px] text-stone-500">標籤（副標）</span>
+                    <input
+                      type="text"
+                      value={subtitleValue}
+                      onChange={(event) => onDraftChange(album.id, { subtitle: event.target.value })}
+                      placeholder={album.subtitle}
+                      className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+                    />
+                  </label>
 
-              <label className="block space-y-1">
-                <span className="text-[11px] text-stone-500">封面圖 URL（可留空）</span>
-                <input
-                  type="url"
-                  value={coverImageValue}
-                  onChange={(event) => onDraftChange(album.id, { coverImage: event.target.value })}
-                  placeholder={album.coverImage || 'https://...'}
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
-                />
-              </label>
+                  <label className="block space-y-1">
+                    <span className="text-[11px] text-stone-500">封面圖 URL（可留空）</span>
+                    <input
+                      type="url"
+                      value={coverImageValue}
+                      onChange={(event) => onDraftChange(album.id, { coverImage: event.target.value })}
+                      placeholder={album.coverImage || 'https://...'}
+                      className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+                    />
+                  </label>
 
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-300 px-3 py-1.5 text-xs text-stone-700">
-                上傳封面
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.currentTarget.value = '';
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      const result = typeof reader.result === 'string' ? reader.result : '';
-                      if (result) onDraftChange(album.id, { coverImage: result });
-                    };
-                    reader.readAsDataURL(file);
-                  }}
-                />
-              </label>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-300 px-3 py-1.5 text-xs text-stone-700">
+                    上傳封面
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.currentTarget.value = '';
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const result = typeof reader.result === 'string' ? reader.result : '';
+                          if (result) onDraftChange(album.id, { coverImage: result });
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onDraftChange(album.id, { coverFit: 'cover' })}
-                  className={`rounded-lg border px-2 py-1.5 text-xs transition active:scale-95 ${
-                    coverFitValue === 'cover'
-                      ? 'border-stone-800 bg-stone-800 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  滿版裁切
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDraftChange(album.id, { coverFit: 'contain' })}
-                  className={`rounded-lg border px-2 py-1.5 text-xs transition active:scale-95 ${
-                    coverFitValue === 'contain'
-                      ? 'border-stone-800 bg-stone-800 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  完整顯示
-                </button>
-              </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onDraftChange(album.id, { coverFit: 'cover' })}
+                      className={`rounded-lg border px-2 py-1.5 text-xs transition active:scale-95 ${
+                        coverFitValue === 'cover'
+                          ? 'border-stone-800 bg-stone-800 text-white'
+                          : 'border-stone-300 bg-white text-stone-700'
+                      }`}
+                    >
+                      滿版裁切
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDraftChange(album.id, { coverFit: 'contain' })}
+                      className={`rounded-lg border px-2 py-1.5 text-xs transition active:scale-95 ${
+                        coverFitValue === 'contain'
+                          ? 'border-stone-800 bg-stone-800 text-white'
+                          : 'border-stone-300 bg-white text-stone-700'
+                      }`}
+                    >
+                      完整顯示
+                    </button>
+                  </div>
+                </>
+              )}
             </section>
           );
         })}
