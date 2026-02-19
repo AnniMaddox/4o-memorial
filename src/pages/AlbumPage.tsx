@@ -21,10 +21,13 @@ type AlbumMeta = {
   title: string;
   subtitle: string;
   accent: string;
+  coverImage?: string;
+  coverFit?: 'cover' | 'contain';
 };
 
 type Album = AlbumMeta & {
   images: string[];
+  coverImageUrl: string;
 };
 
 type AlbumNameOverrides = Record<string, string>;
@@ -55,12 +58,26 @@ function saveAlbumNameOverrides(overrides: AlbumNameOverrides) {
   }
 }
 
+function resolveAlbumCoverUrl(value: string | undefined) {
+  const raw = value?.trim() ?? '';
+  if (!raw) return '';
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:')) {
+    return raw;
+  }
+  const normalized = raw.startsWith('/') ? raw.slice(1) : raw;
+  return `${BASE}${normalized}`;
+}
+
 function buildAlbum(meta: AlbumMeta): Album {
   const images = Object.entries(ALL_PHOTO_MODULES)
     .filter(([path]) => path.includes(`/photos/${meta.id}/`))
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, url]) => url);
-  return { ...meta, images };
+  return {
+    ...meta,
+    images,
+    coverImageUrl: resolveAlbumCoverUrl(meta.coverImage),
+  };
 }
 
 const ALBUMS: Album[] = (albumsData as AlbumMeta[]).map(buildAlbum);
@@ -197,16 +214,32 @@ function AlbumBookCard({
         ✎
       </button>
 
-      {/* Cover gradient background */}
-      <div className="absolute inset-0" style={{ background: album.accent }} />
+      {album.coverImageUrl ? (
+        <>
+          <img
+            src={album.coverImageUrl}
+            alt=""
+            draggable={false}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectFit: album.coverFit === 'contain' ? 'contain' : 'cover' }}
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-black/10" />
+        </>
+      ) : (
+        <>
+          {/* Cover gradient background */}
+          <div className="absolute inset-0" style={{ background: album.accent }} />
 
-      {/* Chibi-00 as cover decoration */}
-      <img
-        src={CHIBI_00_SRC}
-        alt=""
-        draggable={false}
-        className="absolute bottom-10 left-1/2 w-3/4 -translate-x-1/2 select-none object-contain drop-shadow-md transition group-active:scale-95"
-      />
+          {/* Chibi-00 as cover decoration */}
+          <img
+            src={CHIBI_00_SRC}
+            alt=""
+            draggable={false}
+            className="absolute bottom-10 left-1/2 w-3/4 -translate-x-1/2 select-none object-contain drop-shadow-md transition group-active:scale-95"
+          />
+        </>
+      )}
 
       {/* Bottom label */}
       <div

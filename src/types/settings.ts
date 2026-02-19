@@ -10,7 +10,19 @@ export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type DiaryCoverFitMode = 'cover' | 'contain';
-export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'fitness' | 'diary' | 'album' | 'settings';
+export type TabIconKey =
+  | 'home'
+  | 'inbox'
+  | 'calendar'
+  | 'tarot'
+  | 'letters'
+  | 'heart'
+  | 'list'
+  | 'fitness'
+  | 'pomodoro'
+  | 'diary'
+  | 'album'
+  | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
 export type AppLabelKey =
   | 'home'
@@ -23,6 +35,7 @@ export type AppLabelKey =
   | 'chat'
   | 'list'
   | 'fitness'
+  | 'pomodoro'
   | 'diary'
   | 'album';
 export type AppLabels = Record<AppLabelKey, string>;
@@ -36,6 +49,7 @@ export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   heart: '',
   list: '',
   fitness: '',
+  pomodoro: '',
   diary: '',
   album: '',
   settings: '',
@@ -52,6 +66,7 @@ export const DEFAULT_APP_LABELS: AppLabels = {
   chat: '對話',
   list: '清單',
   fitness: '健身',
+  pomodoro: '番茄鐘',
   diary: '日記',
   album: '相冊',
 };
@@ -101,6 +116,8 @@ export type AppSettings = {
   calendarCellShadow: number;
   calendarCellDepth: number;
   tarotGalleryImageUrl: string;
+  tarotNameColor: string;
+  tarotNameScale: number;
   letterFontUrl: string;
   diaryCoverImageUrl: string;
   diaryFontUrl: string;
@@ -160,6 +177,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   calendarCellShadow: 68,
   calendarCellDepth: 70,
   tarotGalleryImageUrl: '',
+  tarotNameColor: '#374151',
+  tarotNameScale: 1,
   letterFontUrl: '',
   diaryCoverImageUrl: '',
   diaryFontUrl: '',

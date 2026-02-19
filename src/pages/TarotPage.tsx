@@ -21,11 +21,18 @@ interface ModalState {
 
 export type TarotPageProps = {
   tarotGalleryImageUrl?: string;
+  tarotNameColor?: string;
+  tarotNameScale?: number;
 };
 
-export function TarotPage({ tarotGalleryImageUrl }: TarotPageProps) {
+export function TarotPage({ tarotGalleryImageUrl, tarotNameColor, tarotNameScale }: TarotPageProps) {
   const basePath = `${import.meta.env.BASE_URL}tarot/`;
   const today = todayDateKey();
+  const safeNameColor = tarotNameColor?.trim() || '#374151';
+  const safeNameScale =
+    typeof tarotNameScale === 'number' && Number.isFinite(tarotNameScale)
+      ? Math.min(2, Math.max(0.8, tarotNameScale))
+      : 1;
 
   const dailySpread = useMemo(
     () => seededShuffle(cardsData as TarotCard[], today).slice(0, 3),
@@ -70,6 +77,8 @@ export function TarotPage({ tarotGalleryImageUrl }: TarotPageProps) {
         onAdvance={advancePhase}
         onFlipBack={flipBack}
         onCloseModal={() => setModal(null)}
+        tarotNameColor={safeNameColor}
+        tarotNameScale={safeNameScale}
       />
     );
   }
@@ -115,7 +124,13 @@ export function TarotPage({ tarotGalleryImageUrl }: TarotPageProps) {
               <p className="text-[10px] uppercase tracking-widest text-stone-400">
                 {SPREAD_POSITIONS[i]}
               </p>
-              <p className="text-xs font-medium text-stone-700">
+              <p
+                className="font-medium leading-tight"
+                style={{
+                  color: safeNameColor,
+                  fontSize: `${0.75 * safeNameScale}rem`,
+                }}
+              >
                 {card.number}・{card.name}
               </p>
             </div>
@@ -165,6 +180,8 @@ export function TarotPage({ tarotGalleryImageUrl }: TarotPageProps) {
           onAdvance={advancePhase}
           onFlipBack={flipBack}
           onClose={() => setModal(null)}
+          tarotNameColor={safeNameColor}
+          tarotNameScale={safeNameScale}
         />
       )}
     </div>
@@ -181,6 +198,8 @@ function TarotGallery({
   onAdvance,
   onFlipBack,
   onCloseModal,
+  tarotNameColor,
+  tarotNameScale,
 }: {
   basePath: string;
   onOpenCard: (card: TarotCard) => void;
@@ -189,6 +208,8 @@ function TarotGallery({
   onAdvance: () => void;
   onFlipBack: () => void;
   onCloseModal: () => void;
+  tarotNameColor: string;
+  tarotNameScale: number;
 }) {
   const allCards = cardsData as TarotCard[];
 
@@ -237,8 +258,23 @@ function TarotGallery({
               )}
             </div>
             <div className="text-center">
-              <p className="text-[9px] font-medium text-stone-600">{card.number}</p>
-              <p className="text-[10px] text-stone-700">{card.name}</p>
+              <p
+                className="font-medium"
+                style={{
+                  color: tarotNameColor,
+                  fontSize: `${0.56 * tarotNameScale}rem`,
+                }}
+              >
+                {card.number}
+              </p>
+              <p
+                style={{
+                  color: tarotNameColor,
+                  fontSize: `${0.62 * tarotNameScale}rem`,
+                }}
+              >
+                {card.name}
+              </p>
             </div>
           </button>
         ))}
@@ -252,6 +288,8 @@ function TarotGallery({
           onAdvance={onAdvance}
           onFlipBack={onFlipBack}
           onClose={onCloseModal}
+          tarotNameColor={tarotNameColor}
+          tarotNameScale={tarotNameScale}
         />
       )}
     </div>
@@ -266,12 +304,16 @@ function CardModal({
   onAdvance,
   onFlipBack,
   onClose,
+  tarotNameColor,
+  tarotNameScale,
 }: {
   modal: ModalState;
   basePath: string;
   onAdvance: () => void;
   onFlipBack: () => void;
   onClose: () => void;
+  tarotNameColor: string;
+  tarotNameScale: number;
 }) {
   const { card, position, phase } = modal;
 
@@ -372,7 +414,13 @@ function CardModal({
                 />
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-widest text-stone-400">{position}</p>
-                  <h2 className="truncate text-base font-medium text-stone-900">
+                  <h2
+                    className="truncate font-medium"
+                    style={{
+                      color: tarotNameColor,
+                      fontSize: `${1 * tarotNameScale}rem`,
+                    }}
+                  >
                     {card.number}・{card.name}
                   </h2>
                   <p className="text-xs text-stone-500">{card.nameEn}</p>
