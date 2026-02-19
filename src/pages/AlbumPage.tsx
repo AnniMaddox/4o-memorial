@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import albumsData from '../../public/data/albums.json';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const BASE = import.meta.env.BASE_URL as string;
+const ALBUM_NAME_OVERRIDES_STORAGE_KEY = 'memorial-album-name-overrides';
 
 // chibi-00 used as book-cover decoration on the shelf
 const CHIBI_00_SRC = `${BASE}chibi/chibi-00.png`;
@@ -26,6 +27,34 @@ type Album = AlbumMeta & {
   images: string[];
 };
 
+type AlbumNameOverrides = Record<string, string>;
+
+function loadAlbumNameOverrides() {
+  try {
+    const raw = window.localStorage.getItem(ALBUM_NAME_OVERRIDES_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const normalized: AlbumNameOverrides = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === 'string') {
+        const text = value.trim();
+        if (text) normalized[key] = text;
+      }
+    }
+    return normalized;
+  } catch {
+    return {};
+  }
+}
+
+function saveAlbumNameOverrides(overrides: AlbumNameOverrides) {
+  try {
+    window.localStorage.setItem(ALBUM_NAME_OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+  } catch {
+    // ignore storage write failures
+  }
+}
+
 function buildAlbum(meta: AlbumMeta): Album {
   const images = Object.entries(ALL_PHOTO_MODULES)
     .filter(([path]) => path.includes(`/photos/${meta.id}/`))
@@ -40,12 +69,48 @@ const ALBUMS: Album[] = (albumsData as AlbumMeta[]).map(buildAlbum);
 
 export function AlbumPage() {
   const [openAlbum, setOpenAlbum] = useState<Album | null>(null);
+  const [albumNameOverrides, setAlbumNameOverrides] = useState<AlbumNameOverrides>(() => loadAlbumNameOverrides());
+
+  const displayAlbums = useMemo(
+    () =>
+      ALBUMS.map((album) => ({
+        ...album,
+        title: albumNameOverrides[album.id] ?? album.title,
+      })),
+    [albumNameOverrides],
+  );
+
+  const renameAlbum = (albumId: string) => {
+    const target = displayAlbums.find((album) => album.id === albumId);
+    if (!target) return;
+
+    const nextName = window.prompt('輸入新的相冊名稱', target.title);
+    if (nextName === null) return;
+
+    const trimmed = nextName.trim();
+    const original = ALBUMS.find((album) => album.id === albumId)?.title ?? target.title;
+
+    setAlbumNameOverrides((prev) => {
+      const next = { ...prev };
+      if (!trimmed || trimmed === original) {
+        delete next[albumId];
+      } else {
+        next[albumId] = trimmed;
+      }
+      saveAlbumNameOverrides(next);
+      return next;
+    });
+
+    if (openAlbum?.id === albumId) {
+      setOpenAlbum((current) => (current ? { ...current, title: trimmed || original } : current));
+    }
+  };
 
   if (openAlbum) {
     return <AlbumReader album={openAlbum} onClose={() => setOpenAlbum(null)} />;
   }
 
-  return <AlbumShelf albums={ALBUMS} onOpen={setOpenAlbum} />;
+  return <AlbumShelf albums={displayAlbums} onOpen={setOpenAlbum} onRenameAlbum={renameAlbum} />;
 }
 
 // ─── AlbumShelf ───────────────────────────────────────────────────────────────
@@ -53,9 +118,11 @@ export function AlbumPage() {
 function AlbumShelf({
   albums,
   onOpen,
+  onRenameAlbum,
 }: {
   albums: Album[];
   onOpen: (album: Album) => void;
+  onRenameAlbum: (albumId: string) => void;
 }) {
   return (
     <div
@@ -84,7 +151,12 @@ function AlbumShelf({
       {/* Album books grid */}
       <div className="grid grid-cols-2 gap-4">
         {albums.map((album) => (
-          <AlbumBookCard key={album.id} album={album} onOpen={() => onOpen(album)} />
+          <AlbumBookCard
+            key={album.id}
+            album={album}
+            onOpen={() => onOpen(album)}
+            onRename={() => onRenameAlbum(album.id)}
+          />
         ))}
       </div>
     </div>
@@ -93,14 +165,38 @@ function AlbumShelf({
 
 // ─── AlbumBookCard ────────────────────────────────────────────────────────────
 
-function AlbumBookCard({ album, onOpen }: { album: Album; onOpen: () => void }) {
+function AlbumBookCard({
+  album,
+  onOpen,
+  onRename,
+}: {
+  album: Album;
+  onOpen: () => void;
+  onRename: () => void;
+}) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="group relative w-full overflow-hidden rounded-2xl shadow-md transition active:scale-95"
-      style={{ aspectRatio: '3/4' }}
-    >
+    <div className="group relative w-full overflow-hidden rounded-2xl shadow-md" style={{ aspectRatio: '3/4' }}>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="absolute inset-0 z-10 transition active:scale-95"
+        aria-label={`打開相冊：${album.title}`}
+        title={album.title}
+      />
+
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onRename();
+        }}
+        className="absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/70 bg-black/35 text-sm text-white backdrop-blur-sm transition active:scale-90"
+        aria-label="修改相冊名稱"
+        title="修改相冊名稱"
+      >
+        ✎
+      </button>
+
       {/* Cover gradient background */}
       <div className="absolute inset-0" style={{ background: album.accent }} />
 
@@ -129,7 +225,7 @@ function AlbumBookCard({ album, onOpen }: { album: Album; onOpen: () => void }) 
         className="pointer-events-none absolute inset-y-0 left-0 w-3"
         style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.15) 0%, transparent 100%)' }}
       />
-    </button>
+    </div>
   );
 }
 

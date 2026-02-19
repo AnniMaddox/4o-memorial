@@ -318,16 +318,16 @@ export function HomePage({
     if (homeSwipeEnabled) {
       builtScreens.push(
         {
-          id: 'counter',
-          kind: 'counter',
-        },
-        {
           id: 'blank-1',
           kind: 'blank',
         },
         {
           id: 'blank-2',
           kind: 'blank',
+        },
+        {
+          id: 'counter',
+          kind: 'counter',
         },
       );
     }
