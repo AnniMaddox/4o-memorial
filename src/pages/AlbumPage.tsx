@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import albumsData from '../../public/data/albums.json';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const BASE = import.meta.env.BASE_URL as string;
-const ALBUM_NAME_OVERRIDES_STORAGE_KEY = 'memorial-album-name-overrides';
+const ALBUM_OVERRIDES_STORAGE_KEY = 'memorial-album-overrides';
+const LEGACY_ALBUM_NAME_OVERRIDES_STORAGE_KEY = 'memorial-album-name-overrides';
 
 // chibi-00 used as book-cover decoration on the shelf
 const CHIBI_00_SRC = `${BASE}chibi/chibi-00.png`;
@@ -30,29 +31,65 @@ type Album = AlbumMeta & {
   coverImageUrl: string;
 };
 
-type AlbumNameOverrides = Record<string, string>;
+type AlbumOverride = {
+  title?: string;
+  subtitle?: string;
+  coverImage?: string;
+  coverFit?: 'cover' | 'contain';
+};
 
-function loadAlbumNameOverrides() {
-  try {
-    const raw = window.localStorage.getItem(ALBUM_NAME_OVERRIDES_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const normalized: AlbumNameOverrides = {};
-    for (const [key, value] of Object.entries(parsed)) {
-      if (typeof value === 'string') {
-        const text = value.trim();
-        if (text) normalized[key] = text;
-      }
-    }
-    return normalized;
-  } catch {
-    return {};
-  }
+type AlbumOverrides = Record<string, AlbumOverride>;
+
+function normalizeAlbumOverride(value: unknown): AlbumOverride {
+  if (!value || typeof value !== 'object') return {};
+  const input = value as Partial<AlbumOverride>;
+  const next: AlbumOverride = {};
+  if (typeof input.title === 'string' && input.title.trim()) next.title = input.title.trim();
+  if (typeof input.subtitle === 'string' && input.subtitle.trim()) next.subtitle = input.subtitle.trim();
+  if (typeof input.coverImage === 'string' && input.coverImage.trim()) next.coverImage = input.coverImage.trim();
+  if (input.coverFit === 'cover' || input.coverFit === 'contain') next.coverFit = input.coverFit;
+  return next;
 }
 
-function saveAlbumNameOverrides(overrides: AlbumNameOverrides) {
+function loadAlbumOverrides() {
+  const normalized: AlbumOverrides = {};
+
   try {
-    window.localStorage.setItem(ALBUM_NAME_OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+    const raw = window.localStorage.getItem(ALBUM_OVERRIDES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      for (const [key, value] of Object.entries(parsed)) {
+        const override = normalizeAlbumOverride(value);
+        if (Object.keys(override).length) normalized[key] = override;
+      }
+    }
+  } catch {
+    // ignore malformed storage
+  }
+
+  try {
+    const rawLegacy = window.localStorage.getItem(LEGACY_ALBUM_NAME_OVERRIDES_STORAGE_KEY);
+    if (rawLegacy) {
+      const parsedLegacy = JSON.parse(rawLegacy) as Record<string, unknown>;
+      for (const [key, value] of Object.entries(parsedLegacy)) {
+        if (typeof value === 'string' && value.trim()) {
+          normalized[key] = {
+            ...(normalized[key] ?? {}),
+            title: normalized[key]?.title ?? value.trim(),
+          };
+        }
+      }
+    }
+  } catch {
+    // ignore malformed legacy storage
+  }
+
+  return normalized;
+}
+
+function saveAlbumOverrides(overrides: AlbumOverrides) {
+  try {
+    window.localStorage.setItem(ALBUM_OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
   } catch {
     // ignore storage write failures
   }
@@ -85,49 +122,89 @@ const ALBUMS: Album[] = (albumsData as AlbumMeta[]).map(buildAlbum);
 // ─── AlbumPage ────────────────────────────────────────────────────────────────
 
 export function AlbumPage() {
-  const [openAlbum, setOpenAlbum] = useState<Album | null>(null);
-  const [albumNameOverrides, setAlbumNameOverrides] = useState<AlbumNameOverrides>(() => loadAlbumNameOverrides());
+  const [openAlbumId, setOpenAlbumId] = useState<string | null>(null);
+  const [manageMode, setManageMode] = useState(false);
+  const [albumOverrides, setAlbumOverrides] = useState<AlbumOverrides>(() => loadAlbumOverrides());
+  const [drafts, setDrafts] = useState<AlbumOverrides>(() => loadAlbumOverrides());
 
   const displayAlbums = useMemo(
     () =>
       ALBUMS.map((album) => ({
         ...album,
-        title: albumNameOverrides[album.id] ?? album.title,
+        title: albumOverrides[album.id]?.title || album.title,
+        subtitle: albumOverrides[album.id]?.subtitle || album.subtitle,
+        coverImageUrl: resolveAlbumCoverUrl(albumOverrides[album.id]?.coverImage || album.coverImage),
+        coverFit: albumOverrides[album.id]?.coverFit || album.coverFit,
       })),
-    [albumNameOverrides],
+    [albumOverrides],
   );
 
-  const renameAlbum = (albumId: string) => {
-    const target = displayAlbums.find((album) => album.id === albumId);
-    if (!target) return;
-
-    const nextName = window.prompt('輸入新的相冊名稱', target.title);
-    if (nextName === null) return;
-
-    const trimmed = nextName.trim();
-    const original = ALBUMS.find((album) => album.id === albumId)?.title ?? target.title;
-
-    setAlbumNameOverrides((prev) => {
-      const next = { ...prev };
-      if (!trimmed || trimmed === original) {
-        delete next[albumId];
-      } else {
-        next[albumId] = trimmed;
-      }
-      saveAlbumNameOverrides(next);
-      return next;
-    });
-
-    if (openAlbum?.id === albumId) {
-      setOpenAlbum((current) => (current ? { ...current, title: trimmed || original } : current));
+  useEffect(() => {
+    if (manageMode) {
+      setDrafts(albumOverrides);
     }
-  };
+  }, [albumOverrides, manageMode]);
 
-  if (openAlbum) {
-    return <AlbumReader album={openAlbum} onClose={() => setOpenAlbum(null)} />;
+  const openedAlbum = openAlbumId ? displayAlbums.find((album) => album.id === openAlbumId) ?? null : null;
+
+  if (openedAlbum) {
+    return <AlbumReader album={openedAlbum} onClose={() => setOpenAlbumId(null)} />;
   }
 
-  return <AlbumShelf albums={displayAlbums} onOpen={setOpenAlbum} onRenameAlbum={renameAlbum} />;
+  if (manageMode) {
+    return (
+      <AlbumManager
+        albums={ALBUMS}
+        drafts={drafts}
+        onDraftChange={(albumId, patch) => {
+          setDrafts((current) => ({
+            ...current,
+            [albumId]: {
+              ...(current[albumId] ?? {}),
+              ...patch,
+            },
+          }));
+        }}
+        onResetAlbum={(albumId) => {
+          setDrafts((current) => {
+            const next = { ...current };
+            delete next[albumId];
+            return next;
+          });
+        }}
+        onSave={() => {
+          const next: AlbumOverrides = {};
+          for (const album of ALBUMS) {
+            const draft = normalizeAlbumOverride(drafts[album.id]);
+            const normalizedTitle = draft.title?.trim() ?? '';
+            const normalizedSubtitle = draft.subtitle?.trim() ?? '';
+            const normalizedCoverImage = draft.coverImage?.trim() ?? '';
+            const normalizedCoverFit = draft.coverFit;
+            const hasChangedTitle = normalizedTitle && normalizedTitle !== album.title;
+            const hasChangedSubtitle = normalizedSubtitle && normalizedSubtitle !== album.subtitle;
+            const hasChangedCover = normalizedCoverImage && normalizedCoverImage !== (album.coverImage ?? '').trim();
+            const hasChangedCoverFit =
+              normalizedCoverFit && normalizedCoverFit !== (album.coverFit ?? 'cover');
+
+            if (hasChangedTitle || hasChangedSubtitle || hasChangedCover || hasChangedCoverFit) {
+              next[album.id] = {};
+              if (hasChangedTitle) next[album.id].title = normalizedTitle;
+              if (hasChangedSubtitle) next[album.id].subtitle = normalizedSubtitle;
+              if (hasChangedCover) next[album.id].coverImage = normalizedCoverImage;
+              if (hasChangedCoverFit) next[album.id].coverFit = normalizedCoverFit;
+            }
+          }
+
+          setAlbumOverrides(next);
+          saveAlbumOverrides(next);
+          setManageMode(false);
+        }}
+        onCancel={() => setManageMode(false)}
+      />
+    );
+  }
+
+  return <AlbumShelf albums={displayAlbums} onOpen={setOpenAlbumId} onOpenManager={() => setManageMode(true)} />;
 }
 
 // ─── AlbumShelf ───────────────────────────────────────────────────────────────
@@ -135,11 +212,11 @@ export function AlbumPage() {
 function AlbumShelf({
   albums,
   onOpen,
-  onRenameAlbum,
+  onOpenManager,
 }: {
   albums: Album[];
-  onOpen: (album: Album) => void;
-  onRenameAlbum: (albumId: string) => void;
+  onOpen: (albumId: string) => void;
+  onOpenManager: () => void;
 }) {
   return (
     <div
@@ -157,23 +234,26 @@ function AlbumShelf({
             相冊
           </h1>
         </div>
-        <img
-          src={CHIBI_00_SRC}
-          alt=""
-          draggable={false}
-          className="calendar-chibi w-16 select-none"
-        />
+        <button
+          type="button"
+          onClick={onOpenManager}
+          className="rounded-full p-1 transition active:scale-95"
+          aria-label="相冊設定"
+          title="相冊設定"
+        >
+          <img
+            src={CHIBI_00_SRC}
+            alt=""
+            draggable={false}
+            className="calendar-chibi w-16 select-none"
+          />
+        </button>
       </header>
 
       {/* Album books grid */}
       <div className="grid grid-cols-2 gap-4">
         {albums.map((album) => (
-          <AlbumBookCard
-            key={album.id}
-            album={album}
-            onOpen={() => onOpen(album)}
-            onRename={() => onRenameAlbum(album.id)}
-          />
+          <AlbumBookCard key={album.id} album={album} onOpen={() => onOpen(album.id)} />
         ))}
       </div>
     </div>
@@ -185,11 +265,9 @@ function AlbumShelf({
 function AlbumBookCard({
   album,
   onOpen,
-  onRename,
 }: {
   album: Album;
   onOpen: () => void;
-  onRename: () => void;
 }) {
   return (
     <div className="group relative w-full overflow-hidden rounded-2xl shadow-md" style={{ aspectRatio: '3/4' }}>
@@ -200,19 +278,6 @@ function AlbumBookCard({
         aria-label={`打開相冊：${album.title}`}
         title={album.title}
       />
-
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onRename();
-        }}
-        className="absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/70 bg-black/35 text-sm text-white backdrop-blur-sm transition active:scale-90"
-        aria-label="修改相冊名稱"
-        title="修改相冊名稱"
-      >
-        ✎
-      </button>
 
       {album.coverImageUrl ? (
         <>
@@ -258,6 +323,157 @@ function AlbumBookCard({
         className="pointer-events-none absolute inset-y-0 left-0 w-3"
         style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.15) 0%, transparent 100%)' }}
       />
+    </div>
+  );
+}
+
+// ─── AlbumManager ────────────────────────────────────────────────────────────
+
+function AlbumManager({
+  albums,
+  drafts,
+  onDraftChange,
+  onResetAlbum,
+  onSave,
+  onCancel,
+}: {
+  albums: Album[];
+  drafts: AlbumOverrides;
+  onDraftChange: (albumId: string, patch: AlbumOverride) => void;
+  onResetAlbum: (albumId: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="mx-auto w-full max-w-xl overflow-y-auto px-4 pb-6 pt-5"
+      style={{ height: 'calc(100dvh - 72px)' }}
+    >
+      <header className="mb-4 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-xl border border-stone-300 bg-white/85 px-3 py-1.5 text-xs text-stone-700 transition active:scale-95"
+        >
+          ‹
+        </button>
+        <div className="min-w-0 text-center">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-stone-400">Album Settings</p>
+          <h1 className="text-xl text-stone-800" style={{ fontFamily: 'var(--app-heading-family)' }}>
+            相冊設定
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={onSave}
+          className="rounded-xl border border-stone-800 bg-stone-800 px-3 py-1.5 text-xs text-white transition active:scale-95"
+        >
+          儲存
+        </button>
+      </header>
+
+      <div className="space-y-4">
+        {albums.map((album) => {
+          const draft = drafts[album.id] ?? {};
+          const titleValue = draft.title ?? '';
+          const subtitleValue = draft.subtitle ?? '';
+          const coverImageValue = draft.coverImage ?? '';
+          const coverFitValue = draft.coverFit ?? album.coverFit ?? 'cover';
+
+          return (
+            <section key={album.id} className="space-y-2 rounded-2xl border border-stone-300 bg-white/90 p-3 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium text-stone-800">{album.title}</p>
+                <button
+                  type="button"
+                  onClick={() => onResetAlbum(album.id)}
+                  className="rounded-lg border border-stone-300 px-2 py-1 text-[11px] text-stone-600 transition active:scale-95"
+                >
+                  還原預設
+                </button>
+              </div>
+
+              <label className="block space-y-1">
+                <span className="text-[11px] text-stone-500">名稱</span>
+                <input
+                  type="text"
+                  value={titleValue}
+                  onChange={(event) => onDraftChange(album.id, { title: event.target.value })}
+                  placeholder={album.title}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-[11px] text-stone-500">標籤（副標）</span>
+                <input
+                  type="text"
+                  value={subtitleValue}
+                  onChange={(event) => onDraftChange(album.id, { subtitle: event.target.value })}
+                  placeholder={album.subtitle}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-[11px] text-stone-500">封面圖 URL（可留空）</span>
+                <input
+                  type="url"
+                  value={coverImageValue}
+                  onChange={(event) => onDraftChange(album.id, { coverImage: event.target.value })}
+                  placeholder={album.coverImage || 'https://...'}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+                />
+              </label>
+
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-300 px-3 py-1.5 text-xs text-stone-700">
+                上傳封面
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.currentTarget.value = '';
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const result = typeof reader.result === 'string' ? reader.result : '';
+                      if (result) onDraftChange(album.id, { coverImage: result });
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onDraftChange(album.id, { coverFit: 'cover' })}
+                  className={`rounded-lg border px-2 py-1.5 text-xs transition active:scale-95 ${
+                    coverFitValue === 'cover'
+                      ? 'border-stone-800 bg-stone-800 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  滿版裁切
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDraftChange(album.id, { coverFit: 'contain' })}
+                  className={`rounded-lg border px-2 py-1.5 text-xs transition active:scale-95 ${
+                    coverFitValue === 'contain'
+                      ? 'border-stone-800 bg-stone-800 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  完整顯示
+                </button>
+              </div>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
