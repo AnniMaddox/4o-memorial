@@ -471,18 +471,22 @@ export function CalendarPage({
             type="button"
             onClick={() => goToNeighborMonth(-1)}
             disabled={currentMonthIndex <= 0}
-            className="calendar-nav-btn rounded-lg px-3 py-1 text-sm text-stone-700"
+            className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+            aria-label="上一月"
+            title="上一月"
           >
-            上一月
+            ‹
           </button>
           <h1 className="text-2xl text-stone-900">{monthLabel(monthKey)}</h1>
           <button
             type="button"
             onClick={() => goToNeighborMonth(1)}
             disabled={currentMonthIndex < 0 || currentMonthIndex >= monthKeys.length - 1}
-            className="calendar-nav-btn rounded-lg px-3 py-1 text-sm text-stone-700"
+            className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+            aria-label="下一月"
+            title="下一月"
           >
-            下一月
+            ›
           </button>
         </div>
 
@@ -491,18 +495,22 @@ export function CalendarPage({
             type="button"
             onClick={goToCurrentMonth}
             disabled={monthKey === currentMonthKey}
-            className="calendar-nav-btn rounded-lg px-3 py-1 text-sm text-stone-700"
+            className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+            aria-label="回當月"
+            title="回當月"
           >
-            回當月
+            ◎
           </button>
           <button
             type="button"
             onClick={() => setMonthPickerOpen((open) => !open)}
-            className={`calendar-nav-btn rounded-lg px-3 py-1 text-sm text-stone-700 ${
+            className={`calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700 ${
               monthPickerOpen ? 'calendar-nav-btn-active' : ''
             }`}
+            aria-label={monthPickerOpen ? '收起月份' : '選擇月份'}
+            title={monthPickerOpen ? '收起月份' : '選擇月份'}
           >
-            {monthPickerOpen ? '收起月份' : '點選月份'}
+            {monthPickerOpen ? '▴' : '▾'}
           </button>
         </div>
 

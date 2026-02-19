@@ -128,6 +128,8 @@ type AppearancePresetPayload = {
     homeWidgetBadgeText: string;
     homeWidgetIconDataUrl: string;
     inboxTitle: string;
+    memorialStartDate: string;
+    diaryCoverFitMode: AppSettings['diaryCoverFitMode'];
     appLabels: AppLabels;
   };
 };
@@ -205,6 +207,7 @@ export function SettingsPage({
   const [homeWidgetBadgeDraft, setHomeWidgetBadgeDraft] = useState(settings.homeWidgetBadgeText);
   const [homeWidgetSubtitleDraft, setHomeWidgetSubtitleDraft] = useState(settings.homeWidgetSubtitle);
   const [inboxTitleDraft, setInboxTitleDraft] = useState(settings.inboxTitle);
+  const [memorialStartDateDraft, setMemorialStartDateDraft] = useState(settings.memorialStartDate);
   const [newProfileDraft, setNewProfileDraft] = useState<Omit<ChatProfile, 'id'>>({
     name: '',
     leftNick: 'M',
@@ -237,6 +240,7 @@ export function SettingsPage({
     setHomeWidgetBadgeDraft(settings.homeWidgetBadgeText);
     setHomeWidgetSubtitleDraft(settings.homeWidgetSubtitle);
     setInboxTitleDraft(settings.inboxTitle);
+    setMemorialStartDateDraft(settings.memorialStartDate);
   }, [
     settings.customFontFileUrl,
     settings.customFontFamily,
@@ -251,6 +255,7 @@ export function SettingsPage({
     settings.homeWidgetBadgeText,
     settings.homeWidgetSubtitle,
     settings.inboxTitle,
+    settings.memorialStartDate,
   ]);
 
   useEffect(() => {
@@ -391,6 +396,8 @@ export function SettingsPage({
         homeWidgetBadgeText: settings.homeWidgetBadgeText,
         homeWidgetIconDataUrl: settings.homeWidgetIconDataUrl,
         inboxTitle: settings.inboxTitle,
+        memorialStartDate: settings.memorialStartDate,
+        diaryCoverFitMode: settings.diaryCoverFitMode,
         appLabels: settings.appLabels,
       },
     };
@@ -518,6 +525,12 @@ export function SettingsPage({
       if (typeof source.inboxTitle === 'string') {
         next.inboxTitle = source.inboxTitle;
       }
+      if (typeof source.memorialStartDate === 'string') {
+        next.memorialStartDate = source.memorialStartDate;
+      }
+      if (source.diaryCoverFitMode === 'cover' || source.diaryCoverFitMode === 'contain') {
+        next.diaryCoverFitMode = source.diaryCoverFitMode;
+      }
       if (source.appLabels && typeof source.appLabels === 'object') {
         const input = source.appLabels as Partial<AppLabels>;
         next.appLabels = {
@@ -584,6 +597,7 @@ export function SettingsPage({
       homeWidgetBadgeText: homeWidgetBadgeDraft.trim(),
       homeWidgetSubtitle: homeWidgetSubtitleDraft.trim(),
       inboxTitle: inboxTitleDraft.trim(),
+      memorialStartDate: memorialStartDateDraft.trim(),
     });
     setHomeTextStatus('已儲存');
     window.setTimeout(() => setHomeTextStatus(''), 1200);
@@ -1075,6 +1089,17 @@ export function SettingsPage({
               />
             </div>
 
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">想你的第 N 天起始日</p>
+              <input
+                type="date"
+                value={memorialStartDateDraft}
+                onChange={(e) => { setMemorialStartDateDraft(e.target.value); setHomeTextStatus(''); }}
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-stone-500">留空會顯示未設定（N 先顯示 1）。</p>
+            </div>
+
             <button
               type="button"
               onClick={applyHomeTextSettings}
@@ -1509,6 +1534,30 @@ export function SettingsPage({
                   className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
                 >
                   使用資料夾隨機封面
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ diaryCoverFitMode: 'cover' })}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    settings.diaryCoverFitMode === 'cover'
+                      ? 'border-stone-900 bg-stone-900 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  滿版裁切
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ diaryCoverFitMode: 'contain' })}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    settings.diaryCoverFitMode === 'contain'
+                      ? 'border-stone-900 bg-stone-900 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  完整顯示
                 </button>
               </div>
               <p className="text-xs text-stone-400">若未設定網址，會嘗試用 `public/diary-covers/` 裡的圖片隨機顯示。</p>

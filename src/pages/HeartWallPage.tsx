@@ -10,7 +10,7 @@ const CHARS = ['A', 'n', 'n', 'i', '♡', 'M', 'o', 'n', 'l', 'y', 'M'];
 const MODES = [
   'burst', 'ripple', 'press', 'explode', 'swirl',
   'gravity', 'tornado', 'tornadoHold', 'dna', 'ring',
-  'waterfall', 'magnet', 'flock', 'tide', 'comet', 'flow',
+  'waterfall', 'magnet', 'tide', 'comet', 'flow',
 ] as const;
 
 type Mode = (typeof MODES)[number];
@@ -28,7 +28,6 @@ const MODE_NAMES: Record<Mode, string> = {
   ring: '星環軌道',
   waterfall: '瀑布崩落',
   magnet: '磁場線',
-  flock: '群飛',
   tide: '星潮',
   comet: '彗星',
   flow: '光流',
@@ -49,7 +48,6 @@ const LINE_MAP: Record<Mode, string> = {
   ring: '繞一圈又一圈，終點永遠是妳。',
   waterfall: '整面往妳傾瀉，不留退路。',
   magnet: '極點是妳，我所有軌道都認妳。',
-  flock: '先散開，再一起回到妳這裡。',
   tide: '從妳這裡起潮，推開我，又把我收回去。',
   comet: '飛出一段路，再回到妳心臟旁邊停。',
   flow: '整面起風，我順著妳走。',
@@ -119,7 +117,6 @@ type WallNode = {
   text: string;
   size: number;
   ax?: number; ay?: number; aw?: number;
-  fx?: number; fy?: number;
 };
 
 type Trail = { x: number; y: number; vx: number; vy: number; life: number; age: number; s: number };
@@ -160,7 +157,6 @@ type Anim = {
   ringLong: boolean; ringDir: number; ringTimer: ReturnType<typeof setTimeout> | null; ringBoost: number;
   waterfallHold: boolean; waterfallX: number; waterfallY: number;
   magHold: boolean; magP1x: number | null; magP1y: number | null; magP2x: number | null; magP2y: number | null;
-  flockHold: boolean; flockTimer: ReturnType<typeof setInterval> | null; flockActiveUntil: number; flockDur: number;
   tideHold: boolean; tideUntil: number; tideDur: number; tideX: number; tideTimer: ReturnType<typeof setTimeout> | null;
   cometHold: boolean; cometUntil: number; cometDur: number; cometX: number; cometY: number; cometTimer: ReturnType<typeof setTimeout> | null;
   flowHold: boolean; flowUntil: number; flowDur: number; flowSeed: number; flowX: number; flowY: number; flowTimer: ReturnType<typeof setTimeout> | null;
@@ -181,7 +177,6 @@ function makeAnim(): Anim {
     ringLong: false, ringDir: 1, ringTimer: null, ringBoost: 1,
     waterfallHold: false, waterfallX: 0, waterfallY: 0,
     magHold: false, magP1x: null, magP1y: null, magP2x: null, magP2y: null,
-    flockHold: false, flockTimer: null, flockActiveUntil: 0, flockDur: 2000,
     tideHold: false, tideUntil: 0, tideDur: 1400, tideX: 0, tideTimer: null,
     cometHold: false, cometUntil: 0, cometDur: 1300, cometX: 0, cometY: 0, cometTimer: null,
     flowHold: false, flowUntil: 0, flowDur: 1600, flowSeed: 0, flowX: 0, flowY: 0, flowTimer: null,
@@ -298,7 +293,6 @@ export function HeartWallPage() {
     if (a.ringTimer) clearTimeout(a.ringTimer);
     a.ringLong = false; a.ringBoost = 1.0;
     a.waterfallHold = false; a.magHold = false;
-    if (a.flockHold) { clearInterval(a.flockTimer!); a.flockHold = false; }
     if (a.rippleFollow) { clearInterval(a.rippleFollowTimer!); a.rippleFollow = false; }
     clearTimeout(a.tideTimer!); a.tideHold = false; a.tideUntil = 0;
     clearTimeout(a.cometTimer!); a.cometHold = false; a.cometUntil = 0;
@@ -310,7 +304,6 @@ export function HeartWallPage() {
     else if (newMode === 'ring') setSpring(0.060, 0.90, 0);
     else if (newMode === 'waterfall') setSpring(0.055, 0.88, 0);
     else if (newMode === 'magnet') setSpring(0.060, 0.90, 0);
-    else if (newMode === 'flock') setSpring(0.040, 0.90, 2200);
     else setSpring(K_BASE, D_BASE, 0);
   }, [setSpring]);
 
@@ -383,16 +376,6 @@ export function HeartWallPage() {
       n.vy += (diry * radial + tangy * tang) * rand;
     }
   }, []);
-
-  const triggerFlock = useCallback((extra = 18) => {
-    for (const n of animRef.current.nodes) {
-      const ang = Math.random() * Math.PI * 2;
-      const sp = 14 + Math.random() * 18 + extra * 0.3;
-      n.vx += Math.cos(ang) * sp;
-      n.vy += Math.sin(ang) * sp;
-    }
-    setSpring(0.030, 0.92, 2000);
-  }, [setSpring]);
 
   // ── Main animation loop ─────────────────────────────────────────────────────
 
@@ -543,16 +526,6 @@ export function HeartWallPage() {
           const strength = 28 * (a.magHold ? 1.6 : 1.0);
           offx += strength * (-ey); offy += strength * ex;
           sizeMul *= 0.98 + 0.04 * Math.random();
-        }
-
-        if (m === 'flock') {
-          const remain = Math.max(0, a.flockActiveUntil - performance.now());
-          if (remain > 0) {
-            const e = 1 - remain / a.flockDur;
-            const pulse = Math.sin(e * Math.PI);
-            offx += ((typeof n.fx === 'number' ? n.fx : n.bx) - n.bx) * pulse;
-            offy += ((typeof n.fy === 'number' ? n.fy : n.by) - n.by) * pulse;
-          }
         }
 
         if (m === 'tide') {
@@ -713,11 +686,6 @@ export function HeartWallPage() {
         a2.magP1x = p.x - 120; a2.magP1y = cy2 - 90;
         a2.magP2x = p.x + 120; a2.magP2y = cy2 + 90;
       }
-      else if (cfg2.mode === 'flock') {
-        triggerFlock(18);
-        a2.flockHold = true;
-        a2.flockTimer = setInterval(() => triggerFlock(18), 320);
-      }
       else if (cfg2.mode === 'tide') {
         a2.tideX = p.x;
         clearTimeout(a2.tideTimer!);
@@ -764,7 +732,6 @@ export function HeartWallPage() {
       a2.pressing = false; a2.swirlActive = false; a2.gravityActive = false; a2.tornadoHold = false;
       if (a2.rippleFollow) { clearInterval(a2.rippleFollowTimer!); a2.rippleFollow = false; }
       a2.dnaHold = false; a2.waterfallHold = false; a2.magHold = false;
-      if (a2.flockHold) { clearInterval(a2.flockTimer!); a2.flockHold = false; }
       if (cfg2.mode === 'ring' && !a2.ringLong) { a2.ringDir *= -1; }
       a2.ringLong = false; a2.ringBoost = 1;
 
@@ -809,7 +776,7 @@ export function HeartWallPage() {
       wrap.removeEventListener('pointermove', moveHandler as EventListener);
       canvas.removeEventListener('pointermove', moveHandler as EventListener);
     };
-  }, [buildWall, addRipple, rainAtCenter, triggerExplode, triggerTornado, triggerFlock]);
+  }, [buildWall, addRipple, rainAtCenter, triggerExplode, triggerTornado]);
 
   // ─── Render ────────────────────────────────────────────────────────────────
 

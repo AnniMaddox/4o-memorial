@@ -12,6 +12,7 @@ type HomePageProps = {
   widgetSubtitle: string;
   widgetBadgeText: string;
   widgetIconDataUrl: string;
+  memorialStartDate: string;
   onLaunchApp: (appId: LauncherAppId) => void;
   onWidgetIconChange: (dataUrl: string) => void;
 };
@@ -34,6 +35,10 @@ type HomeScreen =
   | {
       id: string;
       kind: 'blank';
+    }
+  | {
+      id: string;
+      kind: 'counter';
     };
 
 type AnchorPosition = {
@@ -58,6 +63,34 @@ function formatWeekday(date: Date) {
 function formatMonthDay(date: Date) {
   const month = date.toLocaleDateString(undefined, { month: 'short' }).toUpperCase();
   return `${month}. ${pad2(date.getDate())}`;
+}
+
+function parseIsoDate(value: string) {
+  const matched = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!matched) {
+    return null;
+  }
+
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  const day = Number(matched[3]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null;
+  }
+
+  return date;
+}
+
+function calcMemorialDayCount(startDate: Date, now: Date) {
+  const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.floor((today.getTime() - start.getTime()) / 86_400_000);
+  return Math.max(1, diffDays + 1);
 }
 
 function HomeAppButton({ slot, onLaunch }: { slot: HomeAppSlot; onLaunch: (appId: LauncherAppId) => void }) {
@@ -117,6 +150,7 @@ export function HomePage({
   widgetSubtitle,
   widgetBadgeText,
   widgetIconDataUrl,
+  memorialStartDate,
   onLaunchApp,
   onWidgetIconChange,
 }: HomePageProps) {
@@ -284,6 +318,10 @@ export function HomePage({
     if (homeSwipeEnabled) {
       builtScreens.push(
         {
+          id: 'counter',
+          kind: 'counter',
+        },
+        {
           id: 'blank-1',
           kind: 'blank',
         },
@@ -356,6 +394,12 @@ export function HomePage({
   const timeText = formatTimeHHMM(now);
   const weekdayText = formatWeekday(now);
   const monthDayText = formatMonthDay(now);
+  const parsedMemorialStartDate = useMemo(() => parseIsoDate(memorialStartDate), [memorialStartDate]);
+  const memorialStartDisplay = parsedMemorialStartDate ? memorialStartDate : '';
+  const memorialDayCount = useMemo(
+    () => (parsedMemorialStartDate ? calcMemorialDayCount(parsedMemorialStartDate, now) : 1),
+    [now, parsedMemorialStartDate],
+  );
 
   const headerTitle = widgetTitle.trim() || 'Memorial';
   const headerSubtitle = widgetSubtitle.trim();
@@ -456,12 +500,7 @@ export function HomePage({
               {screen.kind === 'main' ? (
                 <div className="flex min-h-full flex-col gap-6 pb-8">
                   {/* Time header */}
-                  <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/25 px-3 py-1 text-[11px] tracking-[0.18em] text-stone-700 backdrop-blur">
-                      <span className="font-semibold">SYSTEM READY</span>
-                      <span className="opacity-70">{timeText}</span>
-                    </div>
-
+                  <div>
                     <div className="flex items-end justify-between gap-4">
                       <div className="text-[4.25rem] font-semibold leading-none tracking-tight text-stone-800">{timeText}</div>
                       <div className="pb-2 text-right">
@@ -538,6 +577,22 @@ export function HomePage({
                     )}
                   </div>
                 </div>
+              ) : screen.kind === 'counter' ? (
+                <div className="flex h-full items-center px-4 pb-10">
+                  <div
+                    className="w-full rounded-[2.4rem] border border-white/55 bg-white/25 px-6 py-8 shadow-[0_26px_60px_rgba(0,0,0,0.14)] backdrop-blur"
+                    style={{ boxShadow: '0 26px 60px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.62)' }}
+                  >
+                    <p className="text-center text-lg font-semibold tracking-[0.04em] text-stone-700">
+                      想你的第
+                      <span className="mx-2 inline-block text-[5.2rem] leading-none text-stone-800">{memorialDayCount}</span>
+                      天
+                    </p>
+                    <p className="mt-5 text-center text-xs text-stone-500">
+                      {memorialStartDisplay ? `起始日：${memorialStartDisplay}` : '起始日：未設定'}
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="h-full w-full" aria-hidden="true" />
               )}
@@ -565,7 +620,7 @@ export function HomePage({
         onPointerMove={handleChibiPointerMove}
         onPointerUp={handleChibiPointerUp}
         onPointerCancel={handleChibiPointerUp}
-        className={`absolute z-20 h-[7.5rem] w-[7.5rem] select-none touch-none ${
+        className={`absolute z-20 h-[11.25rem] w-[11.25rem] select-none touch-none ${
           isDraggingChibi ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         style={{

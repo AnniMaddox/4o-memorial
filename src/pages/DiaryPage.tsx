@@ -29,9 +29,11 @@ function pickRandom<T>(arr: T[]): T | null {
 export function DiaryPage({
   diaryCoverImageUrl = '',
   diaryFontFamily = '',
+  diaryCoverFitMode = 'cover',
 }: {
   diaryCoverImageUrl?: string;
   diaryFontFamily?: string;
+  diaryCoverFitMode?: 'cover' | 'contain';
 }) {
   const [entries, setEntries] = useState<StoredDiary[]>([]);
   const [openEntry, setOpenEntry] = useState<StoredDiary | null>(null);
@@ -74,6 +76,7 @@ export function DiaryPage({
   return (
     <DiaryBookCover
       coverSrc={coverSrc}
+      coverFitMode={diaryCoverFitMode}
       entryCount={entries.length}
       onOpen={openRandom}
     />
@@ -84,10 +87,12 @@ export function DiaryPage({
 
 function DiaryBookCover({
   coverSrc,
+  coverFitMode,
   entryCount,
   onOpen,
 }: {
   coverSrc: string;
+  coverFitMode: 'cover' | 'contain';
   entryCount: number;
   onOpen: () => void;
 }) {
@@ -99,12 +104,38 @@ function DiaryBookCover({
     >
       {/* Cover image or gradient fallback */}
       {coverSrc ? (
-        <img
-          src={coverSrc}
-          alt=""
-          draggable={false}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+        <>
+          {coverFitMode === 'cover' ? (
+            <img
+              src={coverSrc}
+              alt=""
+              draggable={false}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <>
+              <img
+                src={coverSrc}
+                alt=""
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-cover opacity-35 blur-xl"
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'linear-gradient(165deg, rgba(17,24,39,0.28) 0%, rgba(17,24,39,0.12) 55%, rgba(17,24,39,0.26) 100%)',
+                }}
+              />
+              <img
+                src={coverSrc}
+                alt=""
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-contain p-4"
+              />
+            </>
+          )}
+        </>
       ) : (
         <div
           className="absolute inset-0"

@@ -9,6 +9,7 @@ export type HoverToneWeights = {
 export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
+export type DiaryCoverFitMode = 'cover' | 'contain';
 export type TabIconKey = 'home' | 'inbox' | 'calendar' | 'tarot' | 'letters' | 'heart' | 'list' | 'fitness' | 'diary' | 'settings';
 export type TabIconUrls = Record<TabIconKey, string>;
 export type AppLabelKey =
@@ -74,6 +75,7 @@ export type AppSettings = {
   homeWidgetBadgeText: string;
   homeWidgetIconDataUrl: string;
   inboxTitle: string;
+  memorialStartDate: string;
   backgroundMode: BackgroundMode;
   backgroundGradientStart: string;
   backgroundGradientEnd: string;
@@ -94,6 +96,7 @@ export type AppSettings = {
   letterFontUrl: string;
   diaryCoverImageUrl: string;
   diaryFontUrl: string;
+  diaryCoverFitMode: DiaryCoverFitMode;
 };
 
 export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
@@ -126,6 +129,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   homeWidgetBadgeText: 'ACTIVE',
   homeWidgetIconDataUrl: '',
   inboxTitle: 'Memorial Mailroom',
+  memorialStartDate: '',
   backgroundMode: 'gradient',
   backgroundGradientStart: '#fde9d7',
   backgroundGradientEnd: '#ece4d5',
@@ -146,4 +150,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   letterFontUrl: '',
   diaryCoverImageUrl: '',
   diaryFontUrl: '',
+  diaryCoverFitMode: 'cover',
 };

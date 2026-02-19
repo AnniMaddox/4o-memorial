@@ -839,6 +839,7 @@ function App() {
             widgetSubtitle={settings.homeWidgetSubtitle}
             widgetBadgeText={settings.homeWidgetBadgeText}
             widgetIconDataUrl={settings.homeWidgetIconDataUrl}
+            memorialStartDate={settings.memorialStartDate}
             onLaunchApp={onLaunchApp}
             onWidgetIconChange={(dataUrl) => {
               void onSettingChange({ homeWidgetIconDataUrl: dataUrl });
@@ -1198,6 +1199,7 @@ function App() {
                   <DiaryPage
                     diaryCoverImageUrl={settings.diaryCoverImageUrl}
                     diaryFontFamily={diaryFontFamily}
+                    diaryCoverFitMode={settings.diaryCoverFitMode}
                   />
                 </div>
               </div>

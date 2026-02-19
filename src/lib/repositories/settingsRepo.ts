@@ -1,6 +1,14 @@
 import { getDb } from '../db';
 
-import type { AppLabels, AppSettings, BackgroundMode, CalendarColorMode, ChatBubbleStyle, TabIconUrls } from '../../types/settings';
+import type {
+  AppLabels,
+  AppSettings,
+  BackgroundMode,
+  CalendarColorMode,
+  ChatBubbleStyle,
+  DiaryCoverFitMode,
+  TabIconUrls,
+} from '../../types/settings';
 import { DEFAULT_SETTINGS } from '../../types/settings';
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
@@ -25,6 +33,10 @@ function normalizeBackgroundMode(value: unknown, fallback: BackgroundMode): Back
 
 function normalizeChatBubbleStyle(value: unknown, fallback: ChatBubbleStyle): ChatBubbleStyle {
   return value === 'jelly' || value === 'imessage' || value === 'imessageClassic' ? value : fallback;
+}
+
+function normalizeDiaryCoverFitMode(value: unknown, fallback: DiaryCoverFitMode): DiaryCoverFitMode {
+  return value === 'cover' || value === 'contain' ? value : fallback;
 }
 
 function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrls {
@@ -126,10 +138,15 @@ export async function getSettings() {
     homeWidgetBadgeText: normalizeString(persisted.homeWidgetBadgeText, DEFAULT_SETTINGS.homeWidgetBadgeText),
     homeWidgetIconDataUrl: normalizeString(persisted.homeWidgetIconDataUrl, DEFAULT_SETTINGS.homeWidgetIconDataUrl),
     inboxTitle: normalizeString(persisted.inboxTitle, DEFAULT_SETTINGS.inboxTitle),
+    memorialStartDate: normalizeString(persisted.memorialStartDate, DEFAULT_SETTINGS.memorialStartDate),
     tarotGalleryImageUrl: normalizeString(persisted.tarotGalleryImageUrl, DEFAULT_SETTINGS.tarotGalleryImageUrl),
     letterFontUrl: normalizeString(persisted.letterFontUrl, DEFAULT_SETTINGS.letterFontUrl),
     diaryCoverImageUrl: normalizeString(persisted.diaryCoverImageUrl, DEFAULT_SETTINGS.diaryCoverImageUrl),
     diaryFontUrl: normalizeString(persisted.diaryFontUrl, DEFAULT_SETTINGS.diaryFontUrl),
+    diaryCoverFitMode: normalizeDiaryCoverFitMode(
+      persisted.diaryCoverFitMode,
+      DEFAULT_SETTINGS.diaryCoverFitMode,
+    ),
     backgroundMode: normalizeBackgroundMode(persisted.backgroundMode, DEFAULT_SETTINGS.backgroundMode),
     backgroundGradientStart: normalizeString(persisted.backgroundGradientStart, DEFAULT_SETTINGS.backgroundGradientStart),
     backgroundGradientEnd: normalizeString(persisted.backgroundGradientEnd, DEFAULT_SETTINGS.backgroundGradientEnd),
