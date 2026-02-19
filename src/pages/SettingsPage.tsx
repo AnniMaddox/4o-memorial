@@ -691,7 +691,7 @@ export function SettingsPage({
             </label>
 
             <label className="block space-y-2">
-              <span>全域字體顏色</span>
+              <span>首頁字體顏色</span>
               <input
                 type="color"
                 value={settings.globalTextColor}

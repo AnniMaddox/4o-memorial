@@ -126,26 +126,26 @@ textarea {
   overflow: hidden;
 }
 
-.app-shell {
-  color: rgb(var(--app-text-rgb) / 1);
-}
-
-/* Let one color control the common stone text utilities across pages. */
-.app-shell [class*='text-stone-9'],
-.app-shell [class*='text-stone-8'] {
+/* Home-only text tint (from settings "globalTextColor"). */
+.home-page-root {
   color: rgb(var(--app-text-rgb) / 1) !important;
 }
 
-.app-shell [class*='text-stone-7'] {
+.home-page-root [class*='text-stone-9'],
+.home-page-root [class*='text-stone-8'] {
+  color: rgb(var(--app-text-rgb) / 1) !important;
+}
+
+.home-page-root [class*='text-stone-7'] {
   color: rgb(var(--app-text-rgb) / 0.9) !important;
 }
 
-.app-shell [class*='text-stone-6'] {
+.home-page-root [class*='text-stone-6'] {
   color: rgb(var(--app-text-rgb) / 0.78) !important;
 }
 
-.app-shell [class*='text-stone-5'],
-.app-shell [class*='text-stone-4'] {
+.home-page-root [class*='text-stone-5'],
+.home-page-root [class*='text-stone-4'] {
   color: rgb(var(--app-text-rgb) / 0.64) !important;
 }
 

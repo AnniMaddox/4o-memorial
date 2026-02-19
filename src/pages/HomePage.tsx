@@ -444,7 +444,7 @@ export function HomePage({
   );
 
   return (
-    <div ref={homeRootRef} className="relative mx-auto h-full w-full max-w-xl">
+    <div ref={homeRootRef} className="home-page-root relative mx-auto h-full w-full max-w-xl">
       <div
         ref={pagerRef}
         className={`h-full w-full snap-x snap-mandatory overflow-y-hidden ${homeSwipeEnabled ? 'overflow-x-auto' : 'overflow-x-hidden'}`}
