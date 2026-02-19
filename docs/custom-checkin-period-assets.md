@@ -81,3 +81,10 @@
 1. 把檔案丟到上面對應資料夾。
 2. push 到 GitHub。
 3. 等部署完成後重整即可生效。
+
+## 空白模板（可直接複製改名）
+- `public/data/checkin/checkin_phrases.blank.json`
+- `public/data/checkin/checkin_milestones.blank.json`
+- `public/data/period/period_hover_phrases.blank.json`
+- `public/data/period/period_chibi_phrases.blank.json`
+- `public/data/period/period_post_end_phrases.blank.json`
