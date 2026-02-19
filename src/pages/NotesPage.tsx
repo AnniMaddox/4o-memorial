@@ -1,0 +1,538 @@
+import { useEffect, useRef, useState } from 'react';
+import {
+  clearAllNotes,
+  deleteNote,
+  generateNoteId,
+  importNotes,
+  isValidNote,
+  loadNotes,
+  saveNote,
+} from '../lib/noteDB';
+import type { StoredNote } from '../lib/noteDB';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+// All chibi images (00 included, full pool)
+const CHIBI_MODULES = import.meta.glob(
+  '../../public/chibi/chibi-*.png',
+  { eager: true, import: 'default' },
+) as Record<string, string>;
+const ALL_CHIBI_SRCS = Object.values(CHIBI_MODULES);
+
+function randomChibiSrc(): string {
+  if (ALL_CHIBI_SRCS.length === 0) return '';
+  return ALL_CHIBI_SRCS[Math.floor(Math.random() * ALL_CHIBI_SRCS.length)]!;
+}
+
+// 10 note colours
+export const NOTE_COLORS = [
+  '#FFF3B0', // 蜜黃
+  '#FFE0C8', // 蜜桃
+  '#FFD1DC', // 玫瑰
+  '#FFB8A8', // 珊瑚
+  '#E8D5F5', // 薰衣草
+  '#D4B8E0', // 丁香紫
+  '#C0E4F8', // 天空藍
+  '#C8F0D8', // 薄荷綠
+  '#D4E8C2', // 鼠尾草
+  '#FFF8F0', // 奶白
+] as const;
+
+type NoteView = 'wall' | 'timeline';
+
+// Deterministic rotation -2…+2 degrees from note id
+function noteRotDeg(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = ((h * 31 + id.charCodeAt(i)) | 0);
+  return (((h % 5) + 5) % 5) - 2;
+}
+
+function todayDateStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── NotesPage ────────────────────────────────────────────────────────────────
+
+export function NotesPage({
+  onExit,
+  notesFontSize = 13,
+  notesTextColor = '#44403c',
+}: {
+  onExit: () => void;
+  notesFontSize?: number;
+  notesTextColor?: string;
+}) {
+  const [notes, setNotes] = useState<StoredNote[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [view, setView] = useState<NoteView>('wall');
+  // Random chibi picked once per page mount, won't reroll until unmount
+  const [chibiSrc] = useState(randomChibiSrc);
+  const [composing, setComposing] = useState(false);
+  const [editingNote, setEditingNote] = useState<StoredNote | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    loadNotes()
+      .then((data) => { setNotes(data); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  const refreshNotes = async () => {
+    const updated = await loadNotes();
+    setNotes(updated);
+  };
+
+  const handleSave = async (note: StoredNote) => {
+    await saveNote(note);
+    await refreshNotes();
+    setComposing(false);
+    setEditingNote(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteNote(id);
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    setEditingNote(null);
+  };
+
+  const handleClearAll = async () => {
+    await clearAllNotes();
+    setNotes([]);
+    setShowSettings(false);
+  };
+
+  const handleImport = async (imported: StoredNote[]) => {
+    await importNotes(imported);
+    await refreshNotes();
+  };
+
+  return (
+    <div className="relative flex h-full flex-col overflow-hidden" style={{ background: '#fdf6ee' }}>
+
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <header
+        className="shrink-0 flex items-center gap-3 border-b border-stone-200/70 px-4 pb-3 pt-4"
+        style={{ background: '#fdf6ee' }}
+      >
+        <button
+          type="button"
+          onClick={onExit}
+          className="rounded-xl border border-stone-300 bg-white/80 px-3 py-1.5 text-sm text-stone-600 transition active:scale-95"
+        >
+          ‹
+        </button>
+
+        <div className="flex-1 text-center">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-stone-400">Notes</p>
+          <h1
+            className="text-lg leading-tight text-stone-800"
+            style={{ fontFamily: 'var(--app-heading-family)' }}
+          >
+            心情日記
+          </h1>
+        </div>
+
+        {/* View toggle */}
+        <div className="flex overflow-hidden rounded-xl border border-stone-300 bg-white/80 text-xs">
+          <button
+            type="button"
+            onClick={() => setView('wall')}
+            className={`px-3 py-1.5 transition ${view === 'wall' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
+          >
+            牆
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('timeline')}
+            className={`px-3 py-1.5 transition ${view === 'timeline' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
+          >
+            流
+          </button>
+        </div>
+      </header>
+
+      {/* ── Content ─────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto pb-56 pt-4">
+        {!loaded ? (
+          <div className="flex h-full items-center justify-center text-sm text-stone-400">載入中…</div>
+        ) : notes.length === 0 ? (
+          <NoteEmptyState />
+        ) : view === 'wall' ? (
+          <NoteWall notes={notes} onTap={setEditingNote} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
+        ) : (
+          <NoteTimeline notes={notes} onTap={setEditingNote} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
+        )}
+      </div>
+
+      {/* ── Bottom FAB row ───────────────────────────────────────── */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between pl-4 pr-5 pb-4">
+        {/* + New note */}
+        <button
+          type="button"
+          onClick={() => { setEditingNote(null); setComposing(true); }}
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-stone-800 text-2xl text-white shadow-lg transition active:scale-90"
+        >
+          +
+        </button>
+        {/* Chibi → settings */}
+        <button
+          type="button"
+          onClick={() => setShowSettings(true)}
+          className="pointer-events-auto transition active:scale-90"
+          aria-label="設定 / 匯出"
+        >
+          <img
+            src={chibiSrc}
+            alt=""
+            draggable={false}
+            className="calendar-chibi w-36 select-none drop-shadow-md"
+          />
+        </button>
+      </div>
+
+      {/* ── Compose / Edit sheet ─────────────────────────────────── */}
+      {(composing || editingNote) && (
+        <NoteComposeSheet
+          initial={editingNote}
+          onSave={(note) => void handleSave(note)}
+          onDelete={editingNote ? () => void handleDelete(editingNote.id) : undefined}
+          onClose={() => { setComposing(false); setEditingNote(null); }}
+        />
+      )}
+
+      {/* ── Settings sheet ───────────────────────────────────────── */}
+      {showSettings && (
+        <NoteSettingsSheet
+          notes={notes}
+          onImport={(imported) => void handleImport(imported)}
+          onClearAll={() => void handleClearAll()}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── NoteEmptyState ───────────────────────────────────────────────────────────
+
+function NoteEmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center pt-20 text-center">
+      <p className="mb-3 text-5xl">📝</p>
+      <p className="text-base text-stone-500">還沒有心情日記</p>
+      <p className="mt-1 text-sm text-stone-400">點左下角 + 寫下第一個想法</p>
+    </div>
+  );
+}
+
+// ─── NoteWall ─────────────────────────────────────────────────────────────────
+
+function NoteWall({ notes, onTap, notesFontSize, notesTextColor }: { notes: StoredNote[]; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
+  return (
+    <div className="px-3" style={{ columns: 2, columnGap: '0.75rem' }}>
+      {notes.map((note) => (
+        <StickyNote key={note.id} note={note} onTap={onTap} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
+      ))}
+    </div>
+  );
+}
+
+function StickyNote({ note, onTap, notesFontSize, notesTextColor }: { note: StoredNote; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
+  const rot = noteRotDeg(note.id);
+  const dateStr = new Date(note.createdAt).toLocaleDateString('zh-TW', {
+    month: 'short', day: 'numeric',
+  });
+
+  return (
+    <div
+      className="mb-3 break-inside-avoid cursor-pointer select-none rounded-2xl p-3.5 shadow-sm transition active:scale-95"
+      style={{ background: note.color, transform: `rotate(${rot}deg)` }}
+      onClick={() => onTap(note)}
+    >
+      <p
+        className="line-clamp-6 whitespace-pre-wrap leading-relaxed"
+        style={{ fontSize: `${notesFontSize}px`, color: notesTextColor }}
+      >
+        {note.content}
+      </p>
+      <p className="mt-2 text-[10px] text-stone-400/80">{dateStr}</p>
+    </div>
+  );
+}
+
+// ─── NoteTimeline ─────────────────────────────────────────────────────────────
+
+function NoteTimeline({ notes, onTap, notesFontSize, notesTextColor }: { notes: StoredNote[]; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
+  return (
+    <div className="space-y-3 px-4">
+      {notes.map((note) => (
+        <TimelineItem key={note.id} note={note} onTap={onTap} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
+      ))}
+    </div>
+  );
+}
+
+function TimelineItem({ note, onTap, notesFontSize, notesTextColor }: { note: StoredNote; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
+  const d = new Date(note.createdAt);
+  const dateStr = d.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+  const stripe = note.color;
+
+  return (
+    <div
+      className="flex cursor-pointer gap-3 transition active:opacity-75"
+      onClick={() => onTap(note)}
+    >
+      <div
+        className="mt-1 w-1 shrink-0 rounded-full"
+        style={{ background: stripe, filter: 'saturate(1.8) brightness(0.78)' }}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="mb-1 text-[11px] text-stone-400">{dateStr} {timeStr}</p>
+        <div className="rounded-2xl p-3.5 shadow-sm" style={{ background: note.color }}>
+          <p
+            className="line-clamp-6 whitespace-pre-wrap leading-relaxed"
+            style={{ fontSize: `${notesFontSize}px`, color: notesTextColor }}
+          >
+            {note.content}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── NoteComposeSheet ─────────────────────────────────────────────────────────
+
+function NoteComposeSheet({
+  initial,
+  onSave,
+  onDelete,
+  onClose,
+}: {
+  initial: StoredNote | null;
+  onSave: (note: StoredNote) => void;
+  onDelete?: () => void;
+  onClose: () => void;
+}) {
+  const [content, setContent] = useState(initial?.content ?? '');
+  const [color, setColor] = useState<string>(initial?.color ?? NOTE_COLORS[0]!);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => textareaRef.current?.focus(), 80);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  function handleSave() {
+    if (!content.trim() || saving) return;
+    setSaving(true);
+    const now = Date.now();
+    const note: StoredNote = {
+      id: initial?.id ?? generateNoteId(),
+      content: content.trim(),
+      color,
+      createdAt: initial?.createdAt ?? now,
+      updatedAt: now,
+    };
+    onSave(note);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+
+      {/* Sheet */}
+      <div
+        className="relative flex max-h-[92dvh] flex-col rounded-t-3xl px-4 pb-8 pt-4 shadow-xl"
+        style={{ background: color }}
+      >
+        {/* Drag handle */}
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-stone-400/40" />
+
+        {/* Textarea */}
+        <textarea
+          ref={textareaRef}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="寫下想法…"
+          rows={6}
+          className="min-h-[120px] flex-1 resize-none bg-transparent text-sm leading-relaxed text-stone-700 outline-none placeholder:text-stone-400/70"
+        />
+
+        {/* Colour picker */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {NOTE_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setColor(c)}
+              className="h-7 w-7 rounded-full border-2 transition"
+              style={{
+                background: c,
+                borderColor: color === c ? '#44403c' : 'transparent',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
+                transform: color === c ? 'scale(1.15)' : undefined,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="mt-3 flex items-center gap-2">
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => (confirmDelete ? onDelete() : setConfirmDelete(true))}
+              className={`rounded-xl border px-3 py-2 text-xs transition active:scale-95 ${
+                confirmDelete
+                  ? 'border-rose-500 bg-rose-500 text-white'
+                  : 'border-stone-300/70 text-stone-500'
+              }`}
+            >
+              {confirmDelete ? '確定刪除' : '刪除'}
+            </button>
+          )}
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-stone-300/70 px-3 py-2 text-xs text-stone-500 transition active:scale-95"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!content.trim() || saving}
+            className="rounded-xl bg-stone-800 px-4 py-2 text-xs text-white transition active:scale-95 disabled:opacity-40"
+          >
+            {saving ? '儲存中…' : '儲存'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── NoteSettingsSheet ────────────────────────────────────────────────────────
+
+function NoteSettingsSheet({
+  notes,
+  onImport,
+  onClearAll,
+  onClose,
+}: {
+  notes: StoredNote[];
+  onImport: (notes: StoredNote[]) => void;
+  onClearAll: () => void;
+  onClose: () => void;
+}) {
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  function exportJSON() {
+    const json = JSON.stringify(notes, null, 2);
+    downloadBlob(new Blob([json], { type: 'application/json' }), `memorial-notes-${todayDateStr()}.json`);
+  }
+
+  function exportTXT() {
+    const sorted = [...notes].sort((a, b) => a.createdAt - b.createdAt);
+    const lines = sorted
+      .map((n) => {
+        const d = new Date(n.createdAt).toLocaleString('zh-TW');
+        return `[${d}]\n${n.content}`;
+      })
+      .join('\n\n───────────\n\n');
+    downloadBlob(
+      new Blob([lines], { type: 'text/plain;charset=utf-8' }),
+      `memorial-notes-${todayDateStr()}.txt`,
+    );
+  }
+
+  async function handleImportFile(file: File) {
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const raw = JSON.parse(text) as unknown;
+      if (!Array.isArray(raw)) throw new Error('not array');
+      const valid = raw.filter(isValidNote);
+      if (!valid.length) throw new Error('no valid notes');
+      onImport(valid);
+    } catch {
+      alert('匯入失敗：請確認是由本頁匯出的 JSON 檔案');
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+
+      <div className="relative rounded-t-3xl bg-white px-5 pb-10 pt-4 shadow-xl">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-stone-200" />
+
+        <p className="mb-4 text-center text-xs text-stone-400">共 {notes.length} 則便條</p>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={exportJSON}
+            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-left text-sm text-stone-700 transition active:scale-[0.98]"
+          >
+            📤 匯出 JSON（備份 · 可還原）
+          </button>
+
+          <button
+            type="button"
+            onClick={exportTXT}
+            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-left text-sm text-stone-700 transition active:scale-[0.98]"
+          >
+            📄 匯出 TXT（純文字 · 方便閱讀）
+          </button>
+
+          <label className="block w-full cursor-pointer rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700 transition active:scale-[0.98]">
+            {importing ? '匯入中…' : '📥 匯入 JSON（還原備份）'}
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.currentTarget.value = '';
+                if (f) void handleImportFile(f);
+              }}
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={() => (confirmClear ? onClearAll() : setConfirmClear(true))}
+            className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition active:scale-[0.98] ${
+              confirmClear
+                ? 'border-rose-400 bg-rose-50 text-rose-600'
+                : 'border-stone-200 bg-stone-50 text-stone-400'
+            }`}
+          >
+            🗑️ {confirmClear ? '確定清除全部便條？' : '清除全部便條'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

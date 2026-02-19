@@ -4,12 +4,16 @@ import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 const githubPagesBase = '/4o-memorial/';
+const githubRootDocsBase = '/4o-memorial/docs/';
 
 export default defineConfig(({ mode }) => {
-  const appBase =
-    mode === 'github-pages' || process.env.GITHUB_ACTIONS === 'true'
-      ? githubPagesBase
-      : '/';
+  let appBase = '/';
+  if (mode === 'github-pages' || process.env.GITHUB_ACTIONS === 'true') {
+    appBase = githubPagesBase;
+  }
+  if (mode === 'github-root-docs') {
+    appBase = githubRootDocsBase;
+  }
 
   return {
     base: appBase,

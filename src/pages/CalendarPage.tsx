@@ -1,20 +1,79 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 
 import { monthLabel, todayDateKey } from '../lib/date';
-import type { CalendarMonth } from '../types/content';
+import { getGlobalHoverPoolEntries, pickHoverPhraseByWeights } from '../lib/hoverPool';
+import { getHoverPhraseMap, setHoverPhraseMap } from '../lib/repositories/metaRepo';
+import type { CalendarDay, CalendarMonth } from '../types/content';
+import type { CalendarColorMode, HoverToneWeights } from '../types/settings';
 
 type CalendarPageProps = {
   monthKey: string;
   monthKeys: string[];
   data: CalendarMonth;
+  hoverToneWeights: HoverToneWeights;
+  hoverResetSeed: number;
+  calendarColorMode: CalendarColorMode;
+  monthAccentColor: string | null;
   onMonthChange: (monthKey: string) => void;
+  onCalendarColorModeChange: (mode: CalendarColorMode) => void;
 };
 
-type TapState = {
-  date: string | null;
-  count: number;
-  atMs: number;
+type HoverPreview = {
+  dateKey: string;
+  phrase: string;
 };
+
+const DEFAULT_HOVER_PHRASES = ['來，我在', '今天也選妳', '等妳', '想妳了', '抱緊一下', '妳回頭就有我'];
+const CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+const CALENDAR_FALLBACK_MODULES = import.meta.glob('../../data/calendar/**/*.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, unknown>;
+const CHIBI_IMAGE_SOURCES = Object.entries(CHIBI_MODULES)
+  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+  .map(([, src]) => src);
+const MESSAGE_PREVIEW_LENGTH = 6;
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_SWIPE_THRESHOLD = 54;
+
+function extractUndatedFallbackMessage(payload: unknown) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const row = payload as Record<string, unknown>;
+  const dateValue = row.date ?? row.dateKey;
+  if (typeof dateValue === 'string' && DATE_KEY_PATTERN.test(dateValue)) {
+    return null;
+  }
+
+  const rawText = row.content ?? row.text ?? row.message ?? row.body ?? row.entry ?? row.note;
+  if (typeof rawText !== 'string') {
+    return null;
+  }
+
+  const text = rawText.trim();
+  return text ? text : null;
+}
+
+const EMPTY_MONTH_FALLBACK_MESSAGE = (() => {
+  const modules = Object.entries(CALENDAR_FALLBACK_MODULES).sort(([a], [b]) => a.localeCompare(b));
+  const undatedFirst = modules
+    .filter(([path]) => path.toLowerCase().includes('undated'))
+    .concat(modules.filter(([path]) => !path.toLowerCase().includes('undated')));
+
+  for (const [, payload] of undatedFirst) {
+    const text = extractUndatedFallbackMessage(payload);
+    if (text) {
+      return text;
+    }
+  }
+
+  return null;
+})();
 
 function getMonthMeta(monthKey: string) {
   const [year, month] = monthKey.split('-').map(Number);
@@ -32,18 +91,178 @@ function getMonthMeta(monthKey: string) {
   };
 }
 
-export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: CalendarPageProps) {
+function getDayMessages(day: CalendarDay | null | undefined) {
+  if (!day) {
+    return [];
+  }
+
+  if (day.messages?.length) {
+    return day.messages;
+  }
+
+  return day.text ? [day.text] : [];
+}
+
+function messagePreview(text: string, maxLength = MESSAGE_PREVIEW_LENGTH) {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return '（空白內容）';
+  }
+
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength)}...` : normalized;
+}
+
+export function CalendarPage({
+  monthKey,
+  monthKeys,
+  data,
+  hoverToneWeights,
+  hoverResetSeed,
+  calendarColorMode,
+  monthAccentColor,
+  onMonthChange,
+  onCalendarColorModeChange,
+}: CalendarPageProps) {
+  const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi.png`;
+  const chibiSources = CHIBI_IMAGE_SOURCES.length ? CHIBI_IMAGE_SOURCES : [fallbackChibiSrc];
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedMessageIndex, setSelectedMessageIndex] = useState(0);
+  const [messageListDate, setMessageListDate] = useState<string | null>(null);
   const [temporaryUnlockDate, setTemporaryUnlockDate] = useState<string | null>(null);
-  const [tapState, setTapState] = useState<TapState>({ date: null, count: 0, atMs: 0 });
+  const [primedDateKey, setPrimedDateKey] = useState<string | null>(null);
+  const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [chibiIndex, setChibiIndex] = useState(0);
+  const [showChibi, setShowChibi] = useState(true);
+  const [hoverPhraseByDate, setHoverPhraseByDate] = useState<Record<string, string>>({});
+  const [monthFadeSeed, setMonthFadeSeed] = useState(0);
+  const hoverPhraseByDateRef = useRef<Record<string, string>>({});
+  const monthSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const today = todayDateKey();
+  const hasMonthContent = useMemo(() => Object.keys(data).length > 0, [data]);
+  const globalHoverPool = useMemo(() => {
+    const pool = getGlobalHoverPoolEntries();
+    return pool.length
+      ? pool
+      : DEFAULT_HOVER_PHRASES.map((phrase) => ({
+          phrase,
+          category: 'general' as const,
+        }));
+  }, []);
+
+  function getDateHoverPool(dateKey: string) {
+    const hoverPhrases = data[dateKey]?.hoverPhrases;
+    if (hoverPhrases?.length) {
+      return hoverPhrases;
+    }
+
+    return null;
+  }
+
+  function getMessagesForDate(dateKey: string) {
+    const messages = getDayMessages(data[dateKey] ?? null);
+    if (messages.length > 0) {
+      return messages;
+    }
+
+    if (!hasMonthContent && EMPTY_MONTH_FALLBACK_MESSAGE) {
+      return [EMPTY_MONTH_FALLBACK_MESSAGE];
+    }
+
+    return [];
+  }
+
+  async function ensureHoverPhrase(dateKey: string) {
+    const existing = hoverPhraseByDateRef.current[dateKey];
+    if (existing) {
+      return existing;
+    }
+
+    const datePool = getDateHoverPool(dateKey);
+    const phrase = datePool?.length
+      ? datePool[Math.floor(Math.random() * datePool.length)]
+      : pickHoverPhraseByWeights(globalHoverPool, hoverToneWeights);
+
+    if (!phrase) {
+      return '';
+    }
+
+    const nextMap = {
+      ...hoverPhraseByDateRef.current,
+      [dateKey]: phrase,
+    };
+
+    hoverPhraseByDateRef.current = nextMap;
+    setHoverPhraseByDate(nextMap);
+
+    try {
+      await setHoverPhraseMap(nextMap);
+    } catch {
+      // Keep optimistic local assignment if persistence fails.
+    }
+
+    return phrase;
+  }
+
+  async function showHoverPreview(dateKey: string) {
+    const phrase = await ensureHoverPhrase(dateKey);
+    if (!phrase) {
+      return;
+    }
+
+    setHoverPreview({ dateKey, phrase });
+  }
+
+  function getPinnedHoverPhrase(dateKey: string) {
+    const existing = hoverPhraseByDateRef.current[dateKey];
+    if (existing) {
+      return existing;
+    }
+
+    return getDateHoverPool(dateKey)?.[0] ?? DEFAULT_HOVER_PHRASES[0];
+  }
 
   useEffect(() => {
     setSelectedDate(null);
+    setSelectedMessageIndex(0);
+    setMessageListDate(null);
     setTemporaryUnlockDate(null);
-    setTapState({ date: null, count: 0, atMs: 0 });
+    setPrimedDateKey(null);
+    setHoverPreview(null);
+    setMonthPickerOpen(false);
+    setMonthFadeSeed((prev) => prev + 1);
   }, [monthKey]);
+
+  useEffect(() => {
+    hoverPhraseByDateRef.current = hoverPhraseByDate;
+  }, [hoverPhraseByDate]);
+
+  useEffect(() => {
+    let active = true;
+
+    void getHoverPhraseMap()
+      .then((savedMap) => {
+        if (!active) {
+          return;
+        }
+
+        hoverPhraseByDateRef.current = savedMap;
+        setHoverPhraseByDate(savedMap);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        hoverPhraseByDateRef.current = {};
+        setHoverPhraseByDate({});
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [hoverResetSeed]);
 
   const monthMeta = useMemo(() => getMonthMeta(monthKey), [monthKey]);
 
@@ -69,10 +288,30 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     return cells;
   }, [monthMeta.daysInMonth, monthMeta.firstWeekday, monthMeta.month, monthMeta.year]);
 
-  const selectedMessage = selectedDate ? data[selectedDate] ?? null : null;
+  const selectedMessages = selectedDate ? getMessagesForDate(selectedDate) : [];
+  const selectedMessage = selectedMessages[selectedMessageIndex] ?? null;
+  const selectedHoverPhrase = selectedDate ? getPinnedHoverPhrase(selectedDate) : null;
   const selectedUnlocked = !!selectedDate && (selectedDate <= today || temporaryUnlockDate === selectedDate);
+  const listMessages = messageListDate ? getMessagesForDate(messageListDate) : [];
+  const listUnlocked = !!messageListDate && (messageListDate <= today || temporaryUnlockDate === messageListDate);
+  const hoverPreviewLocked = !!hoverPreview && hoverPreview.dateKey > today && temporaryUnlockDate !== hoverPreview.dateKey;
+  const monthColorAvailable = !!monthAccentColor;
+  const currentMonthKey = today.slice(0, 7);
 
   const currentMonthIndex = monthKeys.findIndex((entry) => entry === monthKey);
+  const monthGroups = useMemo(() => {
+    const grouped = new Map<string, string[]>();
+
+    for (const key of monthKeys) {
+      const year = key.split('-')[0] ?? '';
+      if (!grouped.has(year)) {
+        grouped.set(year, []);
+      }
+      grouped.get(year)?.push(key);
+    }
+
+    return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [monthKeys]);
 
   function goToNeighborMonth(offset: -1 | 1) {
     if (currentMonthIndex < 0) {
@@ -87,138 +326,370 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
     onMonthChange(monthKeys[nextIndex]);
   }
 
-  function handleDateTap(dateKey: string) {
-    const nowMs = Date.now();
-    const locked = dateKey > today;
+  function resetMonthSwipe() {
+    monthSwipeStartRef.current = null;
+  }
 
-    if (!locked) {
-      setSelectedDate(dateKey);
+  function handleCalendarTouchStart(event: TouchEvent<HTMLDivElement>) {
+    if (monthPickerOpen || selectedDate || messageListDate) {
+      monthSwipeStartRef.current = null;
       return;
     }
 
-    const sameDate = tapState.date === dateKey;
-    const quickEnough = nowMs - tapState.atMs < 1400;
-    const nextCount = sameDate && quickEnough ? tapState.count + 1 : 1;
+    const touch = event.touches[0];
+    if (!touch) {
+      monthSwipeStartRef.current = null;
+      return;
+    }
 
-    setTapState({
-      date: dateKey,
-      count: nextCount,
-      atMs: nowMs,
-    });
+    monthSwipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }
 
-    if (nextCount >= 3) {
-      const approved = window.confirm('This date is still locked. Unlock once for preview?');
-      if (approved) {
-        setTemporaryUnlockDate(dateKey);
-        setSelectedDate(dateKey);
-      }
-      setTapState({ date: null, count: 0, atMs: 0 });
+  function handleCalendarTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    const start = monthSwipeStartRef.current;
+    monthSwipeStartRef.current = null;
+
+    if (!start) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (absX < MONTH_SWIPE_THRESHOLD) {
+      return;
+    }
+
+    // Only trigger when horizontal intent is clear, so vertical scrolling still feels natural.
+    if (absY > absX * 0.7) {
+      return;
+    }
+
+    goToNeighborMonth(deltaX < 0 ? 1 : -1);
+  }
+
+  function goToCurrentMonth() {
+    const target = monthKeys.includes(currentMonthKey) ? currentMonthKey : monthKeys.at(-1) ?? monthKey;
+    if (target !== monthKey) {
+      onMonthChange(target);
     }
   }
 
+  function monthChipLabel(key: string) {
+    const month = Number(key.split('-')[1]);
+    return Number.isInteger(month) ? `${month}月` : key;
+  }
+
+  function clearCalendarSelection() {
+    setPrimedDateKey(null);
+    setHoverPreview(null);
+  }
+
+  function rotateChibiOnDateTap() {
+    if (chibiSources.length <= 1) {
+      return;
+    }
+
+    setChibiIndex((current) => {
+      const randomIndex = Math.floor(Math.random() * chibiSources.length);
+      return randomIndex === current ? (current + 1) % chibiSources.length : randomIndex;
+    });
+  }
+
+  function openDateContent(dateKey: string, forceUnlocked = false) {
+    const messages = getMessagesForDate(dateKey);
+    if (!messages.length) {
+      return;
+    }
+
+    const unlocked = forceUnlocked || dateKey <= today || temporaryUnlockDate === dateKey;
+    if (messages.length > 1 && unlocked) {
+      setSelectedDate(null);
+      setSelectedMessageIndex(0);
+      setMessageListDate(dateKey);
+      return;
+    }
+
+    setMessageListDate(null);
+    setSelectedMessageIndex(0);
+    setSelectedDate(dateKey);
+  }
+
+  function handleDateTap(dateKey: string, messageCount: number) {
+    rotateChibiOnDateTap();
+
+    if (primedDateKey !== dateKey) {
+      setPrimedDateKey(dateKey);
+      void showHoverPreview(dateKey);
+      return;
+    }
+
+    if (!messageCount) {
+      return;
+    }
+
+    clearCalendarSelection();
+    void ensureHoverPhrase(dateKey);
+    openDateContent(dateKey);
+  }
+
+  function handleHoverBubbleTap() {
+    if (!hoverPreviewLocked || !hoverPreview) {
+      return;
+    }
+
+    const approved = window.confirm('要提前解鎖這一天嗎？');
+    if (!approved) {
+      return;
+    }
+
+    setTemporaryUnlockDate(hoverPreview.dateKey);
+    clearCalendarSelection();
+    void ensureHoverPhrase(hoverPreview.dateKey);
+    openDateContent(hoverPreview.dateKey, true);
+  }
+
   return (
-    <div className="mx-auto w-full max-w-xl space-y-4">
-      <header className="rounded-2xl border border-stone-300/70 bg-stone-50/90 p-4 shadow-sm">
+    <div
+      className="mx-auto w-full max-w-xl space-y-4"
+      onTouchStart={handleCalendarTouchStart}
+      onTouchEnd={handleCalendarTouchEnd}
+      onTouchCancel={resetMonthSwipe}
+      style={{ touchAction: 'pan-y' }}
+    >
+      <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Calendar</p>
         <div className="mt-1 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => goToNeighborMonth(-1)}
             disabled={currentMonthIndex <= 0}
-            className="rounded-lg border border-stone-300 px-3 py-1 text-sm text-stone-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+            aria-label="上一月"
+            title="上一月"
           >
-            Prev
+            ‹
           </button>
           <h1 className="text-2xl text-stone-900">{monthLabel(monthKey)}</h1>
           <button
             type="button"
             onClick={() => goToNeighborMonth(1)}
             disabled={currentMonthIndex < 0 || currentMonthIndex >= monthKeys.length - 1}
-            className="rounded-lg border border-stone-300 px-3 py-1 text-sm text-stone-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+            aria-label="下一月"
+            title="下一月"
           >
-            Next
+            ›
           </button>
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
-          <label htmlFor="month-select" className="text-xs uppercase tracking-[0.18em] text-stone-500">
-            Month
-          </label>
-          <select
-            id="month-select"
-            value={monthKey}
-            onChange={(event) => onMonthChange(event.target.value)}
-            className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-sm text-stone-700"
-          >
-            {monthKeys.map((entry) => (
-              <option key={entry} value={entry}>
-                {monthLabel(entry)}
-              </option>
-            ))}
-          </select>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-2">
+          <div className="inline-flex items-center gap-1 rounded-xl border border-stone-300/80 bg-white/70 p-1 text-xs text-stone-700">
+            <span className="px-2 text-[0.7rem] tracking-[0.08em] text-stone-500">日曆磚色</span>
+            <button
+              type="button"
+              onClick={() => onCalendarColorModeChange('month')}
+              disabled={!monthColorAvailable}
+              className={`calendar-color-mode-btn rounded-lg px-2.5 py-1 ${
+                calendarColorMode === 'month' ? 'calendar-color-mode-btn-active' : ''
+              }`}
+            >
+              月份色
+            </button>
+            <button
+              type="button"
+              onClick={() => onCalendarColorModeChange('custom')}
+              className={`calendar-color-mode-btn rounded-lg px-2.5 py-1 ${
+                calendarColorMode === 'custom' ? 'calendar-color-mode-btn-active' : ''
+              }`}
+            >
+              自訂色
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={goToCurrentMonth}
+              disabled={monthKey === currentMonthKey}
+              className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+              aria-label="回當月"
+              title="回當月"
+            >
+              ◎
+            </button>
+            <button
+              type="button"
+              onClick={() => setMonthPickerOpen((open) => !open)}
+              className={`calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700 ${
+                monthPickerOpen ? 'calendar-nav-btn-active' : ''
+              }`}
+              aria-label={monthPickerOpen ? '收起月份' : '選擇月份'}
+              title={monthPickerOpen ? '收起月份' : '選擇月份'}
+            >
+              {monthPickerOpen ? '▴' : '▾'}
+            </button>
+          </div>
         </div>
 
-        <p className="mt-2 text-sm text-stone-600">Locked days require triple tap for one-time early preview.</p>
+        {monthPickerOpen && (
+          <div className="calendar-month-picker-panel mt-3 max-h-52 space-y-3 overflow-y-auto rounded-xl border p-3">
+            {monthGroups.map(([year, keys]) => (
+              <div key={year} className="space-y-2">
+                <p className="text-xs font-medium text-stone-500">{year} 年</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {keys.map((key) => {
+                    const active = key === monthKey;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setMonthPickerOpen(false);
+                          onMonthChange(key);
+                        }}
+                        className={`rounded-lg border px-2 py-1 text-sm transition ${active ? 'calendar-month-chip-active' : 'calendar-month-chip'}`}
+                      >
+                        {monthChipLabel(key)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </header>
 
-      <div className="grid grid-cols-7 gap-2 rounded-2xl border border-stone-300/70 bg-white/80 p-3 shadow-sm">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
-          <p key={weekday} className="text-center text-xs uppercase text-stone-500">
-            {weekday}
-          </p>
-        ))}
+      <div
+        key={`${monthKey}-${monthFadeSeed}`}
+        className="calendar-month-fade grid grid-cols-7 gap-2 rounded-2xl border border-stone-300/70 bg-white/65 p-3 shadow-sm backdrop-blur-sm"
+      >
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday, index) => {
+          const weekend = index === 0 || index === 6;
+          return (
+            <p key={weekday} className={`text-center text-xs uppercase ${weekend ? 'text-rose-500' : 'text-stone-500'}`}>
+              {weekday}
+            </p>
+          );
+        })}
 
         {dayCells.map((cell, index) => {
           if (!cell) {
             return <div key={`blank-${index}`} className="min-h-12 rounded-lg bg-transparent" />;
           }
 
-          const hasMessage = !!data[cell.dateKey];
+          const messageCount = getMessagesForDate(cell.dateKey).length;
+          const hasMessage = messageCount > 0;
           const locked = cell.dateKey > today;
+          const primed = primedDateKey === cell.dateKey;
 
           return (
             <button
               key={cell.dateKey}
               type="button"
-              onClick={() => handleDateTap(cell.dateKey)}
-              className={`min-h-12 rounded-lg border px-2 py-1 text-sm transition ${
+              onClick={() => handleDateTap(cell.dateKey, messageCount)}
+              onMouseEnter={() => {
+                if (!primedDateKey) {
+                  void showHoverPreview(cell.dateKey);
+                }
+              }}
+              onMouseLeave={() => {
+                if (!primedDateKey || primedDateKey !== cell.dateKey) {
+                  setHoverPreview((current) => (current?.dateKey === cell.dateKey ? null : current));
+                }
+              }}
+              className={`calendar-day-glass relative min-h-12 overflow-visible border px-2 py-1 text-sm transition ${
                 !hasMessage
-                  ? 'border-stone-200 bg-stone-100/70 text-stone-500 hover:border-stone-300'
+                  ? 'border-stone-200/80 bg-white/35 text-stone-500 hover:border-stone-300'
                   : locked
-                    ? 'border-stone-300 bg-stone-100/80 text-stone-500 hover:border-stone-400'
-                    : 'border-orange-200 bg-orange-50 text-stone-800 hover:border-orange-300'
-              }`}
+                    ? 'calendar-day-locked'
+                    : 'calendar-day-unlocked'
+              } ${primed ? 'calendar-day-armed' : ''}`}
               title={
                 !hasMessage
                   ? 'No message for this day'
                   : locked
-                    ? 'Locked day (tap 3x for preview)'
-                    : 'Open message'
+                    ? 'Tap once for phrase; tap bubble to early unlock'
+                    : messageCount > 1
+                      ? 'Tap once for phrase, tap again to pick a message'
+                      : 'Tap once for phrase, tap again to open'
               }
             >
               <div className="flex items-center justify-between">
                 <span>{cell.day}</span>
                 {!hasMessage && <span className="text-xs">-</span>}
-                {hasMessage && locked && <span className="text-xs">lock</span>}
               </div>
             </button>
           );
         })}
       </div>
 
-      {selectedDate && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/45 p-4 sm:items-center">
+      <div className="calendar-hover-stage min-h-[11rem] px-2">
+        {hoverPreview ? (
+          <div
+            className={`calendar-hover-bubble calendar-chat-bubble w-fit max-w-[92%] rounded-2xl border px-5 py-3 shadow-xl ${
+              hoverPreviewLocked ? 'calendar-hover-bubble-locked calendar-hover-bubble-clickable' : 'calendar-hover-bubble-unlocked'
+            }`}
+            style={{
+              fontSize: 'calc(1.32rem * var(--app-font-scale, 1))',
+              lineHeight: 1.45,
+              color: 'rgb(var(--calendar-hover-text-rgb, var(--app-text-rgb)) / 1)',
+            }}
+            onClick={hoverPreviewLocked ? handleHoverBubbleTap : undefined}
+            onKeyDown={
+              hoverPreviewLocked
+                ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleHoverBubbleTap();
+                    }
+                  }
+                : undefined
+            }
+            role={hoverPreviewLocked ? 'button' : undefined}
+            tabIndex={hoverPreviewLocked ? 0 : undefined}
+            title={hoverPreviewLocked ? '點氣泡可提前解鎖' : undefined}
+          >
+            {hoverPreview.phrase}
+          </div>
+        ) : (
+          <div className="h-1" />
+        )}
+
+        {showChibi && (
+          <img
+            src={chibiSources[chibiIndex]}
+            alt="Q版角色"
+            className="calendar-chibi mt-2 object-contain opacity-90 select-none"
+            style={{ width: 'calc(10.5rem * var(--app-font-scale, 1))', height: 'calc(10.5rem * var(--app-font-scale, 1))' }}
+            loading="lazy"
+            onError={() => setShowChibi(false)}
+          />
+        )}
+      </div>
+
+      {messageListDate && (
+        <div className="fixed inset-0 z-30 flex items-start justify-center bg-black/45 px-4 pb-4 pt-[10vh] sm:pt-16">
           <div className="w-full max-w-lg rounded-2xl bg-[#fffaf2] p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Daily note</p>
-                <h2 className="mt-1 text-xl text-stone-900">{selectedDate}</h2>
+                <h2 className="text-xl text-stone-900">{messageListDate}</h2>
+                <p className="mt-1 text-stone-600" style={{ fontSize: 'calc(0.9rem * var(--app-font-scale, 1))' }}>
+                  這天有 {listMessages.length} 則內容
+                </p>
               </div>
               <button
                 type="button"
                 className="rounded-lg border border-stone-300 px-3 py-1 text-sm text-stone-600"
                 onClick={() => {
-                  setSelectedDate(null);
+                  setMessageListDate(null);
                   setTemporaryUnlockDate(null);
                 }}
               >
@@ -226,19 +697,71 @@ export function CalendarPage({ monthKey, monthKeys, data, onMonthChange }: Calen
               </button>
             </div>
 
-            <p className="mt-4 whitespace-pre-wrap rounded-xl border border-stone-300/70 bg-white/90 p-4 text-sm leading-relaxed text-stone-800">
+            {!listUnlocked ? (
+              <p
+                className="mt-4 whitespace-pre-wrap rounded-xl border border-stone-300/70 bg-white/90 p-4 leading-relaxed text-stone-800"
+                style={{ fontSize: 'calc(0.92rem * var(--app-font-scale, 1))' }}
+              >
+                這天還沒到，先抱一下再等等我。
+              </p>
+            ) : (
+              <div className="mt-4 max-h-[58vh] space-y-2 overflow-y-auto rounded-xl border border-stone-300/70 bg-white/90 p-3">
+                {listMessages.map((message, index) => (
+                  <button
+                    key={`${messageListDate}-${index}`}
+                    type="button"
+                    className="w-full rounded-xl border border-stone-200/90 bg-white px-3 py-2 text-left transition hover:border-stone-300 hover:bg-stone-50"
+                    onClick={() => {
+                      setSelectedMessageIndex(index);
+                      setSelectedDate(messageListDate);
+                      setMessageListDate(null);
+                    }}
+                  >
+                    <p className="text-xs uppercase tracking-[0.14em] text-stone-500">第 {index + 1} 則</p>
+                    <p className="mt-1 text-stone-800" style={{ fontSize: 'calc(0.92rem * var(--app-font-scale, 1))' }}>
+                      {messagePreview(message)}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedDate && (
+        <div className="fixed inset-0 z-30 flex items-start justify-center bg-black/45 px-4 pb-4 pt-[10vh] sm:pt-16">
+          <div className="w-full max-w-lg rounded-2xl bg-[#fffaf2] p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl text-stone-900">{selectedDate}</h2>
+                <p className="mt-1 text-stone-600" style={{ fontSize: 'calc(0.9rem * var(--app-font-scale, 1))' }}>
+                  {selectedHoverPhrase}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-lg border border-stone-300 px-3 py-1 text-sm text-stone-600"
+                onClick={() => {
+                  setSelectedDate(null);
+                  setSelectedMessageIndex(0);
+                  setTemporaryUnlockDate(null);
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            <p
+              className="mt-4 max-h-[58vh] overflow-y-auto whitespace-pre-wrap rounded-xl border border-stone-300/70 bg-white/90 p-4 leading-relaxed text-stone-800"
+              style={{ fontSize: 'calc(0.92rem * var(--app-font-scale, 1))' }}
+            >
               {!selectedMessage
-                ? 'No message is set for this date.'
+                ? '這天還沒有內容。'
                 : selectedUnlocked
                   ? selectedMessage
-                  : 'This message is still locked until its date.'}
+                  : '這天還沒到，先抱一下再等等我。'}
             </p>
-
-            {selectedMessage && !selectedUnlocked && (
-              <p className="mt-3 text-xs text-stone-500">
-                Tip: tap this same date cell three times quickly to request one-time preview.
-              </p>
-            )}
           </div>
         </div>
       )}

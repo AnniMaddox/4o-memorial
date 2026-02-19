@@ -13,29 +13,46 @@ type SwipePagerProps = {
 export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: SwipePagerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isProgrammaticScrollRef = useRef(false);
+  const fromScrollRef = useRef(false);
   const releaseProgrammaticRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (fromScrollRef.current) {
+      fromScrollRef.current = false;
+      return;
+    }
+
     const node = containerRef.current;
     if (!node) {
       return;
     }
 
     const pageWidth = node.clientWidth;
+    if (!pageWidth) {
+      isProgrammaticScrollRef.current = false;
+      return;
+    }
+
+    const targetLeft = activeIndex * pageWidth;
+    if (Math.abs(node.scrollLeft - targetLeft) <= 1) {
+      return;
+    }
+
     isProgrammaticScrollRef.current = true;
 
     if (releaseProgrammaticRef.current !== null) {
-      window.clearTimeout(releaseProgrammaticRef.current);
+      window.cancelAnimationFrame(releaseProgrammaticRef.current);
+      releaseProgrammaticRef.current = null;
     }
 
     node.scrollTo({
-      left: activeIndex * pageWidth,
-      behavior: 'smooth',
+      left: targetLeft,
     });
 
-    releaseProgrammaticRef.current = window.setTimeout(() => {
+    releaseProgrammaticRef.current = window.requestAnimationFrame(() => {
       isProgrammaticScrollRef.current = false;
-    }, 320);
+      releaseProgrammaticRef.current = null;
+    });
   }, [activeIndex]);
 
   useEffect(() => {
@@ -56,6 +73,7 @@ export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: 
 
       const next = Math.round(node.scrollLeft / pageWidth);
       if (next !== activeIndex && next >= 0 && next < pages.length) {
+        fromScrollRef.current = true;
         onIndexChange(next);
       }
     };
@@ -65,7 +83,7 @@ export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: 
       node.removeEventListener('scroll', onScroll);
 
       if (releaseProgrammaticRef.current !== null) {
-        window.clearTimeout(releaseProgrammaticRef.current);
+        window.cancelAnimationFrame(releaseProgrammaticRef.current);
         releaseProgrammaticRef.current = null;
       }
     };
@@ -76,7 +94,7 @@ export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: 
       ref={containerRef}
       className="h-full w-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden"
       style={{
-        scrollBehavior: 'smooth',
+        scrollBehavior: 'auto',
         touchAction: swipeEnabled ? 'pan-x pan-y' : 'pan-y',
         overflowX: swipeEnabled ? 'auto' : 'hidden',
       }}

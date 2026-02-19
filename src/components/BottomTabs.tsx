@@ -1,6 +1,10 @@
+import { useState } from 'react';
+
 type TabItem = {
   id: string;
   label: string;
+  icon: string;
+  iconUrl?: string;
 };
 
 type BottomTabsProps = {
@@ -10,29 +14,51 @@ type BottomTabsProps = {
 };
 
 export function BottomTabs({ tabs, activeIndex, onSelect }: BottomTabsProps) {
-  return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-300/70 bg-amber-50/90 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur">
-      <ul className="mx-auto grid w-full max-w-xl grid-cols-3 gap-2">
-        {tabs.map((tab, index) => {
-          const active = index === activeIndex;
+  const [failedIconIds, setFailedIconIds] = useState<Record<string, boolean>>({});
 
-          return (
-            <li key={tab.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(index)}
-                className={`w-full rounded-xl px-3 py-2 text-sm transition ${
-                  active
-                    ? 'bg-orange-200 text-stone-900 shadow-[inset_0_0_0_1px_rgba(120,53,15,0.15)]'
-                    : 'bg-transparent text-stone-600 hover:bg-orange-100'
-                }`}
-              >
-                {tab.label}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(0.9rem,env(safe-area-inset-bottom))] pt-3">
+      <div className="mx-auto w-full max-w-xl rounded-[2.25rem] border border-white/45 bg-white/25 p-3 shadow-[0_18px_48px_rgba(0,0,0,0.14)] backdrop-blur">
+        <ul className="grid w-full gap-3" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+          {tabs.map((tab, index) => {
+            const active = index === activeIndex;
+
+            return (
+              <li key={tab.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(index)}
+                  aria-label={tab.label}
+                  title={tab.label}
+                  className={`flex w-full items-center justify-center rounded-3xl px-3 py-3 transition ${
+                    active ? 'tab-active' : 'tab-idle bg-transparent text-stone-700/80'
+                  }`}
+                >
+                  {tab.iconUrl && !failedIconIds[tab.id] ? (
+                    <img
+                      src={tab.iconUrl}
+                      alt=""
+                      className="h-9 w-9 rounded-lg object-cover"
+                      loading="lazy"
+                      onError={() =>
+                        setFailedIconIds((current) => ({
+                          ...current,
+                          [tab.id]: true,
+                        }))
+                      }
+                    />
+                  ) : (
+                    <span className="text-3xl leading-none" aria-hidden="true">
+                      {tab.icon}
+                    </span>
+                  )}
+                  <span className="sr-only">{tab.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </nav>
   );
 }
