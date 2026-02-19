@@ -36,9 +36,11 @@ import { readLetterContent } from './lib/letterReader';
 import { detectBestChatProfileId } from './lib/chatProfileMatcher';
 import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
+import { getBaseChibiPoolInfo, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
 import type { ChatProfile } from './lib/chatDB';
 import { AlbumPage } from './pages/AlbumPage';
 import { NotesPage } from './pages/NotesPage';
+import SoulmateHousePage from './pages/SoulmateHousePage';
 import { HeartWallPage } from './pages/HeartWallPage';
 import { ListPage } from './pages/ListPage';
 import { FitnessPage } from './pages/FitnessPage';
@@ -66,7 +68,8 @@ type LauncherAppId =
   | 'period'
   | 'diary'
   | 'album'
-  | 'notes';
+  | 'notes'
+  | 'soulmate';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -213,6 +216,7 @@ function App() {
   const [notificationPermission, setNotificationPermission] = useState<BrowserNotificationPermission>(
     getNotificationPermission,
   );
+  const [chibiPoolInfo, setChibiPoolInfo] = useState(() => getBaseChibiPoolInfo(DEFAULT_SETTINGS.chibiPoolSize));
   const monthAccentColor = useMemo(() => getMonthAccentColor(calendarMonthKey), [calendarMonthKey]);
   const appAccentColor = settings.themeMonthColor;
   const calendarHeaderColor = monthAccentColor ?? appAccentColor;
@@ -839,6 +843,30 @@ function App() {
     }
   }, []);
 
+  const onReshuffleChibiPool = useCallback(() => {
+    const active = refreshActiveBaseChibiPool(settings.chibiPoolSize);
+    const info = getBaseChibiPoolInfo(settings.chibiPoolSize);
+    setChibiPoolInfo({
+      allCount: info.allCount,
+      activeCount: active.length,
+      targetCount: info.targetCount,
+    });
+    setImportStatus({
+      kind: 'success',
+      message: `透明小人已重抽：啟用 ${active.length} 張`,
+    });
+  }, [settings.chibiPoolSize]);
+
+  useEffect(() => {
+    const active = syncActiveBaseChibiPool(settings.chibiPoolSize);
+    const info = getBaseChibiPoolInfo(settings.chibiPoolSize);
+    setChibiPoolInfo({
+      allCount: info.allCount,
+      activeCount: active.length,
+      targetCount: info.targetCount,
+    });
+  }, [settings.chibiPoolSize]);
+
   const onCalendarColorModeChange = useCallback(
     (mode: CalendarColorMode) => {
       void onSettingChange({ calendarColorMode: mode });
@@ -919,6 +947,7 @@ function App() {
             diaryCount={diaries.length}
             chatLogCount={chatLogs.length}
             chatProfiles={chatProfiles}
+            chibiPoolInfo={chibiPoolInfo}
             onSettingChange={onSettingChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
             onImportEmlFiles={onImportEmlFiles}
@@ -936,6 +965,7 @@ function App() {
             onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
             onHoverToneWeightChange={onHoverToneWeightChange}
             onReshuffleHoverPhrases={onReshuffleHoverPhrases}
+            onReshuffleChibiPool={onReshuffleChibiPool}
             onRefresh={() => {
               void saveSettings({ lastSyncAt: new Date().toISOString() }).then((next) => {
                 setSettings(next);
@@ -952,6 +982,7 @@ function App() {
       calendarMonthKeys,
       emails,
       appLabels,
+      chibiPoolInfo,
       importStatus,
       monthCount,
       monthAccentColor,
@@ -966,6 +997,7 @@ function App() {
       onCalendarColorModeChange,
       onRequestNotificationPermission,
       onReshuffleHoverPhrases,
+      onReshuffleChibiPool,
       onSettingChange,
       refreshData,
       settings,
@@ -1310,6 +1342,14 @@ function App() {
                   notesFontSize={settings.notesFontSize}
                   notesTextColor={settings.notesTextColor}
                 />
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'soulmate' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#fdf6ee' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <SoulmateHousePage onExit={() => setLauncherApp(null)} />
               </div>
             </div>
           )}

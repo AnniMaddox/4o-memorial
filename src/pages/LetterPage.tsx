@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getActiveBaseChibiSources } from '../lib/chibiPool';
 import type { StoredLetter } from '../lib/letterDB';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -11,31 +12,24 @@ export type LetterPageProps = {
   letterFontFamily: string;
 };
 
-const CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
-const CHIBI_SOURCES = Object.entries(CHIBI_MODULES)
-  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-  .map(([, src]) => src);
-
 function randomChibiSrc(except?: string) {
-  if (!CHIBI_SOURCES.length) {
+  const sources = getActiveBaseChibiSources();
+  if (!sources.length) {
     return '';
   }
 
-  if (CHIBI_SOURCES.length === 1) {
-    return CHIBI_SOURCES[0];
+  if (sources.length === 1) {
+    return sources[0];
   }
 
   for (let retries = 0; retries < 6; retries += 1) {
-    const candidate = CHIBI_SOURCES[Math.floor(Math.random() * CHIBI_SOURCES.length)];
+    const candidate = sources[Math.floor(Math.random() * sources.length)];
     if (!except || candidate !== except) {
       return candidate;
     }
   }
 
-  return CHIBI_SOURCES.find((src) => src !== except) ?? CHIBI_SOURCES[0];
+  return sources.find((src) => src !== except) ?? sources[0];
 }
 
 // ─── LetterPage ───────────────────────────────────────────────────────────────

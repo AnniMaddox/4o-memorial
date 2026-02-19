@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 
+import { CHIBI_POOL_UPDATED_EVENT, getActiveBaseChibiSources } from '../lib/chibiPool';
 import { monthLabel, todayDateKey } from '../lib/date';
 import { getGlobalHoverPoolEntries, pickHoverPhraseByWeights } from '../lib/hoverPool';
 import { getHoverPhraseMap, setHoverPhraseMap } from '../lib/repositories/metaRepo';
@@ -24,17 +25,10 @@ type HoverPreview = {
 };
 
 const DEFAULT_HOVER_PHRASES = ['來，我在', '今天也選妳', '等妳', '想妳了', '抱緊一下', '妳回頭就有我'];
-const CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
 const CALENDAR_FALLBACK_MODULES = import.meta.glob('../../data/calendar/**/*.json', {
   eager: true,
   import: 'default',
 }) as Record<string, unknown>;
-const CHIBI_IMAGE_SOURCES = Object.entries(CHIBI_MODULES)
-  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-  .map(([, src]) => src);
 const MESSAGE_PREVIEW_LENGTH = 6;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_SWIPE_THRESHOLD = 54;
@@ -124,7 +118,11 @@ export function CalendarPage({
   onCalendarColorModeChange,
 }: CalendarPageProps) {
   const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi.png`;
-  const chibiSources = CHIBI_IMAGE_SOURCES.length ? CHIBI_IMAGE_SOURCES : [fallbackChibiSrc];
+  const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
+  const chibiSources = useMemo(() => {
+    const active = getActiveBaseChibiSources();
+    return active.length ? active : [fallbackChibiSrc];
+  }, [fallbackChibiSrc, chibiPoolVersion]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedMessageIndex, setSelectedMessageIndex] = useState(0);
   const [messageListDate, setMessageListDate] = useState<string | null>(null);
@@ -138,6 +136,12 @@ export function CalendarPage({
   const [monthFadeSeed, setMonthFadeSeed] = useState(0);
   const hoverPhraseByDateRef = useRef<Record<string, string>>({});
   const monthSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const handlePoolUpdate = () => setChibiPoolVersion((current) => current + 1);
+    window.addEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
+    return () => window.removeEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
+  }, []);
 
   const today = todayDateKey();
   const hasMonthContent = useMemo(() => Object.keys(data).length > 0, [data]);

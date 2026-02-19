@@ -19,6 +19,11 @@ type SettingsPageProps = {
   diaryCount: number;
   chatLogCount: number;
   chatProfiles: ChatProfile[];
+  chibiPoolInfo: {
+    allCount: number;
+    activeCount: number;
+    targetCount: number;
+  };
   onSettingChange: (partial: Partial<AppSettings>) => void;
   onRequestNotificationPermission: () => void;
   onImportEmlFiles: (files: File[]) => void;
@@ -36,6 +41,7 @@ type SettingsPageProps = {
   onDeleteChatProfile: (id: string) => void;
   onHoverToneWeightChange: (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => void;
   onReshuffleHoverPhrases: () => void;
+  onReshuffleChibiPool: () => void;
   onRefresh: () => void;
 };
 
@@ -145,6 +151,7 @@ type AppearancePresetPayload = {
     diaryCoverFitMode: AppSettings['diaryCoverFitMode'];
     tarotNameColor: string;
     tarotNameScale: number;
+    chibiPoolSize: number;
     appLabels: AppLabels;
   };
 };
@@ -194,6 +201,7 @@ export function SettingsPage({
   diaryCount,
   chatLogCount,
   chatProfiles,
+  chibiPoolInfo,
   onSettingChange,
   onRequestNotificationPermission,
   onImportEmlFiles,
@@ -211,6 +219,7 @@ export function SettingsPage({
   onDeleteChatProfile,
   onHoverToneWeightChange,
   onReshuffleHoverPhrases,
+  onReshuffleChibiPool,
   onRefresh,
 }: SettingsPageProps) {
   const [openPanel, setOpenPanel] = useState<PanelKey | null>('appearance');
@@ -238,6 +247,7 @@ export function SettingsPage({
   const [labelDrafts, setLabelDrafts] = useState<AppLabels>(settings.appLabels);
   const [tabIconStatus, setTabIconStatus] = useState('');
   const [appearancePresetStatus, setAppearancePresetStatus] = useState('');
+  const [chibiPoolStatus, setChibiPoolStatus] = useState('');
   const [homeTextStatus, setHomeTextStatus] = useState('');
   const [labelStatus, setLabelStatus] = useState('');
 
@@ -423,6 +433,7 @@ export function SettingsPage({
         diaryCoverFitMode: settings.diaryCoverFitMode,
         tarotNameColor: settings.tarotNameColor,
         tarotNameScale: settings.tarotNameScale,
+        chibiPoolSize: settings.chibiPoolSize,
         appLabels: settings.appLabels,
       },
     };
@@ -565,6 +576,9 @@ export function SettingsPage({
       }
       if (typeof source.tarotNameScale === 'number' && Number.isFinite(source.tarotNameScale)) {
         next.tarotNameScale = source.tarotNameScale;
+      }
+      if (typeof source.chibiPoolSize === 'number' && Number.isFinite(source.chibiPoolSize)) {
+        next.chibiPoolSize = Math.max(20, Math.min(200, Math.round(source.chibiPoolSize)));
       }
       if (source.appLabels && typeof source.appLabels === 'object') {
         const input = source.appLabels as Partial<AppLabels>;
@@ -1005,6 +1019,45 @@ export function SettingsPage({
                   className="w-full"
                 />
               </label>
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">透明小人輪換池</p>
+              <p className="text-xs text-stone-500">
+                已上傳 {chibiPoolInfo.allCount} 張，啟用池 {chibiPoolInfo.activeCount} 張。
+              </p>
+              <label className="block space-y-1">
+                <span className="flex items-center justify-between text-xs text-stone-600">
+                  <span>啟用池大小</span>
+                  <span>{settings.chibiPoolSize} 張</span>
+                </span>
+                <input
+                  type="range"
+                  min={20}
+                  max={200}
+                  step={5}
+                  value={settings.chibiPoolSize}
+                  onChange={(event) => {
+                    onSettingChange({ chibiPoolSize: Number(event.target.value) });
+                    setChibiPoolStatus('已更新啟用池大小');
+                  }}
+                  className="w-full"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  onReshuffleChibiPool();
+                  setChibiPoolStatus('已重新抽換透明小人池');
+                }}
+                className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+              >
+                一鍵輪換
+              </button>
+              {chibiPoolStatus && <p className="text-xs text-stone-600">{chibiPoolStatus}</p>}
+              <p className="text-xs text-stone-500">
+                支援透明 PNG / WebP / AVIF。可以全部上傳，系統會只抽啟用池避免卡頓。
+              </p>
             </div>
 
             <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">

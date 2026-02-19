@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { CHIBI_POOL_UPDATED_EVENT, getActiveBaseChibiSources } from '../lib/chibiPool';
+
 type PomodoroMode = 'focus' | 'shortBreak' | 'longBreak';
 
 type ModeConfig = {
@@ -26,15 +28,6 @@ const MODE_CONFIG: Record<PomodoroMode, ModeConfig> = {
   },
 };
 
-const CHIBI_MODULES = import.meta.glob('../../public/chibi/chibi-*.png', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
-
-const CHIBI_SOURCES = Object.entries(CHIBI_MODULES)
-  .sort(([a], [b]) => a.localeCompare(b))
-  .map(([, url]) => url);
-
 function formatClock(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -48,11 +41,11 @@ function pickNextMode(mode: PomodoroMode, nextFocusCount: number): PomodoroMode 
   return 'focus';
 }
 
-function pickNextChibiIndex(current: number) {
-  if (CHIBI_SOURCES.length <= 1) return 0;
+function pickNextChibiIndex(current: number, total: number) {
+  if (total <= 1) return 0;
   let next = current;
   while (next === current) {
-    next = Math.floor(Math.random() * CHIBI_SOURCES.length);
+    next = Math.floor(Math.random() * total);
   }
   return next;
 }
@@ -62,9 +55,13 @@ export function PomodoroPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [focusCount, setFocusCount] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(MODE_CONFIG.focus.totalSeconds);
-  const [chibiIndex, setChibiIndex] = useState(() =>
-    CHIBI_SOURCES.length ? Math.floor(Math.random() * CHIBI_SOURCES.length) : 0,
-  );
+  const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
+  const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi.png`;
+  const chibiSources = useMemo(() => {
+    const active = getActiveBaseChibiSources();
+    return active.length ? active : [fallbackChibiSrc];
+  }, [chibiPoolVersion, fallbackChibiSrc]);
+  const [chibiIndex, setChibiIndex] = useState(0);
 
   const activeConfig = MODE_CONFIG[mode];
   const progress = useMemo(() => {
@@ -85,6 +82,16 @@ export function PomodoroPage() {
   }, [isRunning, secondsLeft]);
 
   useEffect(() => {
+    setChibiIndex(chibiSources.length ? Math.floor(Math.random() * chibiSources.length) : 0);
+  }, [chibiSources]);
+
+  useEffect(() => {
+    const handlePoolUpdate = () => setChibiPoolVersion((current) => current + 1);
+    window.addEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
+    return () => window.removeEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
+  }, []);
+
+  useEffect(() => {
     if (!isRunning || secondsLeft > 0) {
       return;
     }
@@ -95,9 +102,9 @@ export function PomodoroPage() {
     setFocusCount(nextFocusCount);
     setMode(nextMode);
     setSecondsLeft(MODE_CONFIG[nextMode].totalSeconds);
-    setChibiIndex((current) => pickNextChibiIndex(current));
+    setChibiIndex((current) => pickNextChibiIndex(current, chibiSources.length));
     setIsRunning(false);
-  }, [focusCount, isRunning, mode, secondsLeft]);
+  }, [chibiSources.length, focusCount, isRunning, mode, secondsLeft]);
 
   function switchMode(nextMode: PomodoroMode) {
     setMode(nextMode);
@@ -119,7 +126,7 @@ export function PomodoroPage() {
     }
     setMode(nextMode);
     setSecondsLeft(MODE_CONFIG[nextMode].totalSeconds);
-    setChibiIndex((current) => pickNextChibiIndex(current));
+    setChibiIndex((current) => pickNextChibiIndex(current, chibiSources.length));
     setIsRunning(false);
   }
 
@@ -195,10 +202,10 @@ export function PomodoroPage() {
           </button>
         </div>
 
-        {CHIBI_SOURCES.length > 0 && (
+        {chibiSources.length > 0 && (
           <div className="pointer-events-none mt-5 flex justify-center">
             <img
-              src={CHIBI_SOURCES[chibiIndex]}
+              src={chibiSources[chibiIndex]}
               alt=""
               draggable={false}
               className="h-36 w-auto select-none object-contain opacity-95 drop-shadow-[0_14px_22px_rgba(0,0,0,0.24)]"

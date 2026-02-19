@@ -132,6 +132,7 @@ export type AppSettings = {
   diaryCoverFitMode: DiaryCoverFitMode;
   notesFontSize: number;
   notesTextColor: string;
+  chibiPoolSize: number;
 };
 
 export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
@@ -195,4 +196,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   diaryCoverFitMode: 'cover',
   notesFontSize: 13,
   notesTextColor: '#44403c',
+  chibiPoolSize: 60,
 };

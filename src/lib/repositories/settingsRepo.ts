@@ -180,6 +180,7 @@ export async function getSettings() {
     ),
     notesFontSize: clampNumber(persisted.notesFontSize, 11, 17, DEFAULT_SETTINGS.notesFontSize),
     notesTextColor: normalizeString(persisted.notesTextColor, DEFAULT_SETTINGS.notesTextColor),
+    chibiPoolSize: clampNumber(persisted.chibiPoolSize, 20, 200, DEFAULT_SETTINGS.chibiPoolSize),
   };
 }
 

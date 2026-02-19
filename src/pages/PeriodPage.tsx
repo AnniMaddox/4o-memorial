@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { CHIBI_POOL_UPDATED_EVENT, getActiveBaseChibiSources } from '../lib/chibiPool';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type PeriodTab = 'overview' | 'calendar' | 'records';
@@ -108,19 +109,9 @@ const PERIOD_CHIBI_MODULES = import.meta.glob(
   { eager: true, import: 'default' },
 ) as Record<string, string>;
 
-const DEFAULT_CHIBI_MODULES = import.meta.glob(
-  '../../public/chibi/chibi-*.png',
-  { eager: true, import: 'default' },
-) as Record<string, string>;
-
-const CHIBI_SOURCES = [
-  ...Object.entries(PERIOD_CHIBI_MODULES)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, url]) => url),
-  ...Object.entries(DEFAULT_CHIBI_MODULES)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, url]) => url),
-];
+const PERIOD_CHIBI_SOURCES = Object.entries(PERIOD_CHIBI_MODULES)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([, url]) => url);
 
 // ─── Utilities ─────────────────────────────────────────────────────────────────
 function toDateKey(date: Date) {
@@ -162,6 +153,19 @@ function clamp(value: number, min: number, max: number) {
 function randomPick<T>(items: T[]): T | null {
   if (!items.length) return null;
   return items[Math.floor(Math.random() * items.length)]!;
+}
+
+function mergeUniqueStrings(...groups: string[][]) {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const group of groups) {
+    for (const item of group) {
+      if (seen.has(item)) continue;
+      seen.add(item);
+      merged.push(item);
+    }
+  }
+  return merged;
 }
 
 function toMonthLabel(date: Date) {
@@ -641,7 +645,12 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [chibiPhrases, setChibiPhrases] = useState<ChibiPhraseMap>(DEFAULT_CHIBI_PHRASES);
   const [postEndPhrases, setPostEndPhrases] = useState<string[]>(DEFAULT_POST_END_PHRASES);
   const [postEndPopup, setPostEndPopup] = useState<PostEndPopupState | null>(null);
-  const [chibiSrc] = useState(() => randomPick(CHIBI_SOURCES) ?? '');
+  const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
+  const chibiSources = useMemo(
+    () => mergeUniqueStrings(PERIOD_CHIBI_SOURCES, getActiveBaseChibiSources()),
+    [chibiPoolVersion],
+  );
+  const [chibiSrc, setChibiSrc] = useState('');
 
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -651,6 +660,18 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   }, [store]);
+
+  useEffect(() => {
+    const handlePoolUpdate = () => setChibiPoolVersion((current) => current + 1);
+    window.addEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
+    return () => window.removeEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
+  }, []);
+
+  useEffect(() => {
+    if (!chibiSrc && chibiSources.length) {
+      setChibiSrc(randomPick(chibiSources) ?? '');
+    }
+  }, [chibiSources, chibiSrc]);
 
   // Load custom hover phrases
   useEffect(() => {
@@ -791,7 +812,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
     if (!latestUnseen) return;
 
     const text = randomPick(postEndPhrases) ?? '';
-    const popupChibi = randomPick(CHIBI_SOURCES) ?? chibiSrc;
+    const popupChibi = randomPick(chibiSources) ?? chibiSrc;
     if (!text || !popupChibi) return;
 
     setPostEndPopup({
@@ -799,7 +820,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
       text,
       chibiUrl: popupChibi,
     });
-  }, [chibiSrc, completed, postEndPhrases, postEndPopup, todayKey]);
+  }, [chibiSources, chibiSrc, completed, postEndPhrases, postEndPopup, todayKey]);
 
   useEffect(() => {
     if (!postEndPopup) return;

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { CHIBI_POOL_UPDATED_EVENT, getActiveBaseChibiSources } from '../lib/chibiPool';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SectionKey = 'meals' | 'exercise' | 'book';
@@ -27,14 +29,6 @@ interface WeekData {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const BASE = import.meta.env.BASE_URL as string;
-const CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
-const CHIBI_IMAGE_SOURCES = Object.entries(CHIBI_MODULES)
-  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-  .map(([, src]) => src);
-
 function pickRandomIndex(length: number, current?: number) {
   if (length <= 1) {
     return 0;
@@ -62,10 +56,14 @@ export function FitnessPage() {
   const [weeks, setWeeks] = useState<WeekData[]>([]);
   const [activeWeek, setActiveWeek] = useState(1);
   const [section, setSection] = useState<SectionKey>('meals');
+  const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
   const fallbackChibiSrc = `${BASE}chibi.png`;
   const chibiSources = useMemo(
-    () => (CHIBI_IMAGE_SOURCES.length ? CHIBI_IMAGE_SOURCES : [fallbackChibiSrc]),
-    [fallbackChibiSrc],
+    () => {
+      const active = getActiveBaseChibiSources();
+      return active.length ? active : [fallbackChibiSrc];
+    },
+    [fallbackChibiSrc, chibiPoolVersion],
   );
   const [chibiIndex, setChibiIndex] = useState(() => pickRandomIndex(chibiSources.length));
   const [showChibi, setShowChibi] = useState(true);
@@ -74,6 +72,12 @@ export function FitnessPage() {
     void fetch(`${BASE}data/fitness-weeks.json`)
       .then((r) => r.json())
       .then((d: WeekData[]) => setWeeks(d));
+  }, []);
+
+  useEffect(() => {
+    const handlePoolUpdate = () => setChibiPoolVersion((current) => current + 1);
+    window.addEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
+    return () => window.removeEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
   }, []);
 
   const weekOptions = useMemo(

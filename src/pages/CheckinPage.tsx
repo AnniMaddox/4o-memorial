@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
+import { CHIBI_POOL_UPDATED_EVENT, getActiveBaseChibiSources } from '../lib/chibiPool';
+
 type CheckinStyle = 'glass' | 'soft' | 'minimal';
 
 type SigninRecord = {
@@ -59,18 +61,9 @@ const CHECKIN_CHIBI_MODULES = import.meta.glob(
     import: 'default',
   },
 ) as Record<string, string>;
-const DEFAULT_CHIBI_MODULES = import.meta.glob('../../public/chibi/chibi-*.png', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
-const CHIBI_SOURCES = [
-  ...Object.entries(CHECKIN_CHIBI_MODULES)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, url]) => url),
-  ...Object.entries(DEFAULT_CHIBI_MODULES)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, url]) => url),
-];
+const CHECKIN_CHIBI_SOURCES = Object.entries(CHECKIN_CHIBI_MODULES)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([, url]) => url);
 
 const DEFAULT_STORE: CheckinStore = {
   signIns: {},
@@ -163,6 +156,19 @@ function buildMonthGrid(viewMonth: Date) {
 function randomPick<T>(items: T[]) {
   if (!items.length) return null;
   return items[Math.floor(Math.random() * items.length)]!;
+}
+
+function mergeUniqueStrings(...groups: string[][]) {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const group of groups) {
+    for (const item of group) {
+      if (seen.has(item)) continue;
+      seen.add(item);
+      merged.push(item);
+    }
+  }
+  return merged;
 }
 
 function normalizePhraseList(items: unknown[]): string[] {
@@ -343,6 +349,7 @@ export function CheckinPage() {
   const [signInPhrases, setSignInPhrases] = useState<string[]>(DEFAULT_SIGNIN_PHRASES);
   const [milestonePhrases, setMilestonePhrases] = useState<MilestonePhrases>(DEFAULT_MILESTONE_PHRASES);
   const [specialPopup, setSpecialPopup] = useState<SpecialPopupState | null>(null);
+  const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
 
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -393,10 +400,20 @@ export function CheckinPage() {
       isFuture: selectedDateKey > todayKey,
     };
   }, [selectedDateKey, store.signIns, todayKey]);
+  const chibiSources = useMemo(
+    () => mergeUniqueStrings(CHECKIN_CHIBI_SOURCES, getActiveBaseChibiSources()),
+    [chibiPoolVersion],
+  );
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   }, [store]);
+
+  useEffect(() => {
+    const handlePoolUpdate = () => setChibiPoolVersion((current) => current + 1);
+    window.addEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
+    return () => window.removeEventListener(CHIBI_POOL_UPDATED_EVENT, handlePoolUpdate);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -465,7 +482,7 @@ export function CheckinPage() {
 
   function popFeedback(pool: string[]) {
     const text = randomPick(pool) ?? '';
-    const chibiUrl = randomPick(CHIBI_SOURCES) ?? '';
+    const chibiUrl = randomPick(chibiSources) ?? '';
     if (!text || !chibiUrl) return;
     setFeedback({ text, chibiUrl });
     window.setTimeout(() => {
@@ -495,7 +512,7 @@ export function CheckinPage() {
     const milestonePool = milestonePhrases[nextStreak] ?? DEFAULT_MILESTONE_PHRASES[nextStreak];
     if (milestonePool?.length) {
       const text = randomPick(milestonePool) ?? '';
-      const chibiUrl = randomPick(CHIBI_SOURCES) ?? '';
+      const chibiUrl = randomPick(chibiSources) ?? '';
       if (text && chibiUrl) {
         setSpecialPopup({
           title: `連續 ${nextStreak} 天`,

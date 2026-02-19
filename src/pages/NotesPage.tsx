@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { getActiveBaseChibiSources } from '../lib/chibiPool';
 import {
   clearAllNotes,
   deleteNote,
@@ -12,16 +13,10 @@ import type { StoredNote } from '../lib/noteDB';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-// All chibi images (00 included, full pool)
-const CHIBI_MODULES = import.meta.glob(
-  '../../public/chibi/chibi-*.png',
-  { eager: true, import: 'default' },
-) as Record<string, string>;
-const ALL_CHIBI_SRCS = Object.values(CHIBI_MODULES);
-
 function randomChibiSrc(): string {
-  if (ALL_CHIBI_SRCS.length === 0) return '';
-  return ALL_CHIBI_SRCS[Math.floor(Math.random() * ALL_CHIBI_SRCS.length)]!;
+  const sources = getActiveBaseChibiSources();
+  if (sources.length === 0) return '';
+  return sources[Math.floor(Math.random() * sources.length)]!;
 }
 
 // 10 note colours
