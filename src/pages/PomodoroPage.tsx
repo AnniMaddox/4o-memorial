@@ -56,7 +56,7 @@ export function PomodoroPage() {
   const [focusCount, setFocusCount] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(MODE_CONFIG.focus.totalSeconds);
   const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
-  const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi.png`;
+  const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
   const chibiSources = useMemo(() => {
     const active = getActiveBaseChibiSources();
     return active.length ? active : [fallbackChibiSrc];

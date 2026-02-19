@@ -117,7 +117,7 @@ export function CalendarPage({
   onMonthChange,
   onCalendarColorModeChange,
 }: CalendarPageProps) {
-  const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi.png`;
+  const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
   const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
   const chibiSources = useMemo(() => {
     const active = getActiveBaseChibiSources();

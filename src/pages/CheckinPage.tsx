@@ -682,8 +682,8 @@ export function CheckinPage() {
 
       {specialPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
-          <div className="w-full max-w-sm rounded-2xl border border-stone-300 bg-white p-4 shadow-xl">
-            <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="w-[min(92vw,34rem)] rounded-3xl border border-stone-300/95 bg-white p-5 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-xs uppercase tracking-[0.12em] text-stone-500">Milestone</p>
               <button
                 type="button"
@@ -693,10 +693,10 @@ export function CheckinPage() {
                 關閉
               </button>
             </div>
-            <p className="text-lg text-stone-900">{specialPopup.title}</p>
-            <div className="mt-3 flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
-              <img src={specialPopup.chibiUrl} alt="" draggable={false} className="h-16 w-16 shrink-0 object-contain" />
-              <p className="text-sm text-stone-700">{specialPopup.text}</p>
+            <p className="text-xl text-stone-900">{specialPopup.title}</p>
+            <div className="mt-4 flex items-center gap-4 rounded-2xl border border-stone-200 bg-stone-50 p-4">
+              <img src={specialPopup.chibiUrl} alt="" draggable={false} className="h-20 w-20 shrink-0 object-contain" />
+              <p className="whitespace-pre-line text-base leading-relaxed text-stone-700">{specialPopup.text}</p>
             </div>
           </div>
         </div>

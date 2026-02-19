@@ -178,7 +178,7 @@ export function HomePage({
   const [isDraggingChibi, setIsDraggingChibi] = useState(false);
   const [chibiAnchor, setChibiAnchor] = useState<AnchorPosition>({ x: 0.9, y: 0.86 });
   const chibiAnchorRef = useRef(chibiAnchor);
-  const cornerChibiUrl = `${import.meta.env.BASE_URL}chibi/chibi-00.png`;
+  const cornerChibiUrl = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
 
   useEffect(() => {
     chibiAnchorRef.current = chibiAnchor;

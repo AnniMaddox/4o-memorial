@@ -57,7 +57,7 @@ export function FitnessPage() {
   const [activeWeek, setActiveWeek] = useState(1);
   const [section, setSection] = useState<SectionKey>('meals');
   const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
-  const fallbackChibiSrc = `${BASE}chibi.png`;
+  const fallbackChibiSrc = `${BASE}chibi/chibi-00.webp`;
   const chibiSources = useMemo(
     () => {
       const active = getActiveBaseChibiSources();

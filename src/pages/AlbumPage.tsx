@@ -8,7 +8,7 @@ const ALBUM_OVERRIDES_STORAGE_KEY = 'memorial-album-overrides';
 const LEGACY_ALBUM_NAME_OVERRIDES_STORAGE_KEY = 'memorial-album-name-overrides';
 
 // chibi-00 used as book-cover decoration on the shelf
-const CHIBI_00_SRC = `${BASE}chibi/chibi-00.png`;
+const CHIBI_00_SRC = `${BASE}chibi/chibi-00.webp`;
 
 // Single catch-all glob — covers ALL albums under public/photos/
 // Key format: '../../public/photos/[album-id]/001.webp'

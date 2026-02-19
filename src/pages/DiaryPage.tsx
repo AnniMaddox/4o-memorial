@@ -9,7 +9,7 @@ const BASE = import.meta.env.BASE_URL as string;
 const CHIBI_COUNT = 35;
 function randomChibiSrc() {
   const idx = Math.floor(Math.random() * CHIBI_COUNT) + 1;
-  return `${BASE}chibi/chibi-${String(idx).padStart(2, '0')}.png`;
+  return `${BASE}chibi/chibi-${String(idx).padStart(2, '0')}.webp`;
 }
 
 // Cover images from public/diary-covers/
