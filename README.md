@@ -57,13 +57,12 @@ npm run preview -- --host --port 4173
 
 Those files are seeded into IndexedDB on first launch.
 
-## Auto build on GitHub (main branch)
+## Optional: auto build on GitHub (main branch)
 
-When you push to `main`, GitHub Actions now auto-builds `docs/`.
-So you can upload new `EML` / `chibi` / album files directly in GitHub,
-and the hosted page will refresh after workflow completes.
-
-Workflow file: `.github/workflows/auto-build-docs.yml`
+If you add workflow file `.github/workflows/auto-build-docs.yml`,
+every push to `main` can auto-build `docs/`.
+That lets you upload new `EML` / `chibi` / album files in GitHub
+without running local build commands.
 
 ## Add a new album
 
