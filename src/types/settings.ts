@@ -20,6 +20,7 @@ export type TabIconKey =
   | 'list'
   | 'fitness'
   | 'pomodoro'
+  | 'period'
   | 'diary'
   | 'album'
   | 'notes'
@@ -37,6 +38,7 @@ export type AppLabelKey =
   | 'list'
   | 'fitness'
   | 'pomodoro'
+  | 'period'
   | 'diary'
   | 'album'
   | 'notes';
@@ -52,6 +54,7 @@ export const DEFAULT_TAB_ICON_URLS: TabIconUrls = {
   list: '',
   fitness: '',
   pomodoro: '',
+  period: '',
   diary: '',
   album: '',
   notes: '',
@@ -70,6 +73,7 @@ export const DEFAULT_APP_LABELS: AppLabels = {
   list: '清單',
   fitness: '健身',
   pomodoro: '番茄鐘',
+  period: '經期日記',
   diary: '日記',
   album: '相冊',
   notes: '心情日記',

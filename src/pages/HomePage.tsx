@@ -2,7 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 
 import type { AppLabels, TabIconUrls } from '../types/settings';
 
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'pomodoro' | 'diary' | 'album' | 'notes';
+type LauncherAppId =
+  | 'tarot'
+  | 'letters'
+  | 'heart'
+  | 'chat'
+  | 'list'
+  | 'fitness'
+  | 'pomodoro'
+  | 'period'
+  | 'diary'
+  | 'album'
+  | 'notes';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -290,6 +301,13 @@ export function HomePage({
       iconUrl: tabIconUrls.pomodoro.trim() || undefined,
       launch: 'pomodoro',
     };
+    const periodSlot: HomeAppSlot = {
+      id: 'period',
+      label: launcherLabels.period,
+      icon: '🩸',
+      iconUrl: tabIconUrls.period.trim() || undefined,
+      launch: 'period',
+    };
     const diarySlot: HomeAppSlot = {
       id: 'diary',
       label: launcherLabels.diary,
@@ -380,11 +398,11 @@ export function HomePage({
             tarotSlot,
             heartSlot,
             pomodoroSlot,
+            periodSlot,
             notesSlot,
             placeholder('placeholder-secondary-1'),
             placeholder('placeholder-secondary-2'),
             placeholder('placeholder-secondary-3'),
-            placeholder('placeholder-secondary-4'),
           ],
         },
         {
@@ -408,11 +426,13 @@ export function HomePage({
     launcherLabels.list,
     launcherLabels.fitness,
     launcherLabels.pomodoro,
+    launcherLabels.period,
     launcherLabels.tarot,
     launcherLabels.album,
     launcherLabels.notes,
     tabIconUrls.fitness,
     tabIconUrls.pomodoro,
+    tabIconUrls.period,
     tabIconUrls.diary,
     tabIconUrls.heart,
     tabIconUrls.letters,

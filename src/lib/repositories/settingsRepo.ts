@@ -55,6 +55,7 @@ function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrl
     list: normalizeString(input.list, fallback.list),
     fitness: normalizeString(input.fitness, fallback.fitness),
     pomodoro: normalizeString(input.pomodoro, fallback.pomodoro),
+    period: normalizeString(input.period, fallback.period),
     diary: normalizeString(input.diary, fallback.diary),
     album: normalizeString(input.album, fallback.album),
     notes: normalizeString(input.notes, fallback.notes),
@@ -77,6 +78,7 @@ function normalizeAppLabels(value: unknown, fallback: AppLabels): AppLabels {
     list: normalizeString(input.list, fallback.list),
     fitness: normalizeString(input.fitness, fallback.fitness),
     pomodoro: normalizeString(input.pomodoro, fallback.pomodoro),
+    period: normalizeString(input.period, fallback.period),
     diary: normalizeString(input.diary, fallback.diary),
     album: normalizeString(input.album, fallback.album),
     // Migrate legacy default label to the new one unless user set a custom value.
