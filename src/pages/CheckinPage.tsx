@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
-type PageTab = 'checkin' | 'period';
 type CheckinStyle = 'glass' | 'soft' | 'minimal';
 
 type SigninRecord = {
@@ -12,9 +11,6 @@ type SigninRecord = {
 
 type CheckinStore = {
   signIns: Record<string, SigninRecord>;
-  periodStarts: string[];
-  periodCycleLength: number;
-  periodDuration: number;
   style: CheckinStyle;
   accentColor: string;
 };
@@ -40,13 +36,6 @@ const SIGNIN_PHRASES = [
   '簽到成功，今天也算數。',
   '妳來過了，我知道。',
 ];
-const PERIOD_PHRASES = [
-  '辛苦了，今天要對自己再溫柔一點。',
-  '我在，先抱抱妳，再慢慢處理今天。',
-  '記錄好了，接下來我陪妳走。',
-  '不舒服就休息，其他的交給我。',
-  '已經幫妳記下來了，不會漏掉。',
-];
 
 const CHIBI_MODULES = import.meta.glob('../../public/chibi/chibi-*.png', {
   eager: true,
@@ -58,9 +47,6 @@ const CHIBI_SOURCES = Object.entries(CHIBI_MODULES)
 
 const DEFAULT_STORE: CheckinStore = {
   signIns: {},
-  periodStarts: [],
-  periodCycleLength: 28,
-  periodDuration: 5,
   style: 'glass',
   accentColor: '#D35A7B',
 };
@@ -93,6 +79,12 @@ function addDays(date: Date, offset: number) {
   const copied = new Date(date);
   copied.setDate(copied.getDate() + offset);
   return copied;
+}
+
+function dayDiff(from: Date, to: Date) {
+  const a = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
+  const b = new Date(to.getFullYear(), to.getMonth(), to.getDate()).getTime();
+  return Math.round((b - a) / 86_400_000);
 }
 
 function toMonthLabel(date: Date) {
@@ -146,20 +138,16 @@ function randomPick<T>(items: T[]) {
   return items[Math.floor(Math.random() * items.length)]!;
 }
 
-function dayDiff(from: Date, to: Date) {
-  const a = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
-  const b = new Date(to.getFullYear(), to.getMonth(), to.getDate()).getTime();
-  return Math.round((b - a) / 86_400_000);
-}
-
 function computeLongestStreak(keys: string[]) {
   if (!keys.length) return 0;
   let best = 1;
   let current = 1;
+
   for (let i = 1; i < keys.length; i += 1) {
     const prev = parseDateKey(keys[i - 1]!);
     const next = parseDateKey(keys[i]!);
     if (!prev || !next) continue;
+
     if (dayDiff(prev, next) === 1) {
       current += 1;
     } else {
@@ -167,6 +155,7 @@ function computeLongestStreak(keys: string[]) {
     }
     best = Math.max(best, current);
   }
+
   return best;
 }
 
@@ -176,8 +165,8 @@ function computeCurrentStreak(signIns: Record<string, SigninRecord>, todayKey: s
   if (!signIns[todayKey]) {
     cursor = addDays(cursor, -1);
   }
-  let streak = 0;
 
+  let streak = 0;
   while (signIns[toDateKey(cursor)]) {
     streak += 1;
     cursor = addDays(cursor, -1);
@@ -217,20 +206,29 @@ function loadStore() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_STORE;
-    const parsed = JSON.parse(raw) as Partial<CheckinStore>;
+    const parsed = JSON.parse(raw) as Partial<CheckinStore> & {
+      signIns?: Record<string, Partial<SigninRecord>>;
+    };
+
+    const signInsEntries = Object.entries(parsed.signIns ?? {}).flatMap(([key, value]) => {
+      if (!parseDateKey(key)) return [];
+      if (!value || typeof value !== 'object') return [];
+      const timestamp = typeof value.timestamp === 'string' ? value.timestamp : '';
+      if (!timestamp) return [];
+      return [
+        [
+          key,
+          {
+            timestamp,
+            mood: typeof value.mood === 'string' ? value.mood : '',
+            note: typeof value.note === 'string' ? value.note : '',
+          },
+        ] as const,
+      ];
+    });
+
     return {
-      signIns: parsed.signIns && typeof parsed.signIns === 'object' ? parsed.signIns : {},
-      periodStarts: Array.isArray(parsed.periodStarts)
-        ? parsed.periodStarts.filter((item): item is string => typeof item === 'string')
-        : [],
-      periodCycleLength:
-        typeof parsed.periodCycleLength === 'number' && Number.isFinite(parsed.periodCycleLength)
-          ? Math.min(40, Math.max(21, Math.round(parsed.periodCycleLength)))
-          : DEFAULT_STORE.periodCycleLength,
-      periodDuration:
-        typeof parsed.periodDuration === 'number' && Number.isFinite(parsed.periodDuration)
-          ? Math.min(10, Math.max(3, Math.round(parsed.periodDuration)))
-          : DEFAULT_STORE.periodDuration,
+      signIns: Object.fromEntries(signInsEntries),
       style:
         parsed.style === 'glass' || parsed.style === 'soft' || parsed.style === 'minimal'
           ? parsed.style
@@ -247,78 +245,62 @@ function loadStore() {
 
 export function CheckinPage() {
   const [store, setStore] = useState<CheckinStore>(loadStore);
-  const [activeTab, setActiveTab] = useState<PageTab>('checkin');
   const [viewMonth, setViewMonth] = useState(() => new Date());
   const [selectedMood, setSelectedMood] = useState(MOODS[0]!);
   const [noteDraft, setNoteDraft] = useState('');
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
-  const [statsModalOpen, setStatsModalOpen] = useState(false);
-  const [statsTab, setStatsTab] = useState<'month' | 'total'>('month');
-  const [periodStartDraft, setPeriodStartDraft] = useState('');
+  const [overviewOpen, setOverviewOpen] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
 
   const today = new Date();
   const todayKey = toDateKey(today);
   const viewMonthKey = getMonthKey(viewMonth);
+  const currentMonthKey = getMonthKey(today);
   const monthCells = useMemo(() => buildMonthGrid(viewMonth), [viewMonth]);
   const signInKeys = useMemo(() => Object.keys(store.signIns).sort(), [store.signIns]);
-  const monthSignedCount = useMemo(
+  const viewMonthSignedCount = useMemo(
     () => signInKeys.filter((key) => key.startsWith(viewMonthKey)).length,
     [signInKeys, viewMonthKey],
+  );
+  const currentMonthSignedCount = useMemo(
+    () => signInKeys.filter((key) => key.startsWith(currentMonthKey)).length,
+    [currentMonthKey, signInKeys],
   );
   const totalSignedCount = signInKeys.length;
   const currentStreak = useMemo(() => computeCurrentStreak(store.signIns, todayKey), [store.signIns, todayKey]);
   const longestStreak = useMemo(() => computeLongestStreak(signInKeys), [signInKeys]);
   const todaySigned = !!store.signIns[todayKey];
+  const todayRecord = store.signIns[todayKey] ?? null;
   const variant = getVariantClasses(store.style);
 
-  const periodActualSet = useMemo(() => {
-    const set = new Set<string>();
-    for (const startKey of store.periodStarts) {
-      const startDate = parseDateKey(startKey);
-      if (!startDate) continue;
-      for (let offset = 0; offset < store.periodDuration; offset += 1) {
-        set.add(toDateKey(addDays(startDate, offset)));
-      }
-    }
-    return set;
-  }, [store.periodDuration, store.periodStarts]);
+  const currentMonthTotalDays = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const monthProgress = currentMonthTotalDays > 0 ? currentMonthSignedCount / currentMonthTotalDays : 0;
+  const monthProgressPercent = Math.round(monthProgress * 100);
 
-  const periodPredictedSet = useMemo(() => {
-    const set = new Set<string>();
-    if (!store.periodStarts.length) return set;
-    const lastStart = parseDateKey(store.periodStarts[store.periodStarts.length - 1]!);
-    if (!lastStart) return set;
-
-    for (let cycle = 1; cycle <= 6; cycle += 1) {
-      const predictedStart = addDays(lastStart, store.periodCycleLength * cycle);
-      for (let offset = 0; offset < store.periodDuration; offset += 1) {
-        set.add(toDateKey(addDays(predictedStart, offset)));
-      }
-    }
-    return set;
-  }, [store.periodCycleLength, store.periodDuration, store.periodStarts]);
-
-  const nextPredictedStart = useMemo(() => {
-    if (!store.periodStarts.length) return '';
-    const last = parseDateKey(store.periodStarts[store.periodStarts.length - 1]!);
-    if (!last) return '';
-    return toDateKey(addDays(last, store.periodCycleLength));
-  }, [store.periodCycleLength, store.periodStarts]);
+  const lastSevenDays = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) => {
+        const date = addDays(today, -(6 - index));
+        const key = toDateKey(date);
+        return {
+          key,
+          date,
+          signed: !!store.signIns[key],
+          isToday: key === todayKey,
+        };
+      }),
+    [store.signIns, today, todayKey],
+  );
 
   const selectedDateInfo = useMemo(() => {
     if (!selectedDateKey) return null;
     const signedRecord = store.signIns[selectedDateKey];
-    const isActualPeriod = periodActualSet.has(selectedDateKey);
-    const isPredictedPeriod = !isActualPeriod && periodPredictedSet.has(selectedDateKey);
     return {
       dateKey: selectedDateKey,
       signedRecord,
-      isActualPeriod,
-      isPredictedPeriod,
       isFuture: selectedDateKey > todayKey,
     };
-  }, [periodActualSet, periodPredictedSet, selectedDateKey, store.signIns, todayKey]);
+  }, [selectedDateKey, store.signIns, todayKey]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
@@ -353,22 +335,6 @@ export function CheckinPage() {
     popFeedback(SIGNIN_PHRASES);
   }
 
-  function onRecordPeriodStart() {
-    const key = periodStartDraft.trim();
-    if (!parseDateKey(key)) return;
-    if (key > todayKey) return;
-
-    setStore((current) => {
-      const nextStarts = Array.from(new Set([...current.periodStarts, key])).sort();
-      return {
-        ...current,
-        periodStarts: nextStarts,
-      };
-    });
-    setPeriodStartDraft('');
-    popFeedback(PERIOD_PHRASES);
-  }
-
   return (
     <div className={`mx-auto h-full w-full max-w-xl overflow-y-auto ${variant.page}`}>
       <div className="space-y-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
@@ -380,44 +346,21 @@ export function CheckinPage() {
             </div>
             <button
               type="button"
-              onClick={() => setStatsModalOpen(true)}
+              onClick={() => setOverviewOpen(true)}
               className="rounded-xl border border-stone-300 bg-white/80 px-3 py-1.5 text-xs text-stone-700 transition active:scale-95"
             >
-              查看詳情
+              總覽
             </button>
           </div>
 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <MetricCard title="連續天數" value={String(currentStreak)} />
-            <MetricCard title="本月已簽" value={String(monthSignedCount)} />
+            <MetricCard title="本月已簽" value={String(currentMonthSignedCount)} />
             <MetricCard title="最長紀錄" value={String(longestStreak)} />
           </div>
         </header>
 
-        <section className={`rounded-2xl border p-3 shadow-sm ${variant.card}`}>
-          <div className="mb-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab('checkin')}
-              className={`rounded-xl border px-3 py-2 text-sm transition active:scale-95 ${
-                activeTab === 'checkin' ? 'text-white' : 'border-stone-300 bg-white/80 text-stone-700'
-              }`}
-              style={activeTab === 'checkin' ? { backgroundColor: store.accentColor, borderColor: store.accentColor } : undefined}
-            >
-              簽到
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('period')}
-              className={`rounded-xl border px-3 py-2 text-sm transition active:scale-95 ${
-                activeTab === 'period' ? 'text-white' : 'border-stone-300 bg-white/80 text-stone-700'
-              }`}
-              style={activeTab === 'period' ? { backgroundColor: store.accentColor, borderColor: store.accentColor } : undefined}
-            >
-              經期
-            </button>
-          </div>
-
+        <section className={`rounded-2xl border p-4 shadow-sm ${variant.card}`}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <button
@@ -456,24 +399,16 @@ export function CheckinPage() {
               const signed = !!store.signIns[cell.key];
               const isPast = cell.key < todayKey;
               const isFuture = cell.key > todayKey;
-              const isActualPeriod = periodActualSet.has(cell.key);
-              const isPredictedPeriod = !isActualPeriod && periodPredictedSet.has(cell.key);
 
               let cellBg = variant.cell;
               let cellText = 'text-stone-700';
               if (!cell.inMonth) {
                 cellText = 'text-stone-400';
               }
-              if (activeTab === 'checkin' && signed) {
+              if (signed) {
                 cellBg = 'bg-rose-100';
                 cellText = 'text-rose-700';
-              } else if (activeTab === 'period' && isActualPeriod) {
-                cellBg = 'bg-fuchsia-100';
-                cellText = 'text-fuchsia-700';
-              } else if (activeTab === 'period' && isPredictedPeriod) {
-                cellBg = 'bg-sky-100';
-                cellText = 'text-sky-700';
-              } else if (isPast && activeTab === 'checkin' && !signed && cell.inMonth) {
+              } else if (isPast && cell.inMonth) {
                 cellBg = 'bg-stone-100';
               }
 
@@ -486,175 +421,60 @@ export function CheckinPage() {
                   style={isToday ? { boxShadow: `0 0 0 1px ${store.accentColor} inset` } : undefined}
                 >
                   <span>{cell.day}</span>
-                  {activeTab === 'checkin' && signed && (
-                    <span className="absolute bottom-1 right-1 text-[10px]">💋</span>
-                  )}
-                  {activeTab === 'period' && isActualPeriod && (
-                    <span className="absolute bottom-1 right-1 text-[10px]">●</span>
-                  )}
-                  {activeTab === 'period' && isPredictedPeriod && (
-                    <span className="absolute bottom-1 right-1 text-[10px]">◌</span>
-                  )}
-                  {isFuture && activeTab === 'checkin' && (
-                    <span className="absolute right-1 top-1 text-[9px] text-stone-400">·</span>
-                  )}
+                  {signed && <span className="absolute bottom-1 right-1 text-[10px]">💋</span>}
+                  {isFuture && <span className="absolute right-1 top-1 text-[9px] text-stone-400">·</span>}
                 </button>
               );
             })}
           </div>
+
+          <p className={`mt-3 text-xs ${variant.muted}`}>目前檢視月份已簽：{viewMonthSignedCount} 天</p>
         </section>
 
-        {activeTab === 'checkin' ? (
-          <section className={`space-y-3 rounded-2xl border p-4 shadow-sm ${variant.card}`}>
-            <div>
-              <p className="text-sm text-stone-800">今天簽到</p>
-              <p className={`text-xs ${variant.muted}`}>
-                {todaySigned
-                  ? `已完成：${new Date(store.signIns[todayKey]!.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                  : '還沒簽到'}
-              </p>
-            </div>
-            <label className="block space-y-1">
-              <span className="text-xs text-stone-500">今天心情</span>
-              <select
-                value={selectedMood}
-                onChange={(event) => setSelectedMood(event.target.value)}
-                className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-              >
-                {MOODS.map((mood) => (
-                  <option key={mood} value={mood}>
-                    {mood}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block space-y-1">
-              <span className="text-xs text-stone-500">備註（選填）</span>
-              <textarea
-                value={noteDraft}
-                onChange={(event) => setNoteDraft(event.target.value)}
-                rows={2}
-                className="w-full resize-none rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-                placeholder="今天想記下的一句話..."
-              />
-            </label>
-            <button
-              type="button"
-              onClick={onSignToday}
-              disabled={todaySigned}
-              className={`w-full rounded-xl px-4 py-2.5 text-sm text-white transition ${
-                todaySigned ? 'cursor-not-allowed bg-stone-400/70' : 'active:scale-95'
-              }`}
-              style={!todaySigned ? { backgroundColor: store.accentColor } : undefined}
-            >
-              {todaySigned ? '今日已簽到' : '今日簽到'}
-            </button>
-          </section>
-        ) : (
-          <section className={`space-y-3 rounded-2xl border p-4 shadow-sm ${variant.card}`}>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="space-y-1">
-                <span className="text-xs text-stone-500">週期天數</span>
-                <input
-                  type="number"
-                  min={21}
-                  max={40}
-                  value={store.periodCycleLength}
-                  onChange={(event) =>
-                    setStore((current) => ({
-                      ...current,
-                      periodCycleLength: Math.min(40, Math.max(21, Number(event.target.value) || 28)),
-                    }))
-                  }
-                  className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-xs text-stone-500">經期天數</span>
-                <input
-                  type="number"
-                  min={3}
-                  max={10}
-                  value={store.periodDuration}
-                  onChange={(event) =>
-                    setStore((current) => ({
-                      ...current,
-                      periodDuration: Math.min(10, Math.max(3, Number(event.target.value) || 5)),
-                    }))
-                  }
-                  className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-                />
-              </label>
-            </div>
-
-            <label className="block space-y-1">
-              <span className="text-xs text-stone-500">本次開始日</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={periodStartDraft}
-                  max={todayKey}
-                  onChange={(event) => setPeriodStartDraft(event.target.value)}
-                  className="min-w-0 flex-1 rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
-                />
-                <button
-                  type="button"
-                  onClick={onRecordPeriodStart}
-                  className="rounded-xl px-3 py-2 text-xs text-white transition active:scale-95"
-                  style={{ backgroundColor: store.accentColor }}
-                >
-                  記錄
-                </button>
-              </div>
-            </label>
-
-            <div className="rounded-xl border border-stone-200 bg-white/75 px-3 py-2 text-xs text-stone-600">
-              下次預測開始日：{nextPredictedStart || '尚未建立資料'}
-            </div>
-          </section>
-        )}
-
         <section className={`space-y-3 rounded-2xl border p-4 shadow-sm ${variant.card}`}>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-stone-800">頁面風格</p>
-            <input
-              type="color"
-              value={store.accentColor}
-              onChange={(event) =>
-                setStore((current) => ({
-                  ...current,
-                  accentColor: event.target.value,
-                }))
-              }
-              className="h-8 w-12 cursor-pointer rounded border border-stone-300 bg-white"
+          <div>
+            <p className="text-sm text-stone-800">今天簽到</p>
+            <p className={`text-xs ${variant.muted}`}>
+              {todaySigned
+                ? `已完成：${new Date(todayRecord!.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : '還沒簽到'}
+            </p>
+          </div>
+          <label className="block space-y-1">
+            <span className="text-xs text-stone-500">今天心情</span>
+            <select
+              value={selectedMood}
+              onChange={(event) => setSelectedMood(event.target.value)}
+              className="w-full rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
+            >
+              {MOODS.map((mood) => (
+                <option key={mood} value={mood}>
+                  {mood}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs text-stone-500">備註（選填）</span>
+            <textarea
+              value={noteDraft}
+              onChange={(event) => setNoteDraft(event.target.value)}
+              rows={2}
+              className="w-full resize-none rounded-xl border border-stone-300 bg-white/85 px-3 py-2 text-sm text-stone-800"
+              placeholder="今天想記下的一句話..."
             />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {([
-              { id: 'glass', label: '玻璃感' },
-              { id: 'soft', label: '柔和感' },
-              { id: 'minimal', label: '極簡風' },
-            ] as const).map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() =>
-                  setStore((current) => ({
-                    ...current,
-                    style: option.id,
-                  }))
-                }
-                className={`rounded-xl border px-2 py-2 text-xs transition active:scale-95 ${
-                  store.style === option.id
-                    ? 'text-white'
-                    : 'border-stone-300 bg-white/80 text-stone-700'
-                }`}
-                style={store.style === option.id ? { backgroundColor: store.accentColor, borderColor: store.accentColor } : undefined}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          </label>
+          <button
+            type="button"
+            onClick={onSignToday}
+            disabled={todaySigned}
+            className={`w-full rounded-xl px-4 py-2.5 text-sm text-white transition ${
+              todaySigned ? 'cursor-not-allowed bg-stone-400/70' : 'active:scale-95'
+            }`}
+            style={!todaySigned ? { backgroundColor: store.accentColor } : undefined}
+          >
+            {todaySigned ? '今日已簽到' : '今日簽到'}
+          </button>
         </section>
       </div>
 
@@ -688,62 +508,139 @@ export function CheckinPage() {
                 {selectedDateInfo.signedRecord.note && <p>備註：{selectedDateInfo.signedRecord.note}</p>}
               </>
             )}
-            <p>
-              經期：{selectedDateInfo.isActualPeriod ? '實際紀錄日' : selectedDateInfo.isPredictedPeriod ? '預測日' : '無'}
-            </p>
           </div>
         </ModalFrame>
       )}
 
-      {statsModalOpen && (
-        <ModalFrame onClose={() => setStatsModalOpen(false)}>
-          <div className="mb-3 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setStatsTab('month')}
-              className={`rounded-lg border px-3 py-1 text-xs ${
-                statsTab === 'month' ? 'text-white' : 'border-stone-300 text-stone-700'
-              }`}
-              style={statsTab === 'month' ? { backgroundColor: store.accentColor, borderColor: store.accentColor } : undefined}
-            >
-              本月
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatsTab('total')}
-              className={`rounded-lg border px-3 py-1 text-xs ${
-                statsTab === 'total' ? 'text-white' : 'border-stone-300 text-stone-700'
-              }`}
-              style={statsTab === 'total' ? { backgroundColor: store.accentColor, borderColor: store.accentColor } : undefined}
-            >
-              累積
-            </button>
-          </div>
+      {overviewOpen && (
+        <ModalFrame onClose={() => setOverviewOpen(false)} maxWidthClassName="max-w-md">
+          <p className="text-xs uppercase tracking-[0.14em] text-stone-500">Checkin Overview</p>
+          <h3 className="mt-1 text-lg text-stone-900">打卡總覽</h3>
 
-          {statsTab === 'month' ? (
-            <div className="space-y-2 text-sm text-stone-700">
-              <p>月份：{viewMonthKey}</p>
-              <p>本月已簽：{monthSignedCount} 天</p>
-              <p>本月未簽：{Math.max(0, new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate() - monthSignedCount)} 天</p>
+          <div className="mt-3 space-y-3">
+            <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
+              <p className="text-xs text-stone-500">今日狀態</p>
+              <p className="mt-1 text-sm text-stone-800">{todaySigned ? '已簽到 💋' : '未簽到'}</p>
+              {todaySigned && todayRecord && (
+                <div className="mt-1 space-y-1 text-xs text-stone-600">
+                  <p>時間：{new Date(todayRecord.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  <p>心情：{todayRecord.mood || '未填寫'}</p>
+                  {!!todayRecord.note && <p>備註：{todayRecord.note}</p>}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="space-y-2 text-sm text-stone-700">
-              <p>累積簽到：{totalSignedCount} 天</p>
-              <p>目前連續：{currentStreak} 天</p>
-              <p>最長連續：{longestStreak} 天</p>
+
+            <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
+              <div className="flex items-center justify-between text-xs text-stone-500">
+                <span>本月進度</span>
+                <span>
+                  {currentMonthSignedCount}/{currentMonthTotalDays}（{monthProgressPercent}%）
+                </span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-stone-200">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${monthProgressPercent}%`,
+                    backgroundColor: store.accentColor,
+                  }}
+                />
+              </div>
             </div>
-          )}
+
+            <div className="grid grid-cols-3 gap-2">
+              <MetricCard title="目前連續" value={`${currentStreak} 天`} compact />
+              <MetricCard title="最長連續" value={`${longestStreak} 天`} compact />
+              <MetricCard title="累積簽到" value={`${totalSignedCount} 天`} compact />
+            </div>
+
+            <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
+              <p className="text-xs text-stone-500">最近 7 日</p>
+              <div className="mt-2 grid grid-cols-7 gap-1">
+                {lastSevenDays.map((item) => (
+                  <div key={item.key} className="text-center">
+                    <div
+                      className="grid h-8 place-items-center rounded-lg text-xs"
+                      style={{
+                        backgroundColor: item.signed ? `${store.accentColor}22` : '#e7e5e4',
+                        color: item.signed ? '#be123c' : '#78716c',
+                        boxShadow: item.isToday ? `0 0 0 1px ${store.accentColor} inset` : undefined,
+                      }}
+                    >
+                      {item.signed ? '💋' : item.date.getDate()}
+                    </div>
+                    <p className="mt-1 text-[10px] text-stone-500">{item.date.getDate()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-xs text-stone-500">頁面風格</p>
+                <input
+                  type="color"
+                  value={store.accentColor}
+                  onChange={(event) =>
+                    setStore((current) => ({
+                      ...current,
+                      accentColor: event.target.value,
+                    }))
+                  }
+                  className="h-8 w-12 cursor-pointer rounded border border-stone-300 bg-white"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: 'glass', label: '玻璃感' },
+                  { id: 'soft', label: '柔和感' },
+                  { id: 'minimal', label: '極簡風' },
+                ] as const).map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() =>
+                      setStore((current) => ({
+                        ...current,
+                        style: option.id,
+                      }))
+                    }
+                    className={`rounded-xl border px-2 py-2 text-xs transition active:scale-95 ${
+                      store.style === option.id
+                        ? 'text-white'
+                        : 'border-stone-300 bg-white text-stone-700'
+                    }`}
+                    style={
+                      store.style === option.id
+                        ? { backgroundColor: store.accentColor, borderColor: store.accentColor }
+                        : undefined
+                    }
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </ModalFrame>
       )}
     </div>
   );
 }
 
-function MetricCard({ title, value }: { title: string; value: string }) {
+function MetricCard({
+  title,
+  value,
+  compact = false,
+}: {
+  title: string;
+  value: string;
+  compact?: boolean;
+}) {
   return (
     <div className="rounded-xl border border-stone-200 bg-white/80 px-3 py-2 text-center">
       <p className="text-[11px] text-stone-500">{title}</p>
-      <p className="mt-0.5 text-lg text-stone-800">{value}</p>
+      <p className={`mt-0.5 text-stone-800 ${compact ? 'text-sm' : 'text-lg'}`}>{value}</p>
     </div>
   );
 }
@@ -751,9 +648,11 @@ function MetricCard({ title, value }: { title: string; value: string }) {
 function ModalFrame({
   children,
   onClose,
+  maxWidthClassName = 'max-w-sm',
 }: {
   children: ReactNode;
   onClose: () => void;
+  maxWidthClassName?: string;
 }) {
   return (
     <div
@@ -764,7 +663,7 @@ function ModalFrame({
         }
       }}
     >
-      <div className="w-full max-w-sm rounded-2xl border border-stone-300 bg-white p-4 shadow-xl">
+      <div className={`w-full ${maxWidthClassName} max-h-[86vh] overflow-y-auto rounded-2xl border border-stone-300 bg-white p-4 shadow-xl`}>
         <div className="mb-2 flex justify-end">
           <button
             type="button"
