@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 
 import type { AppLabels, TabIconUrls } from '../types/settings';
 
-type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'diary' | 'album';
+type LauncherAppId = 'tarot' | 'letters' | 'heart' | 'chat' | 'list' | 'fitness' | 'pomodoro' | 'diary' | 'album';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -280,6 +280,13 @@ export function HomePage({
       iconUrl: tabIconUrls.fitness.trim() || undefined,
       launch: 'fitness',
     };
+    const pomodoroSlot: HomeAppSlot = {
+      id: 'pomodoro',
+      label: launcherLabels.pomodoro,
+      icon: '🍅',
+      iconUrl: tabIconUrls.pomodoro.trim() || undefined,
+      launch: 'pomodoro',
+    };
     const diarySlot: HomeAppSlot = {
       id: 'diary',
       label: launcherLabels.diary,
@@ -295,17 +302,26 @@ export function HomePage({
       launch: 'album',
     };
 
-    // Screen 1: main apps, plus reserved empty slots.
-    const screen1: HomeAppSlot[] = [
-      tarotSlot,
-      lettersSlot,
-      heartSlot,
-      chatSlot,
-      listSlot,
-      fitnessSlot,
-      diarySlot,
-      albumSlot,
-    ];
+    const placeholder = (id: string): HomeAppSlot => ({
+      id,
+      label: '',
+      icon: '',
+      disabled: true,
+    });
+
+    // Screen 1: keep frequently used apps.
+    const screen1: HomeAppSlot[] = homeSwipeEnabled
+      ? [
+          tarotSlot,
+          lettersSlot,
+          chatSlot,
+          listSlot,
+          fitnessSlot,
+          diarySlot,
+          albumSlot,
+          placeholder('placeholder-main-1'),
+        ]
+      : [tarotSlot, lettersSlot, heartSlot, pomodoroSlot, chatSlot, listSlot, fitnessSlot, diarySlot, albumSlot];
 
     const builtScreens: HomeScreen[] = [
       {
@@ -318,11 +334,21 @@ export function HomePage({
     if (homeSwipeEnabled) {
       builtScreens.push(
         {
-          id: 'blank-1',
-          kind: 'blank',
+          id: 'apps-2',
+          kind: 'main',
+          slots: [
+            heartSlot,
+            pomodoroSlot,
+            placeholder('placeholder-secondary-1'),
+            placeholder('placeholder-secondary-2'),
+            placeholder('placeholder-secondary-3'),
+            placeholder('placeholder-secondary-4'),
+            placeholder('placeholder-secondary-5'),
+            placeholder('placeholder-secondary-6'),
+          ],
         },
         {
-          id: 'blank-2',
+          id: 'blank-1',
           kind: 'blank',
         },
         {
@@ -341,9 +367,11 @@ export function HomePage({
     launcherLabels.letters,
     launcherLabels.list,
     launcherLabels.fitness,
+    launcherLabels.pomodoro,
     launcherLabels.tarot,
     launcherLabels.album,
     tabIconUrls.fitness,
+    tabIconUrls.pomodoro,
     tabIconUrls.diary,
     tabIconUrls.heart,
     tabIconUrls.letters,

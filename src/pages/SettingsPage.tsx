@@ -63,6 +63,7 @@ const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   heart: '💗',
   list: '🎴',
   fitness: '🏋️',
+  pomodoro: '🍅',
   diary: '📓',
   album: '📷',
   settings: '⚙️',
@@ -77,6 +78,7 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'heart', label: 'MY LOVE' },
   { key: 'list', label: 'List 清單' },
   { key: 'fitness', label: 'Fitness 健身' },
+  { key: 'pomodoro', label: 'Pomodoro 番茄鐘' },
   { key: 'diary', label: 'Diary 日記' },
   { key: 'album', label: 'Album 相冊' },
   { key: 'settings', label: 'Settings' },
@@ -93,6 +95,7 @@ const APP_LABEL_FIELDS: Array<{ key: AppLabelKey; label: string }> = [
   { key: 'chat', label: '首頁入口：對話' },
   { key: 'list', label: '首頁入口：清單' },
   { key: 'fitness', label: '首頁入口：健身' },
+  { key: 'pomodoro', label: '首頁入口：番茄鐘' },
   { key: 'diary', label: '首頁入口：日記' },
   { key: 'album', label: '首頁入口：相冊' },
 ];
@@ -133,6 +136,8 @@ type AppearancePresetPayload = {
     inboxTitle: string;
     memorialStartDate: string;
     diaryCoverFitMode: AppSettings['diaryCoverFitMode'];
+    tarotNameColor: string;
+    tarotNameScale: number;
     appLabels: AppLabels;
   };
 };
@@ -327,6 +332,7 @@ export function SettingsPage({
       heart: tabIconDrafts.heart.trim(),
       list: tabIconDrafts.list.trim(),
       fitness: tabIconDrafts.fitness.trim(),
+      pomodoro: tabIconDrafts.pomodoro.trim(),
       diary: tabIconDrafts.diary.trim(),
       album: tabIconDrafts.album.trim(),
       settings: tabIconDrafts.settings.trim(),
@@ -353,6 +359,7 @@ export function SettingsPage({
       chat: labelDrafts.chat.trim(),
       list: labelDrafts.list.trim(),
       fitness: labelDrafts.fitness.trim(),
+      pomodoro: labelDrafts.pomodoro.trim(),
       diary: labelDrafts.diary.trim(),
       album: labelDrafts.album.trim(),
     };
@@ -403,6 +410,8 @@ export function SettingsPage({
         inboxTitle: settings.inboxTitle,
         memorialStartDate: settings.memorialStartDate,
         diaryCoverFitMode: settings.diaryCoverFitMode,
+        tarotNameColor: settings.tarotNameColor,
+        tarotNameScale: settings.tarotNameScale,
         appLabels: settings.appLabels,
       },
     };
@@ -487,6 +496,7 @@ export function SettingsPage({
           heart: typeof input.heart === 'string' ? input.heart.trim() : '',
           list: typeof input.list === 'string' ? input.list.trim() : '',
           fitness: typeof input.fitness === 'string' ? input.fitness.trim() : '',
+          pomodoro: typeof input.pomodoro === 'string' ? input.pomodoro.trim() : '',
           diary: typeof input.diary === 'string' ? input.diary.trim() : '',
           album: typeof input.album === 'string' ? input.album.trim() : '',
           settings: typeof input.settings === 'string' ? input.settings.trim() : '',
@@ -537,6 +547,12 @@ export function SettingsPage({
       if (source.diaryCoverFitMode === 'cover' || source.diaryCoverFitMode === 'contain') {
         next.diaryCoverFitMode = source.diaryCoverFitMode;
       }
+      if (typeof source.tarotNameColor === 'string') {
+        next.tarotNameColor = source.tarotNameColor;
+      }
+      if (typeof source.tarotNameScale === 'number' && Number.isFinite(source.tarotNameScale)) {
+        next.tarotNameScale = source.tarotNameScale;
+      }
       if (source.appLabels && typeof source.appLabels === 'object') {
         const input = source.appLabels as Partial<AppLabels>;
         next.appLabels = {
@@ -550,6 +566,7 @@ export function SettingsPage({
           chat: typeof input.chat === 'string' ? input.chat.trim() : '',
           list: typeof input.list === 'string' ? input.list.trim() : '',
           fitness: typeof input.fitness === 'string' ? input.fitness.trim() : '',
+          pomodoro: typeof input.pomodoro === 'string' ? input.pomodoro.trim() : '',
           diary: typeof input.diary === 'string' ? input.diary.trim() : '',
           album: typeof input.album === 'string' ? input.album.trim() : '',
         };
@@ -1361,7 +1378,7 @@ export function SettingsPage({
         <SettingPanel
           icon="🃏"
           title="塔羅"
-          subtitle="閱覽室入口圖片"
+          subtitle="閱覽室入口圖片 · 名稱字色與字級"
           isOpen={openPanel === 'tarot'}
           onToggle={() => togglePanel('tarot')}
         >
@@ -1391,7 +1408,30 @@ export function SettingsPage({
             >
               套用
             </button>
-            <p className="text-xs text-stone-400">圖片會顯示在塔羅頁底部，點擊進入全部 22 張牌的閱覽室。</p>
+            <div className="space-y-2 rounded-xl border border-stone-200 bg-stone-50 p-3">
+              <label className="flex items-center justify-between gap-3 text-xs text-stone-600">
+                <span>牌名顏色</span>
+                <input
+                  type="color"
+                  value={settings.tarotNameColor}
+                  onChange={(event) => onSettingChange({ tarotNameColor: event.target.value })}
+                  className="h-8 w-12 cursor-pointer rounded border border-stone-300 bg-white"
+                />
+              </label>
+              <label className="block space-y-1 text-xs text-stone-600">
+                <span>牌名字級：{settings.tarotNameScale.toFixed(2)}x</span>
+                <input
+                  type="range"
+                  min={0.8}
+                  max={2}
+                  step={0.05}
+                  value={settings.tarotNameScale}
+                  onChange={(event) => onSettingChange({ tarotNameScale: Number(event.target.value) })}
+                  className="w-full"
+                />
+              </label>
+            </div>
+            <p className="text-xs text-stone-400">會套用在塔羅首頁牌名、閱覽室清單牌名、翻牌內容標題。</p>
           </div>
         </SettingPanel>
 
