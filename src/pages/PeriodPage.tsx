@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type PeriodTab = 'overview' | 'calendar' | 'records';
+type PeriodPanelStyle = 'soft' | 'glass' | 'minimal';
 
 type PeriodRecord = {
   id: string;
@@ -14,6 +15,7 @@ type PeriodRecord = {
 type PeriodStore = {
   records: PeriodRecord[];
   accentColor: string;
+  panelStyle: PeriodPanelStyle;
 };
 
 type CalendarCell = {
@@ -97,9 +99,53 @@ const DEFAULT_POST_END_PHRASES = [
   '這次也平安走過來了，妳很棒。',
 ];
 
+const PANEL_STYLE_OPTIONS: Array<{ id: PeriodPanelStyle; label: string }> = [
+  { id: 'soft', label: '柔和' },
+  { id: 'glass', label: '玻璃' },
+  { id: 'minimal', label: '極簡' },
+];
+
+const PANEL_STYLE_THEME: Record<
+  PeriodPanelStyle,
+  {
+    pageBg: string;
+    headerBg: string;
+    cardBg: string;
+    cardBorder: string;
+    cardShadow: string;
+    mutedCardBg: string;
+  }
+> = {
+  soft: {
+    pageBg: C.bg,
+    headerBg: C.bg,
+    cardBg: 'rgba(255,255,255,0.72)',
+    cardBorder: 'rgba(255,255,255,0.9)',
+    cardShadow: '0 2px 12px rgba(0,0,0,0.05)',
+    mutedCardBg: 'rgba(255,255,255,0.55)',
+  },
+  glass: {
+    pageBg: '#f7fafc',
+    headerBg: 'rgba(255,255,255,0.72)',
+    cardBg: 'rgba(255,255,255,0.5)',
+    cardBorder: 'rgba(255,255,255,0.86)',
+    cardShadow: '0 10px 28px rgba(15,23,42,0.10)',
+    mutedCardBg: 'rgba(255,255,255,0.38)',
+  },
+  minimal: {
+    pageBg: '#fafaf9',
+    headerBg: '#fafaf9',
+    cardBg: '#ffffff',
+    cardBorder: 'rgba(0,0,0,0.08)',
+    cardShadow: 'none',
+    mutedCardBg: '#ffffff',
+  },
+};
+
 const DEFAULT_STORE: PeriodStore = {
   records: [],
   accentColor: C.period,
+  panelStyle: 'soft',
 };
 
 // ─── Chibi sources ─────────────────────────────────────────────────────────────
@@ -188,6 +234,10 @@ function loadStore(): PeriodStore {
         typeof parsed.accentColor === 'string' && parsed.accentColor.trim()
           ? parsed.accentColor
           : DEFAULT_STORE.accentColor,
+      panelStyle:
+        parsed.panelStyle === 'glass' || parsed.panelStyle === 'minimal' || parsed.panelStyle === 'soft'
+          ? parsed.panelStyle
+          : DEFAULT_STORE.panelStyle,
     };
   } catch {
     return DEFAULT_STORE;
@@ -423,7 +473,7 @@ function FloatingChibi({
 }) {
   return (
     <div
-      className="pointer-events-none absolute bottom-[54px] right-2 z-20 flex flex-col items-end gap-2 sm:right-3"
+      className="pointer-events-none absolute bottom-[42px] right-2 z-20 flex flex-col items-end gap-2 sm:right-3"
     >
       {/* Bubble */}
       <div className="pointer-events-auto">
@@ -560,13 +610,13 @@ function DateSheet({
 
 // ─── PeriodSettingsSheet ──────────────────────────────────────────────────────
 function PeriodSettingsSheet({
-  avgCycleLength,
-  avgDuration,
+  panelStyle,
+  onPanelStyleChange,
   onClearAll,
   onClose,
 }: {
-  avgCycleLength: number;
-  avgDuration: number;
+  panelStyle: PeriodPanelStyle;
+  onPanelStyleChange: (style: PeriodPanelStyle) => void;
   onClearAll: () => void;
   onClose: () => void;
 }) {
@@ -585,15 +635,29 @@ function PeriodSettingsSheet({
         <p className="mb-5 text-center text-base font-semibold text-stone-800">週期設定</p>
 
         <div className="mb-4 rounded-2xl bg-stone-50 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-stone-500">目前平均週期</span>
-            <span className="text-sm font-medium text-stone-700">{avgCycleLength} 天</span>
+          <p className="mb-2 text-xs text-stone-500">面板風格</p>
+          <div className="grid grid-cols-3 gap-2">
+            {PANEL_STYLE_OPTIONS.map((option) => {
+              const active = option.id === panelStyle;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => onPanelStyleChange(option.id)}
+                  className="rounded-xl border px-2 py-2 text-xs transition active:scale-95"
+                  style={{
+                    background: active ? '#fde4ec' : '#fff',
+                    color: active ? C.accent : '#57534e',
+                    borderColor: active ? 'rgba(212,96,122,0.24)' : '#e7e5e4',
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs text-stone-500">目前平均經期</span>
-            <span className="text-sm font-medium text-stone-700">{avgDuration} 天</span>
-          </div>
-          <p className="mt-2 text-[10px] text-stone-400">預測依歷史紀錄自動計算，新增更多紀錄會更準確。</p>
+          <p className="mt-2 text-[10px] text-stone-400">統計資訊在「總覽」頁查看。</p>
         </div>
 
         <button
@@ -633,6 +697,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [postEndPopup, setPostEndPopup] = useState<PostEndPopupState | null>(null);
   const chibiSources = PERIOD_CHIBI_SOURCES;
   const [chibiSrc, setChibiSrc] = useState('');
+  const panelTheme = PANEL_STYLE_THEME[store.panelStyle];
 
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -902,12 +967,12 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   return (
     <div
       className="relative flex h-full flex-col overflow-hidden"
-      style={{ background: C.bg }}
+      style={{ background: panelTheme.pageBg }}
     >
       {/* ── Header ──────────────────────────────────────────────── */}
       <header
         className="shrink-0 border-b"
-        style={{ background: C.bg, borderColor: 'rgba(0,0,0,0.06)' }}
+        style={{ background: panelTheme.headerBg, borderColor: 'rgba(0,0,0,0.06)' }}
       >
         <div className="flex items-center gap-3 px-4 pb-2.5 pt-4">
           <button
@@ -1008,9 +1073,9 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
                   key={s.label}
                   className="rounded-2xl border px-2 py-3 text-center"
                   style={{
-                    background: 'rgba(255,255,255,0.8)',
-                    borderColor: 'rgba(255,255,255,0.95)',
-                    boxShadow: '0 1px 6px rgba(0,0,0,0.05)',
+                    background: panelTheme.cardBg,
+                    borderColor: panelTheme.cardBorder,
+                    boxShadow: panelTheme.cardShadow,
                   }}
                 >
                   <span className="block text-[8px] uppercase tracking-[0.1em] text-stone-400 mb-1">{s.label}</span>
@@ -1025,9 +1090,9 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
               <div
                 className="rounded-2xl border p-4"
                 style={{
-                  background: 'rgba(255,255,255,0.72)',
-                  borderColor: 'rgba(255,255,255,0.9)',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                  background: panelTheme.cardBg,
+                  borderColor: panelTheme.cardBorder,
+                  boxShadow: panelTheme.cardShadow,
                 }}
               >
                 <span className="mb-2 block text-[9px] uppercase tracking-[0.14em] text-stone-400">上次月經</span>
@@ -1052,13 +1117,13 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
 
             {/* Ovulation window card */}
             {ovulationWindow.start && (
-              <div
-                className="rounded-2xl border p-4"
-                style={{
-                  background: 'rgba(197,232,212,0.35)',
-                  borderColor: 'rgba(42,96,72,0.10)',
-                }}
-              >
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                background: store.panelStyle === 'minimal' ? '#eef7f1' : 'rgba(197,232,212,0.35)',
+                borderColor: store.panelStyle === 'minimal' ? 'rgba(42,96,72,0.16)' : 'rgba(42,96,72,0.10)',
+              }}
+            >
                 <span className="mb-2 block text-[9px] uppercase tracking-[0.14em] text-stone-400">預測可孕期</span>
                 <div className="flex items-center justify-between">
                   <div>
@@ -1082,7 +1147,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             {!completed.length && (
               <div
                 className="rounded-2xl border p-5 text-center"
-                style={{ background: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.9)' }}
+                style={{ background: panelTheme.mutedCardBg, borderColor: panelTheme.cardBorder }}
               >
                 <p className="text-2xl mb-2">🩸</p>
                 <p className="text-sm text-stone-500">還沒有紀錄，去「紀錄」頁新增第一筆吧！</p>
@@ -1176,7 +1241,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             {/* Legend */}
             <div
               className="flex flex-wrap items-center justify-center gap-3 rounded-2xl px-3 py-2.5"
-              style={{ background: 'rgba(255,255,255,0.6)' }}
+              style={{ background: panelTheme.mutedCardBg }}
             >
               {[
                 { bg: C.period,    label: '月經' },
@@ -1203,7 +1268,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             {/* Hint */}
             <div
               className="flex items-center gap-3 rounded-2xl border p-3"
-              style={{ background: 'rgba(255,255,255,0.5)', borderColor: 'rgba(255,255,255,0.9)' }}
+              style={{ background: panelTheme.mutedCardBg, borderColor: panelTheme.cardBorder }}
             >
               <span className="text-[18px]">📅</span>
               <p className="flex-1 text-xs leading-relaxed text-stone-400">
@@ -1226,9 +1291,9 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             <div
               className="rounded-2xl border p-4"
               style={{
-                background: 'rgba(255,255,255,0.72)',
-                borderColor: 'rgba(255,255,255,0.9)',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                background: panelTheme.cardBg,
+                borderColor: panelTheme.cardBorder,
+                boxShadow: panelTheme.cardShadow,
               }}
             >
               <span className="mb-2.5 block text-[9px] uppercase tracking-[0.14em] text-stone-400">快速記錄</span>
@@ -1256,9 +1321,9 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             <div
               className="rounded-2xl border p-4"
               style={{
-                background: 'rgba(255,255,255,0.72)',
-                borderColor: 'rgba(255,255,255,0.9)',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                background: panelTheme.cardBg,
+                borderColor: panelTheme.cardBorder,
+                boxShadow: panelTheme.cardShadow,
               }}
             >
               <span className="mb-2.5 block text-[9px] uppercase tracking-[0.14em] text-stone-400">手動輸入</span>
@@ -1326,9 +1391,9 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
                 <div
                   className="rounded-2xl border px-4 py-1"
                   style={{
-                    background: 'rgba(255,255,255,0.72)',
-                    borderColor: 'rgba(255,255,255,0.9)',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                    background: panelTheme.cardBg,
+                    borderColor: panelTheme.cardBorder,
+                    boxShadow: panelTheme.cardShadow,
                   }}
                 >
                   {completed
@@ -1377,7 +1442,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
               type="button"
               onClick={() => setShowPeriodSettings(true)}
               className="flex items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.98]"
-              style={{ background: 'rgba(255,255,255,0.5)', borderColor: 'rgba(255,255,255,0.9)' }}
+              style={{ background: panelTheme.mutedCardBg, borderColor: panelTheme.cardBorder }}
             >
               <span className="text-[18px]">⚙️</span>
               <p className="flex-1 text-xs text-stone-400">週期設定 · 預測資訊 · 清除資料</p>
@@ -1435,8 +1500,8 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
       {/* ── Period settings sheet ────────────────────────────────── */}
       {showPeriodSettings && (
         <PeriodSettingsSheet
-          avgCycleLength={avgCycleLength}
-          avgDuration={avgDuration}
+          panelStyle={store.panelStyle}
+          onPanelStyleChange={(style) => setStore((cur) => ({ ...cur, panelStyle: style }))}
           onClearAll={clearAllRecords}
           onClose={() => setShowPeriodSettings(false)}
         />
