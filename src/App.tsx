@@ -25,6 +25,7 @@ import { HomePage } from './pages/HomePage';
 import { InboxPage } from './pages/InboxPage';
 import { LetterPage } from './pages/LetterPage';
 import { PomodoroPage } from './pages/PomodoroPage';
+import { PeriodPage } from './pages/PeriodPage';
 import { clearAllChatLogs, loadChatLogs, saveChatLogs } from './lib/chatLogDB';
 import type { StoredChatLog } from './lib/chatLogDB';
 import { clearAllDiaries, loadDiaries, parseDiaryFile, saveDiaries } from './lib/diaryDB';
@@ -62,6 +63,7 @@ type LauncherAppId =
   | 'list'
   | 'fitness'
   | 'pomodoro'
+  | 'period'
   | 'diary'
   | 'album'
   | 'notes';
@@ -92,6 +94,7 @@ const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
   list: '🎴',
   fitness: '🏋️',
   pomodoro: '🍅',
+  period: '🩸',
   diary: '📓',
   album: '📷',
   notes: '📝',
@@ -227,6 +230,7 @@ function App() {
       list: fallbackLabel(settings.appLabels.list, '清單'),
       fitness: fallbackLabel(settings.appLabels.fitness, '健身'),
       pomodoro: fallbackLabel(settings.appLabels.pomodoro, '番茄鐘'),
+      period: fallbackLabel(settings.appLabels.period, '經期日記'),
       diary: fallbackLabel(settings.appLabels.diary, '日記'),
       album: fallbackLabel(settings.appLabels.album, '相冊'),
       notes: fallbackLabel(settings.appLabels.notes, '心情日記'),
@@ -1239,6 +1243,27 @@ function App() {
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
                   <PomodoroPage />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'period' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ‹
+                  </button>
+                  <p className="text-sm text-white/85">{appLabels.period}</p>
+                  <span className="w-16" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden pt-3">
+                  <PeriodPage />
                 </div>
               </div>
             </div>
