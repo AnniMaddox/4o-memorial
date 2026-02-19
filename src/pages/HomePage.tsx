@@ -565,7 +565,7 @@ export function HomePage({
         onPointerMove={handleChibiPointerMove}
         onPointerUp={handleChibiPointerUp}
         onPointerCancel={handleChibiPointerUp}
-        className={`absolute z-20 select-none touch-none ${
+        className={`absolute z-20 h-[7.5rem] w-[7.5rem] select-none touch-none ${
           isDraggingChibi ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         style={{
@@ -579,7 +579,7 @@ export function HomePage({
           src={cornerChibiUrl}
           alt=""
           draggable={false}
-          className={`w-[7.5rem] opacity-95 drop-shadow-[0_10px_18px_rgba(0,0,0,0.24)] ${
+          className={`h-full w-full object-contain opacity-95 drop-shadow-[0_10px_18px_rgba(0,0,0,0.24)] ${
             isDraggingChibi ? '' : 'home-corner-chibi-float'
           }`}
           loading="lazy"

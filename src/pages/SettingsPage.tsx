@@ -102,6 +102,7 @@ type AppearancePresetPayload = {
     globalTextColor: string;
     calendarColorMode: AppSettings['calendarColorMode'];
     lockedBubbleColor: string;
+    calendarHoverBubbleTextColor: string;
     chatBubbleStyle: AppSettings['chatBubbleStyle'];
     chatUserBubbleColor: string;
     chatUserBubbleBorderColor: string;
@@ -364,6 +365,7 @@ export function SettingsPage({
         globalTextColor: settings.globalTextColor,
         calendarColorMode: settings.calendarColorMode,
         lockedBubbleColor: settings.lockedBubbleColor,
+        calendarHoverBubbleTextColor: settings.calendarHoverBubbleTextColor,
         chatBubbleStyle: settings.chatBubbleStyle,
         chatUserBubbleColor: settings.chatUserBubbleColor,
         chatUserBubbleBorderColor: settings.chatUserBubbleBorderColor,
@@ -421,6 +423,9 @@ export function SettingsPage({
       }
       if (typeof source.lockedBubbleColor === 'string') {
         next.lockedBubbleColor = source.lockedBubbleColor;
+      }
+      if (typeof source.calendarHoverBubbleTextColor === 'string') {
+        next.calendarHoverBubbleTextColor = source.calendarHoverBubbleTextColor;
       }
       if (
         source.chatBubbleStyle === 'jelly' ||
@@ -701,6 +706,16 @@ export function SettingsPage({
                 type="color"
                 value={settings.lockedBubbleColor}
                 onChange={(event) => onSettingChange({ lockedBubbleColor: event.target.value })}
+                className="h-10 w-full rounded-md border border-stone-300"
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span>月曆底下氣泡文字色</span>
+              <input
+                type="color"
+                value={settings.calendarHoverBubbleTextColor}
+                onChange={(event) => onSettingChange({ calendarHoverBubbleTextColor: event.target.value })}
                 className="h-10 w-full rounded-md border border-stone-300"
               />
             </label>

@@ -625,10 +625,14 @@ export function CalendarPage({
       <div className="calendar-hover-stage min-h-[11rem] px-2">
         {hoverPreview ? (
           <div
-            className={`calendar-hover-bubble calendar-chat-bubble w-fit max-w-[92%] rounded-2xl border px-5 py-3 text-stone-700 shadow-xl ${
+            className={`calendar-hover-bubble calendar-chat-bubble w-fit max-w-[92%] rounded-2xl border px-5 py-3 shadow-xl ${
               hoverPreviewLocked ? 'calendar-hover-bubble-locked calendar-hover-bubble-clickable' : 'calendar-hover-bubble-unlocked'
             }`}
-            style={{ fontSize: 'calc(1.32rem * var(--app-font-scale, 1))', lineHeight: 1.45 }}
+            style={{
+              fontSize: 'calc(1.32rem * var(--app-font-scale, 1))',
+              lineHeight: 1.45,
+              color: 'rgb(var(--calendar-hover-text-rgb, var(--app-text-rgb)) / 1)',
+            }}
             onClick={hoverPreviewLocked ? handleHoverBubbleTap : undefined}
             onKeyDown={
               hoverPreviewLocked

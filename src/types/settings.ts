@@ -57,6 +57,7 @@ export type AppSettings = {
   globalTextColor: string;
   calendarColorMode: CalendarColorMode;
   lockedBubbleColor: string;
+  calendarHoverBubbleTextColor: string;
   chatBubbleStyle: ChatBubbleStyle;
   chatUserBubbleColor: string;
   chatUserBubbleBorderColor: string;
@@ -108,6 +109,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   globalTextColor: '#1f2937',
   calendarColorMode: 'month',
   lockedBubbleColor: '#d2f0ff',
+  calendarHoverBubbleTextColor: '#1f2937',
   chatBubbleStyle: 'jelly',
   chatUserBubbleColor: '#BAEF61',
   chatUserBubbleBorderColor: '#8CBE3C',

@@ -117,6 +117,10 @@ export async function getSettings() {
       36,
       DEFAULT_SETTINGS.chatBubbleRadius,
     ),
+    calendarHoverBubbleTextColor: normalizeString(
+      persisted.calendarHoverBubbleTextColor,
+      DEFAULT_SETTINGS.calendarHoverBubbleTextColor,
+    ),
     homeWidgetTitle: normalizeString(persisted.homeWidgetTitle, DEFAULT_SETTINGS.homeWidgetTitle),
     homeWidgetSubtitle: normalizeString(persisted.homeWidgetSubtitle, DEFAULT_SETTINGS.homeWidgetSubtitle),
     homeWidgetBadgeText: normalizeString(persisted.homeWidgetBadgeText, DEFAULT_SETTINGS.homeWidgetBadgeText),

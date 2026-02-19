@@ -217,6 +217,10 @@ function App() {
   const calendarAccentRgb = useMemo(() => toRgbTriplet(calendarAccentColor), [calendarAccentColor]);
   const calendarHeaderAccentRgb = useMemo(() => toRgbTriplet(calendarHeaderColor), [calendarHeaderColor]);
   const lockedBubbleRgb = useMemo(() => toRgbTriplet(settings.lockedBubbleColor), [settings.lockedBubbleColor]);
+  const calendarHoverBubbleTextRgb = useMemo(
+    () => toRgbTriplet(settings.calendarHoverBubbleTextColor),
+    [settings.calendarHoverBubbleTextColor],
+  );
   const chatUserBubbleRgb = useMemo(() => toRgbTriplet(settings.chatUserBubbleColor), [settings.chatUserBubbleColor]);
   const chatUserBorderRgb = useMemo(
     () => toRgbTriplet(settings.chatUserBubbleBorderColor),
@@ -978,6 +982,7 @@ function App() {
         ['--calendar-accent-rgb' as string]: calendarAccentRgb,
         ['--calendar-header-accent-rgb' as string]: calendarHeaderAccentRgb,
         ['--locked-bubble-rgb' as string]: lockedBubbleRgb,
+        ['--calendar-hover-text-rgb' as string]: calendarHoverBubbleTextRgb,
         ['--chat-user-bubble-rgb' as string]: chatUserBubbleRgb,
         ['--chat-user-border-rgb' as string]: chatUserBorderRgb,
         ['--chat-ai-bubble-rgb' as string]: chatAiBubbleRgb,
