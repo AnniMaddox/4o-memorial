@@ -304,6 +304,13 @@ export function HomePage({
       iconUrl: tabIconUrls.album.trim() || undefined,
       launch: 'album',
     };
+    const notesSlot: HomeAppSlot = {
+      id: 'notes',
+      label: launcherLabels.notes,
+      icon: '📝',
+      iconUrl: tabIconUrls.notes.trim() || undefined,
+      launch: 'notes',
+    };
     const bookcasePlaceholder: HomeAppSlot = {
       id: 'bookcase-placeholder',
       label: '書架',
@@ -322,13 +329,6 @@ export function HomePage({
       icon: '🧳',
       disabled: true,
     };
-    const timeCapsulePlaceholder: HomeAppSlot = {
-      id: 'time-capsule-placeholder',
-      label: '時空膠囊',
-      icon: '⏳',
-      disabled: true,
-    };
-
     const placeholder = (id: string): HomeAppSlot => ({
       id,
       label: '',
@@ -380,7 +380,7 @@ export function HomePage({
             tarotSlot,
             heartSlot,
             pomodoroSlot,
-            timeCapsulePlaceholder,
+            notesSlot,
             placeholder('placeholder-secondary-1'),
             placeholder('placeholder-secondary-2'),
             placeholder('placeholder-secondary-3'),
@@ -410,6 +410,7 @@ export function HomePage({
     launcherLabels.pomodoro,
     launcherLabels.tarot,
     launcherLabels.album,
+    launcherLabels.notes,
     tabIconUrls.fitness,
     tabIconUrls.pomodoro,
     tabIconUrls.diary,
@@ -418,6 +419,7 @@ export function HomePage({
     tabIconUrls.list,
     tabIconUrls.tarot,
     tabIconUrls.album,
+    tabIconUrls.notes,
   ]);
 
   useEffect(() => {

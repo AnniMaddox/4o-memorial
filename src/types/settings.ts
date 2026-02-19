@@ -72,7 +72,7 @@ export const DEFAULT_APP_LABELS: AppLabels = {
   pomodoro: '番茄鐘',
   diary: '日記',
   album: '相冊',
-  notes: '便條',
+  notes: '心情日記',
 };
 
 export type AppSettings = {
@@ -126,6 +126,8 @@ export type AppSettings = {
   diaryCoverImageUrl: string;
   diaryFontUrl: string;
   diaryCoverFitMode: DiaryCoverFitMode;
+  notesFontSize: number;
+  notesTextColor: string;
 };
 
 export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
@@ -187,4 +189,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   diaryCoverImageUrl: '',
   diaryFontUrl: '',
   diaryCoverFitMode: 'cover',
+  notesFontSize: 13,
+  notesTextColor: '#44403c',
 };

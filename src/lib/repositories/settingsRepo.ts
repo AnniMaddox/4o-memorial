@@ -64,6 +64,7 @@ function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrl
 
 function normalizeAppLabels(value: unknown, fallback: AppLabels): AppLabels {
   const input = (value && typeof value === 'object' ? value : {}) as Partial<AppLabels>;
+  const normalizedNotes = normalizeString(input.notes, fallback.notes);
   return {
     home: normalizeString(input.home, fallback.home),
     inbox: normalizeString(input.inbox, fallback.inbox),
@@ -78,7 +79,8 @@ function normalizeAppLabels(value: unknown, fallback: AppLabels): AppLabels {
     pomodoro: normalizeString(input.pomodoro, fallback.pomodoro),
     diary: normalizeString(input.diary, fallback.diary),
     album: normalizeString(input.album, fallback.album),
-    notes: normalizeString(input.notes, fallback.notes),
+    // Migrate legacy default label to the new one unless user set a custom value.
+    notes: normalizedNotes === '便條' ? fallback.notes : normalizedNotes,
   };
 }
 
@@ -174,6 +176,8 @@ export async function getSettings() {
       90,
       DEFAULT_SETTINGS.backgroundImageOverlay,
     ),
+    notesFontSize: clampNumber(persisted.notesFontSize, 11, 17, DEFAULT_SETTINGS.notesFontSize),
+    notesTextColor: normalizeString(persisted.notesTextColor, DEFAULT_SETTINGS.notesTextColor),
   };
 }
 
