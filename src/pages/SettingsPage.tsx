@@ -51,6 +51,7 @@ type PanelKey =
   | 'tarot'
   | 'letters'
   | 'diary'
+  | 'notes'
   | 'chatLogs'
   | 'maintenance';
 
@@ -82,7 +83,7 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'pomodoro', label: 'Pomodoro 番茄鐘' },
   { key: 'diary', label: 'Diary 日記' },
   { key: 'album', label: 'Album 相冊' },
-  { key: 'notes', label: 'Notes 便條' },
+  { key: 'notes', label: 'Notes 心情日記' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -100,7 +101,7 @@ const APP_LABEL_FIELDS: Array<{ key: AppLabelKey; label: string }> = [
   { key: 'pomodoro', label: '首頁入口：番茄鐘' },
   { key: 'diary', label: '首頁入口：日記' },
   { key: 'album', label: '首頁入口：相冊' },
-  { key: 'notes', label: '首頁入口：便條' },
+  { key: 'notes', label: '首頁入口：心情日記' },
 ];
 
 type AppearancePresetPayload = {
@@ -1695,6 +1696,46 @@ export function SettingsPage({
                 清空所有日記
               </button>
             </div>
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
+          icon="📝"
+          title="心情日記"
+          subtitle="字體大小 · 文字色"
+          isOpen={openPanel === 'notes'}
+          onToggle={() => togglePanel('notes')}
+        >
+          <div className="space-y-4">
+            <label className="block space-y-1">
+              <span className="flex items-center justify-between text-xs text-stone-600">
+                <span>心情日記字體大小</span>
+                <span>{settings.notesFontSize}px</span>
+              </span>
+              <input
+                type="range"
+                min={11}
+                max={17}
+                step={1}
+                value={settings.notesFontSize}
+                onChange={(e) => onSettingChange({ notesFontSize: Number(e.target.value) })}
+                className="w-full accent-stone-800"
+              />
+              <div className="flex justify-between text-[10px] text-stone-400">
+                <span>11px 小</span>
+                <span>17px 大</span>
+              </div>
+            </label>
+
+            <label className="flex items-center justify-between">
+              <span className="text-xs text-stone-600">心情日記文字色</span>
+              <input
+                type="color"
+                value={settings.notesTextColor}
+                onChange={(e) => onSettingChange({ notesTextColor: e.target.value })}
+                className="h-8 w-12 cursor-pointer rounded border border-stone-300 bg-white"
+              />
+            </label>
           </div>
         </SettingPanel>
 

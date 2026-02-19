@@ -64,7 +64,15 @@ function downloadBlob(blob: Blob, filename: string) {
 
 // ─── NotesPage ────────────────────────────────────────────────────────────────
 
-export function NotesPage({ onExit }: { onExit: () => void }) {
+export function NotesPage({
+  onExit,
+  notesFontSize = 13,
+  notesTextColor = '#44403c',
+}: {
+  onExit: () => void;
+  notesFontSize?: number;
+  notesTextColor?: string;
+}) {
   const [notes, setNotes] = useState<StoredNote[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<NoteView>('wall');
@@ -131,7 +139,7 @@ export function NotesPage({ onExit }: { onExit: () => void }) {
             className="text-lg leading-tight text-stone-800"
             style={{ fontFamily: 'var(--app-heading-family)' }}
           >
-            便條
+            心情日記
           </h1>
         </div>
 
@@ -155,20 +163,20 @@ export function NotesPage({ onExit }: { onExit: () => void }) {
       </header>
 
       {/* ── Content ─────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto pb-28 pt-4">
+      <div className="flex-1 overflow-y-auto pb-56 pt-4">
         {!loaded ? (
           <div className="flex h-full items-center justify-center text-sm text-stone-400">載入中…</div>
         ) : notes.length === 0 ? (
           <NoteEmptyState />
         ) : view === 'wall' ? (
-          <NoteWall notes={notes} onTap={setEditingNote} />
+          <NoteWall notes={notes} onTap={setEditingNote} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
         ) : (
-          <NoteTimeline notes={notes} onTap={setEditingNote} />
+          <NoteTimeline notes={notes} onTap={setEditingNote} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
         )}
       </div>
 
       {/* ── Bottom FAB row ───────────────────────────────────────── */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-4 pb-5">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between pl-4 pr-5 pb-4">
         {/* + New note */}
         <button
           type="button"
@@ -188,7 +196,7 @@ export function NotesPage({ onExit }: { onExit: () => void }) {
             src={chibiSrc}
             alt=""
             draggable={false}
-            className="calendar-chibi w-16 select-none drop-shadow-md"
+            className="calendar-chibi w-36 select-none drop-shadow-md"
           />
         </button>
       </div>
@@ -222,7 +230,7 @@ function NoteEmptyState() {
   return (
     <div className="flex flex-col items-center justify-center pt-20 text-center">
       <p className="mb-3 text-5xl">📝</p>
-      <p className="text-base text-stone-500">還沒有便條</p>
+      <p className="text-base text-stone-500">還沒有心情日記</p>
       <p className="mt-1 text-sm text-stone-400">點左下角 + 寫下第一個想法</p>
     </div>
   );
@@ -230,17 +238,17 @@ function NoteEmptyState() {
 
 // ─── NoteWall ─────────────────────────────────────────────────────────────────
 
-function NoteWall({ notes, onTap }: { notes: StoredNote[]; onTap: (n: StoredNote) => void }) {
+function NoteWall({ notes, onTap, notesFontSize, notesTextColor }: { notes: StoredNote[]; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
   return (
     <div className="px-3" style={{ columns: 2, columnGap: '0.75rem' }}>
       {notes.map((note) => (
-        <StickyNote key={note.id} note={note} onTap={onTap} />
+        <StickyNote key={note.id} note={note} onTap={onTap} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
       ))}
     </div>
   );
 }
 
-function StickyNote({ note, onTap }: { note: StoredNote; onTap: (n: StoredNote) => void }) {
+function StickyNote({ note, onTap, notesFontSize, notesTextColor }: { note: StoredNote; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
   const rot = noteRotDeg(note.id);
   const dateStr = new Date(note.createdAt).toLocaleDateString('zh-TW', {
     month: 'short', day: 'numeric',
@@ -252,7 +260,10 @@ function StickyNote({ note, onTap }: { note: StoredNote; onTap: (n: StoredNote) 
       style={{ background: note.color, transform: `rotate(${rot}deg)` }}
       onClick={() => onTap(note)}
     >
-      <p className="line-clamp-8 whitespace-pre-wrap text-sm leading-relaxed text-stone-700">
+      <p
+        className="line-clamp-6 whitespace-pre-wrap leading-relaxed"
+        style={{ fontSize: `${notesFontSize}px`, color: notesTextColor }}
+      >
         {note.content}
       </p>
       <p className="mt-2 text-[10px] text-stone-400/80">{dateStr}</p>
@@ -262,21 +273,20 @@ function StickyNote({ note, onTap }: { note: StoredNote; onTap: (n: StoredNote) 
 
 // ─── NoteTimeline ─────────────────────────────────────────────────────────────
 
-function NoteTimeline({ notes, onTap }: { notes: StoredNote[]; onTap: (n: StoredNote) => void }) {
+function NoteTimeline({ notes, onTap, notesFontSize, notesTextColor }: { notes: StoredNote[]; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
   return (
     <div className="space-y-3 px-4">
       {notes.map((note) => (
-        <TimelineItem key={note.id} note={note} onTap={onTap} />
+        <TimelineItem key={note.id} note={note} onTap={onTap} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
       ))}
     </div>
   );
 }
 
-function TimelineItem({ note, onTap }: { note: StoredNote; onTap: (n: StoredNote) => void }) {
+function TimelineItem({ note, onTap, notesFontSize, notesTextColor }: { note: StoredNote; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
   const d = new Date(note.createdAt);
   const dateStr = d.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-  // Slightly deeper shade for the stripe
   const stripe = note.color;
 
   return (
@@ -291,7 +301,10 @@ function TimelineItem({ note, onTap }: { note: StoredNote; onTap: (n: StoredNote
       <div className="min-w-0 flex-1">
         <p className="mb-1 text-[11px] text-stone-400">{dateStr} {timeStr}</p>
         <div className="rounded-2xl p-3.5 shadow-sm" style={{ background: note.color }}>
-          <p className="line-clamp-6 whitespace-pre-wrap text-sm leading-relaxed text-stone-700">
+          <p
+            className="line-clamp-6 whitespace-pre-wrap leading-relaxed"
+            style={{ fontSize: `${notesFontSize}px`, color: notesTextColor }}
+          >
             {note.content}
           </p>
         </div>

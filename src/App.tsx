@@ -229,7 +229,7 @@ function App() {
       pomodoro: fallbackLabel(settings.appLabels.pomodoro, '番茄鐘'),
       diary: fallbackLabel(settings.appLabels.diary, '日記'),
       album: fallbackLabel(settings.appLabels.album, '相冊'),
-      notes: fallbackLabel(settings.appLabels.notes, '便條'),
+      notes: fallbackLabel(settings.appLabels.notes, '心情日記'),
     }),
     [settings.appLabels],
   );
@@ -1293,7 +1293,11 @@ function App() {
           {launcherApp === 'notes' && (
             <div className="fixed inset-0 z-30" style={{ background: '#fdf6ee' }}>
               <div className="mx-auto h-full w-full max-w-xl">
-                <NotesPage onExit={() => setLauncherApp(null)} />
+                <NotesPage
+                  onExit={() => setLauncherApp(null)}
+                  notesFontSize={settings.notesFontSize}
+                  notesTextColor={settings.notesTextColor}
+                />
               </div>
             </div>
           )}
