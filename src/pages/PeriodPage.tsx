@@ -127,12 +127,12 @@ const PANEL_STYLE_THEME: Record<
     mutedCardBg: 'rgba(255,255,255,0.55)',
   },
   glass: {
-    pageBg: '#f7fafc',
-    headerBg: 'rgba(255,255,255,0.72)',
-    cardBg: 'rgba(255,255,255,0.5)',
-    cardBorder: 'rgba(255,255,255,0.86)',
-    cardShadow: '0 10px 28px rgba(15,23,42,0.10)',
-    mutedCardBg: 'rgba(255,255,255,0.38)',
+    pageBg: 'radial-gradient(120% 120% at 0% 0%, #fff2f7 0%, #eff6ff 52%, #f5fbff 100%)',
+    headerBg: 'linear-gradient(140deg, rgba(255,255,255,0.78), rgba(244,250,255,0.62))',
+    cardBg: 'linear-gradient(145deg, rgba(255,255,255,0.6), rgba(255,255,255,0.34))',
+    cardBorder: 'rgba(255,255,255,0.94)',
+    cardShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 16px 34px rgba(15,23,42,0.16), 0 6px 14px rgba(255,255,255,0.28)',
+    mutedCardBg: 'linear-gradient(160deg, rgba(255,255,255,0.52), rgba(255,255,255,0.32))',
   },
   minimal: {
     pageBg: '#fafaf9',
@@ -457,16 +457,14 @@ function phaseToPhraseKey(phase: string): keyof ChibiPhraseMap {
 }
 
 // ─── SpeechBubble ──────────────────────────────────────────────────────────────
-function SpeechBubble({ countdown, phrase }: { countdown: string; phrase: string }) {
+function SpeechBubble({ phrase }: { phrase: string }) {
   return (
     <div
       className="relative max-w-[11.5rem] rounded-2xl bg-white px-3 py-2.5"
       style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
     >
-      {/* Countdown line */}
-      <p className="text-[10px] leading-tight text-stone-400">{countdown}</p>
       {/* Phase phrase */}
-      <p className="mt-1 text-[12px] leading-snug text-stone-600">{phrase}</p>
+      <p className="text-[12px] leading-snug text-stone-600">{phrase}</p>
       {/* Tail — bottom-left, toward chibi */}
       <div
         className="absolute -bottom-[7px] right-5"
@@ -484,12 +482,10 @@ function SpeechBubble({ countdown, phrase }: { countdown: string; phrase: string
 // ─── FloatingChibi ────────────────────────────────────────────────────────────
 function FloatingChibi({
   chibiSrc,
-  countdown,
   phrase,
   onClickSettings,
 }: {
   chibiSrc: string;
-  countdown: string;
   phrase: string;
   onClickSettings: () => void;
 }) {
@@ -499,7 +495,7 @@ function FloatingChibi({
     >
       {/* Bubble */}
       <div className="pointer-events-auto">
-        <SpeechBubble countdown={countdown} phrase={phrase} />
+        <SpeechBubble phrase={phrase} />
       </div>
 
       {/* Chibi */}
@@ -507,7 +503,7 @@ function FloatingChibi({
         type="button"
         onClick={onClickSettings}
         className="pointer-events-auto transition active:scale-90"
-        aria-label="週期設定"
+        aria-label="面板風格"
       >
         {chibiSrc ? (
           <img
@@ -654,7 +650,7 @@ function PeriodSettingsSheet({
         style={{ background: 'white', boxShadow: '0 -6px 28px rgba(0,0,0,0.12)' }}
       >
         <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-stone-300" />
-        <p className="mb-5 text-center text-base font-semibold text-stone-800">週期設定</p>
+        <p className="mb-5 text-center text-base font-semibold text-stone-800">面板風格</p>
 
         <div className="mb-4 rounded-2xl bg-stone-50 p-4">
           <p className="mb-2 text-xs text-stone-500">面板風格</p>
@@ -721,6 +717,24 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [chibiSrc, setChibiSrc] = useState('');
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const panelTheme = PANEL_STYLE_THEME[store.panelStyle];
+  const glassPanelFx =
+    store.panelStyle === 'glass'
+      ? {
+          backdropFilter: 'blur(16px) saturate(145%)',
+          WebkitBackdropFilter: 'blur(16px) saturate(145%)',
+        }
+      : {};
+  const panelCardStyle = {
+    background: panelTheme.cardBg,
+    borderColor: panelTheme.cardBorder,
+    boxShadow: panelTheme.cardShadow,
+    ...glassPanelFx,
+  };
+  const panelMutedCardStyle = {
+    background: panelTheme.mutedCardBg,
+    borderColor: panelTheme.cardBorder,
+    ...glassPanelFx,
+  };
 
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -856,12 +870,6 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
     return randomPick(chibiPhrases[key]) ?? '';
   }, [chibiPhrases, todayPhase]);
 
-  const chibiCountdown = useMemo(() => {
-    if (daysUntilNext === null) return '週期追蹤中';
-    if (daysUntilNext === 0) return '今天是預測開始日';
-    if (daysUntilNext < 0) return `超過預測 ${Math.abs(daysUntilNext)} 天`;
-    return `距下次月經 · 還有 ${daysUntilNext} 天`;
-  }, [daysUntilNext]);
 
   // Trigger one-time popup for each finished period
   useEffect(() => {
@@ -1037,7 +1045,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
       {/* ── Header ──────────────────────────────────────────────── */}
       <header
         className="shrink-0 border-b"
-        style={{ background: panelTheme.headerBg, borderColor: 'rgba(0,0,0,0.06)' }}
+        style={{ background: panelTheme.headerBg, borderColor: 'rgba(0,0,0,0.06)', ...glassPanelFx }}
       >
         <div className="flex items-center gap-3 px-4 pb-2.5 pt-4">
           <button
@@ -1137,11 +1145,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
                 <div
                   key={s.label}
                   className="rounded-2xl border px-2 py-3 text-center"
-                  style={{
-                    background: panelTheme.cardBg,
-                    borderColor: panelTheme.cardBorder,
-                    boxShadow: panelTheme.cardShadow,
-                  }}
+                  style={panelCardStyle}
                 >
                   <span className="block text-[8px] uppercase tracking-[0.1em] text-stone-400 mb-1">{s.label}</span>
                   <span className="block text-lg font-bold text-stone-800">{s.value}</span>
@@ -1154,11 +1158,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             {lastPeriod && (
               <div
                 className="rounded-2xl border p-4"
-                style={{
-                  background: panelTheme.cardBg,
-                  borderColor: panelTheme.cardBorder,
-                  boxShadow: panelTheme.cardShadow,
-                }}
+                style={panelCardStyle}
               >
                 <span className="mb-2 block text-[9px] uppercase tracking-[0.14em] text-stone-400">上次月經</span>
                 <div className="flex items-center justify-between">
@@ -1212,7 +1212,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             {!completed.length && (
               <div
                 className="rounded-2xl border p-5 text-center"
-                style={{ background: panelTheme.mutedCardBg, borderColor: panelTheme.cardBorder }}
+                style={panelMutedCardStyle}
               >
                 <p className="text-2xl mb-2">🩸</p>
                 <p className="text-sm text-stone-500">還沒有紀錄，去「紀錄」頁新增第一筆吧！</p>
@@ -1306,7 +1306,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             {/* Legend */}
             <div
               className="flex flex-wrap items-center justify-center gap-3 rounded-2xl px-3 py-2.5"
-              style={{ background: panelTheme.mutedCardBg }}
+              style={{ ...panelMutedCardStyle, borderColor: 'transparent' }}
             >
               {[
                 { bg: C.period,    label: '月經' },
@@ -1333,7 +1333,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             {/* Hint */}
             <div
               className="flex items-center gap-3 rounded-2xl border p-3"
-              style={{ background: panelTheme.mutedCardBg, borderColor: panelTheme.cardBorder }}
+              style={panelMutedCardStyle}
             >
               <span className="text-[18px]">📅</span>
               <p className="flex-1 text-xs leading-relaxed text-stone-400">
@@ -1355,11 +1355,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             {/* Quick action card */}
             <div
               className="rounded-2xl border p-4"
-              style={{
-                background: panelTheme.cardBg,
-                borderColor: panelTheme.cardBorder,
-                boxShadow: panelTheme.cardShadow,
-              }}
+              style={panelCardStyle}
             >
               <span className="mb-2.5 block text-[9px] uppercase tracking-[0.14em] text-stone-400">快速記錄</span>
               <div className="flex flex-col gap-2">
@@ -1385,11 +1381,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             {/* Form card */}
             <div
               className="rounded-2xl border p-4"
-              style={{
-                background: panelTheme.cardBg,
-                borderColor: panelTheme.cardBorder,
-                boxShadow: panelTheme.cardShadow,
-              }}
+              style={panelCardStyle}
             >
               <span className="mb-2.5 block text-[9px] uppercase tracking-[0.14em] text-stone-400">手動輸入</span>
               <div className="grid grid-cols-2 gap-2 mb-3">
@@ -1455,11 +1447,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
                 <p className="mb-2.5 text-[10px] uppercase tracking-[0.14em] text-stone-400">歷史紀錄</p>
                 <div
                   className="rounded-2xl border px-4 py-1"
-                  style={{
-                    background: panelTheme.cardBg,
-                    borderColor: panelTheme.cardBorder,
-                    boxShadow: panelTheme.cardShadow,
-                  }}
+                  style={panelCardStyle}
                 >
                   {completed
                     .slice()
@@ -1507,10 +1495,10 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
               type="button"
               onClick={() => setShowPeriodSettings(true)}
               className="flex items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.98]"
-              style={{ background: panelTheme.mutedCardBg, borderColor: panelTheme.cardBorder }}
+              style={panelMutedCardStyle}
             >
               <span className="text-[18px]">⚙️</span>
-              <p className="flex-1 text-xs text-stone-400">週期設定 · 預測資訊 · 清除資料</p>
+              <p className="flex-1 text-xs text-stone-400">面板風格 · 清除資料</p>
               <span className="text-stone-300">›</span>
             </button>
           </div>
@@ -1519,12 +1507,13 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
       </div>
 
       {/* ── Floating chibi ───────────────────────────────────────── */}
-      <FloatingChibi
-        chibiSrc={chibiSrc}
-        countdown={chibiCountdown}
-        phrase={chibiPhrase}
-        onClickSettings={() => setShowPeriodSettings(true)}
-      />
+      {activeTab !== 'records' && (
+        <FloatingChibi
+          chibiSrc={chibiSrc}
+          phrase={chibiPhrase}
+          onClickSettings={() => setShowPeriodSettings(true)}
+        />
+      )}
 
       {postEndPopup && (
         <div className="absolute inset-0 z-40 flex items-center justify-center px-4">
