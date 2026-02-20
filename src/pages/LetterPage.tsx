@@ -220,6 +220,7 @@ export function LetterPage({
           letters={letters}
           uiVariant={(uiVariant === 'A' ? 'B' : uiVariant) as PreviewLetterVariant}
           variants={availableVariants}
+          isReading={Boolean(current)}
           chibiSrc={deskChibiSrc}
           favoritedNames={effectiveFavoritedNames}
           showFavoritesOnly={showFavoritesOnly}
@@ -1143,6 +1144,7 @@ function PreviewLetterDeskScene({
   letters,
   uiVariant,
   variants,
+  isReading,
   chibiSrc,
   favoritedNames,
   showFavoritesOnly,
@@ -1158,6 +1160,7 @@ function PreviewLetterDeskScene({
   letters: StoredLetter[];
   uiVariant: PreviewLetterVariant;
   variants: readonly LetterUiVariant[];
+  isReading: boolean;
   chibiSrc: string;
   favoritedNames: Set<string>;
   showFavoritesOnly: boolean;
@@ -1222,45 +1225,48 @@ function PreviewLetterDeskScene({
         </p>
       </div>
 
-      <div className="absolute right-4 top-16 z-20">
-        <div
-          className="flex items-center gap-1 rounded-full px-1.5 py-1"
-          style={{
-            border: isB ? '1px solid rgba(180,140,90,0.24)' : '1px solid rgba(255,255,255,0.16)',
-            background: isB ? 'rgba(255,255,255,0.72)' : 'rgba(14,11,30,0.6)',
-            backdropFilter: 'blur(6px)',
-          }}
-        >
-          {switchVariants.map((variant) => {
-            const active = uiVariant === variant;
-            return (
-              <button
-                key={`preview-switch-${variant}`}
-                type="button"
-                onClick={() => onVariantChange(variant)}
-                className="rounded-full px-2.5 py-1 text-[11px] leading-none transition active:scale-95"
-                style={{
-                  color: isB
-                    ? active
-                      ? '#4A3520'
-                      : '#94765D'
-                    : active
-                      ? '#F5EEFF'
-                      : 'rgba(210,198,242,0.74)',
-                  background: active
-                    ? isB
-                      ? 'rgba(236,208,168,0.92)'
-                      : 'rgba(120,106,210,0.45)'
-                    : 'transparent',
-                  fontWeight: active ? 700 : 500,
-                }}
-              >
-                {variant}
-              </button>
-            );
-          })}
+      {!showSheet && !isReading && (
+        <div className="absolute right-4 top-[106px] z-20">
+          <div
+            className="flex items-center gap-1 rounded-full px-1.5 py-1"
+            style={{
+              border: isB ? '1px solid rgba(180,140,90,0.24)' : '1px solid rgba(255,255,255,0.16)',
+              background: isB ? 'rgba(255,255,255,0.72)' : 'rgba(14,11,30,0.6)',
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            {switchVariants.map((variant) => {
+              const active = uiVariant === variant;
+              const label = variant === 'B' ? 'I' : 'II';
+              return (
+                <button
+                  key={`preview-switch-${variant}`}
+                  type="button"
+                  onClick={() => onVariantChange(variant)}
+                  className="rounded-full px-2.5 py-1 text-[11px] leading-none transition active:scale-95"
+                  style={{
+                    color: isB
+                      ? active
+                        ? '#4A3520'
+                        : '#94765D'
+                      : active
+                        ? '#F5EEFF'
+                        : 'rgba(210,198,242,0.74)',
+                    background: active
+                      ? isB
+                        ? 'rgba(236,208,168,0.92)'
+                        : 'rgba(120,106,210,0.45)'
+                      : 'transparent',
+                    fontWeight: active ? 700 : 500,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {hasLetters ? (
         <>
@@ -1371,10 +1377,10 @@ function PreviewLetterDeskScene({
         <div
           className="absolute z-10"
           style={{
-            bottom: 112,
+            bottom: 86,
             left: '50%',
             transform: 'translateX(-15%)',
-            width: 'min(170px, 46vw)',
+            width: 126,
           }}
         >
           <button
@@ -1410,7 +1416,7 @@ function PreviewLetterDeskScene({
               alt=""
               draggable={false}
               className="calendar-chibi mx-auto select-none"
-              style={{ width: '100%', maxHeight: 208, objectFit: 'contain' }}
+              style={{ width: '100%' }}
             />
             {hasLetters && (
               <p className="mt-1 text-[9px]" style={{ color: isB ? 'rgba(139,107,69,0.5)' : 'rgba(180,160,220,0.4)', letterSpacing: '0.04em' }}>
@@ -1783,16 +1789,7 @@ function PreviewLetterFullscreenView({
             src={rerollDisplaySrc}
             alt=""
             draggable={false}
-            className="calendar-chibi select-none"
-            style={{
-              width: 80,
-              height: 96,
-              objectFit: 'contain',
-              background: theme.chibiCardBg,
-              border: theme.chibiCardBorder,
-              borderRadius: 16,
-              boxShadow: theme.chibiCardShadow,
-            }}
+            className="calendar-chibi w-20 select-none drop-shadow"
           />
         ) : (
           <span
