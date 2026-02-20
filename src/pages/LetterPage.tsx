@@ -740,8 +740,17 @@ function LetterDeskScene({
           type="button"
           onClick={onExit}
           aria-label="返回"
-          className="absolute left-4 top-4 z-20 flex items-center gap-1.5 transition active:opacity-50"
-          style={{ color: sceneTheme.backIcon }}
+          className="absolute left-4 top-4 z-20 flex h-9 w-9 items-center justify-center transition active:opacity-50"
+          style={{
+            color: sceneTheme.backIcon,
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            WebkitTapHighlightColor: 'transparent',
+            textShadow: uiVariant === 'C' ? '0 1px 4px rgba(0,0,0,0.35)' : '0 1px 3px rgba(255,255,255,0.42)',
+          }}
         >
           <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden="true">
             <path
@@ -1196,13 +1205,16 @@ function PreviewLetterDeskScene({
           type="button"
           onClick={onExit}
           aria-label="返回"
-          className="absolute left-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-xl transition active:opacity-60"
+          className="absolute left-4 top-4 z-20 flex h-9 w-9 items-center justify-center transition active:opacity-60"
           style={{
-            background: isB ? 'rgba(255,255,255,0.52)' : 'rgba(255,255,255,0.08)',
-            border: isB ? '1px solid rgba(170,132,92,0.2)' : '1px solid rgba(255,255,255,0.14)',
-            color: isB ? '#7D6240' : 'rgba(236,230,255,0.78)',
-            boxShadow: 'none',
-            backdropFilter: 'blur(4px)',
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            WebkitTapHighlightColor: 'transparent',
+            color: isB ? '#7D6240' : 'rgba(236,230,255,0.84)',
+            textShadow: isB ? '0 1px 3px rgba(255,255,255,0.45)' : '0 1px 4px rgba(0,0,0,0.35)',
           }}
         >
           <svg width="16" height="12" viewBox="0 0 18 14" fill="none" aria-hidden="true">
@@ -1391,34 +1403,40 @@ function PreviewLetterDeskScene({
             className="w-full transition active:scale-95"
             style={{ cursor: hasLetters ? 'pointer' : 'default' }}
           >
-            <div
-              className="mx-auto mb-2 max-w-[130px] rounded-[14px] px-3 py-2 text-[11px]"
-              style={{
-                borderRadius: isB ? '14px 14px 14px 2px' : '14px 14px 14px 2px',
-                color: isB ? '#6B5040' : 'rgba(220,210,255,0.85)',
-                lineHeight: 1.45,
-                background: hasLetters
-                  ? isB
-                    ? 'rgba(255,255,255,0.88)'
-                    : 'rgba(255,255,255,0.08)'
-                  : isB
-                    ? 'rgba(255,255,255,0.82)'
-                    : 'rgba(255,255,255,0.06)',
-                border: isB ? 'none' : '1px solid rgba(255,255,255,0.12)',
-                boxShadow: isB ? '0 3px 12px rgba(90,50,20,0.14)' : 'none',
-                backdropFilter: isB ? 'none' : 'blur(8px)',
-                textAlign: 'center',
-              }}
-            >
-              {hasLetters ? '每封都有你。' : '等信的感覺…'}
+            <div className="relative mx-auto" style={{ width: '100%' }}>
+              <div
+                className="pointer-events-none absolute z-[2] rounded-[14px] px-3 py-2 text-[11px]"
+                style={{
+                  right: 'calc(100% + 16px)',
+                  top: hasLetters ? '56%' : '54%',
+                  transform: 'translateY(-50%)',
+                  width: 112,
+                  borderRadius: '14px 14px 2px 14px',
+                  color: isB ? '#6B5040' : 'rgba(220,210,255,0.85)',
+                  lineHeight: 1.45,
+                  background: hasLetters
+                    ? isB
+                      ? 'rgba(255,255,255,0.88)'
+                      : 'rgba(255,255,255,0.08)'
+                    : isB
+                      ? 'rgba(255,255,255,0.82)'
+                      : 'rgba(255,255,255,0.06)',
+                  border: isB ? 'none' : '1px solid rgba(255,255,255,0.12)',
+                  boxShadow: isB ? '0 3px 12px rgba(90,50,20,0.14)' : 'none',
+                  backdropFilter: isB ? 'none' : 'blur(8px)',
+                  textAlign: 'center',
+                }}
+              >
+                {hasLetters ? '每封都有你。' : '等信的感覺…'}
+              </div>
+              <img
+                src={chibiSrc}
+                alt=""
+                draggable={false}
+                className="calendar-chibi mx-auto select-none"
+                style={{ width: '100%' }}
+              />
             </div>
-            <img
-              src={chibiSrc}
-              alt=""
-              draggable={false}
-              className="calendar-chibi mx-auto select-none"
-              style={{ width: '100%' }}
-            />
             {hasLetters && (
               <p className="mt-1 text-[9px]" style={{ color: isB ? 'rgba(139,107,69,0.5)' : 'rgba(180,160,220,0.4)', letterSpacing: '0.04em' }}>
                 點我看全部
