@@ -267,6 +267,62 @@ function DriedFlowers() {
   );
 }
 
+function PressedFlowerCluster({
+  arrangement = 'single',
+  tone = 'rose',
+}: {
+  arrangement?: 'single' | 'double';
+  tone?: 'rose' | 'peach' | 'mauve';
+}) {
+  const palette =
+    tone === 'peach'
+      ? { petal: '#DDB89F', core: '#B68767' }
+      : tone === 'mauve'
+        ? { petal: '#CF9CB3', core: '#AA6780' }
+        : { petal: '#D7A1AF', core: '#B26A7B' };
+
+  const blossoms =
+    arrangement === 'double'
+      ? [
+          { x: 16, y: 13, scale: 1 },
+          { x: 34, y: 10, scale: 0.84 },
+        ]
+      : [{ x: 18, y: 12, scale: 1 }];
+  const width = arrangement === 'double' ? 46 : 30;
+
+  return (
+    <svg
+      width={width}
+      height="24"
+      viewBox={`0 0 ${width} 24`}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d={arrangement === 'double' ? 'M4 21Q20 14 42 19' : 'M3 21Q12 16 27 19'}
+        stroke="rgba(122,155,92,0.34)"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      {blossoms.map((flower, index) => (
+        <g
+          key={`pressed-flower-${arrangement}-${index}`}
+          transform={`translate(${flower.x} ${flower.y}) scale(${flower.scale})`}
+          opacity="0.75"
+        >
+          <circle cx="0" cy="-2.4" r="2.2" fill={palette.petal} />
+          <circle cx="2.3" cy="-0.8" r="2.2" fill={palette.petal} />
+          <circle cx="1.4" cy="1.9" r="2.2" fill={palette.petal} />
+          <circle cx="-1.4" cy="1.9" r="2.2" fill={palette.petal} />
+          <circle cx="-2.3" cy="-0.8" r="2.2" fill={palette.petal} />
+          <circle cx="0" cy="0" r="1.5" fill={palette.core} />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 // ─── LetterPile ───────────────────────────────────────────────────────────────
 
 function LetterPile({
@@ -289,14 +345,14 @@ function LetterPile({
         ]
       : variant === 'B'
         ? [
-            { rotate: -5, y: 5, z: 0, bg: '#2A2448', inner: '#3C3870' },
-            { rotate: 3, y: 2, z: 1, bg: '#332D5C', inner: '#4A4488' },
-            { rotate: -1, y: 0, z: 2, bg: '#3D3670', inner: '#5A52A0' },
+            { rotate: -4, y: 5, z: 0, bg: '#D8E9CB', inner: '#CDE0BE' },
+            { rotate: 2, y: 2, z: 1, bg: '#E6F2DC', inner: '#D8E9CB' },
+            { rotate: -1, y: 0, z: 2, bg: '#F0F8E9', inner: '#E2F0D8' },
           ]
         : [
-            { rotate: -5, y: 5, z: 0, bg: '#222B38', inner: '#324256' },
-            { rotate: 3, y: 2, z: 1, bg: '#2B374A', inner: '#3E4F68' },
-            { rotate: -1, y: 0, z: 2, bg: '#34445C', inner: '#50627F' },
+            { rotate: -4, y: 5, z: 0, bg: '#C8D8E8', inner: '#B8CCE0' },
+            { rotate: 2, y: 2, z: 1, bg: '#D6E3EF', inner: '#C7D8E8' },
+            { rotate: -1, y: 0, z: 2, bg: '#E4EDF5', inner: '#D8E5F1' },
           ];
 
   const width = Math.round(176 * scale);
@@ -306,6 +362,9 @@ function LetterPile({
   const ribbonHeight = Math.max(8, Math.round(12 * scale));
   const bowSize = Math.max(26, Math.round(34 * scale));
   const sealSymbol = variant === 'C' ? '✦' : '❤';
+  const ribbonColor = variant === 'A' ? '#C4697A' : variant === 'B' ? '#86AD76' : '#6F98C0';
+  const bowColor = variant === 'A' ? '#D4818E' : variant === 'B' ? '#A7C791' : '#97BEDD';
+  const bowCenterColor = variant === 'A' ? '#C4697A' : variant === 'B' ? '#789E65' : '#6F98C0';
 
   return (
     <button
@@ -407,7 +466,7 @@ function LetterPile({
           right: 0,
           height: ribbonHeight,
           marginTop: -ribbonHeight / 2,
-          background: variant === 'B' ? '#B9575F' : variant === 'C' ? '#C8A64E' : '#C4697A',
+          background: ribbonColor,
           zIndex: 10,
           boxShadow: '0 1px 5px rgba(0,0,0,0.35)',
         }}
@@ -423,9 +482,9 @@ function LetterPile({
         }}
       >
         <svg width={bowSize} height={Math.round(bowSize * 0.7)} viewBox="0 0 34 24" fill="none" aria-hidden="true">
-          <ellipse cx="10" cy="12" rx="8.5" ry="5.5" fill="#D4818E" opacity="0.9" />
-          <ellipse cx="24" cy="12" rx="8.5" ry="5.5" fill="#D4818E" opacity="0.9" />
-          <circle cx="17" cy="12" r="4.2" fill="#C4697A" />
+          <ellipse cx="10" cy="12" rx="8.5" ry="5.5" fill={bowColor} opacity="0.9" />
+          <ellipse cx="24" cy="12" rx="8.5" ry="5.5" fill={bowColor} opacity="0.9" />
+          <circle cx="17" cy="12" r="4.2" fill={bowCenterColor} />
         </svg>
       </div>
 
@@ -502,6 +561,23 @@ function LetterDeskScene({
   const isA = uiVariant === 'A';
   const isB = uiVariant === 'B';
   const isC = uiVariant === 'C';
+  const bFlowerDecor: Array<{
+    top: string;
+    left: string;
+    rotate: number;
+    scale: number;
+    opacity: number;
+    arrangement: 'single' | 'double';
+    tone: 'rose' | 'peach' | 'mauve';
+  }> = [
+    { top: '15%', left: '8%', rotate: -16, scale: 0.94, opacity: 0.58, arrangement: 'double', tone: 'mauve' },
+    { top: '24%', left: '91%', rotate: 11, scale: 0.78, opacity: 0.5, arrangement: 'single', tone: 'peach' },
+    { top: '37%', left: '6%', rotate: -9, scale: 0.72, opacity: 0.46, arrangement: 'single', tone: 'rose' },
+    { top: '47%', left: '93%', rotate: 13, scale: 0.84, opacity: 0.55, arrangement: 'double', tone: 'mauve' },
+    { top: '61%', left: '11%', rotate: -12, scale: 0.8, opacity: 0.48, arrangement: 'single', tone: 'peach' },
+    { top: '73%', left: '90%', rotate: 8, scale: 0.74, opacity: 0.44, arrangement: 'single', tone: 'rose' },
+    { top: '83%', left: '14%', rotate: -6, scale: 0.7, opacity: 0.4, arrangement: 'double', tone: 'peach' },
+  ];
 
   const sceneTheme = isA
     ? {
@@ -515,6 +591,10 @@ function LetterDeskScene({
         switchActive: 'rgba(236,208,168,0.9)',
         switchText: '#4A3520',
         switchMuted: '#8B7355',
+        deskGrain:
+          'repeating-linear-gradient(2.5deg, transparent, transparent 36px, rgba(0,0,0,0.09) 36px, rgba(0,0,0,0.09) 38px)',
+        backIcon: '#8B7355',
+        flowerOpacity: 0.8,
       }
     : isB
       ? {
@@ -528,6 +608,9 @@ function LetterDeskScene({
           switchActive: 'rgba(236,208,168,0.92)',
           switchText: '#5C3B20',
           switchMuted: '#94765D',
+          deskGrain: 'none',
+          backIcon: '#8B6B45',
+          flowerOpacity: 0,
         }
       : {
           base: 'radial-gradient(ellipse 80% 60% at 30% 0%, #1e1840 0%, #0d0b1e 55%, #09071a 100%)',
@@ -540,6 +623,9 @@ function LetterDeskScene({
           switchActive: 'rgba(120,106,210,0.45)',
           switchText: '#F5EEFF',
           switchMuted: 'rgba(210,198,242,0.74)',
+          deskGrain: 'none',
+          backIcon: 'rgba(255,255,255,0.72)',
+          flowerOpacity: 0,
         };
 
   return (
@@ -563,7 +649,6 @@ function LetterDeskScene({
             const opacity = 0.16 + ((index % 5) * 0.1);
             return (
               <span
-                // deterministic pseudo-random placement
                 key={`star-${index}`}
                 className="absolute rounded-full"
                 style={{
@@ -602,7 +687,7 @@ function LetterDeskScene({
           onClick={onExit}
           aria-label="返回"
           className="absolute left-4 top-4 z-20 flex items-center gap-1.5 transition active:opacity-50"
-          style={{ color: isA ? '#8B7355' : isB ? '#8B6B45' : 'rgba(255,255,255,0.72)' }}
+          style={{ color: sceneTheme.backIcon }}
         >
           <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden="true">
             <path
@@ -647,49 +732,38 @@ function LetterDeskScene({
         </div>
       </div>
 
-      {!isA && (
-        <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 text-center">
-          <p
-            className="text-[9px] tracking-[0.35em] uppercase"
-            style={{ color: sceneTheme.titleMuted }}
-          >
-            Letters
-          </p>
-          <p className="mt-1 text-[16px]" style={{ color: sceneTheme.titleText }}>
-            情書
-          </p>
-        </div>
-      )}
+      <div
+        className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 text-center"
+        style={{ top: '11.8%' }}
+      >
+        <p style={{ color: sceneTheme.titleText, fontSize: 34, letterSpacing: '0.02em', lineHeight: 1.05 }}>
+          我愛你
+        </p>
+        <p style={{ color: sceneTheme.titleText, lineHeight: 1, marginTop: 4 }}>
+          <span style={{ fontSize: 94, fontWeight: 800, letterSpacing: -3 }}>{letters.length}</span>
+          <span style={{ fontSize: 30, marginLeft: 8 }}>次</span>
+        </p>
+        <p className="mt-2 text-[11px]" style={{ color: sceneTheme.titleMuted, letterSpacing: '0.14em' }}>
+          每封都在等你打開
+        </p>
+      </div>
 
-      {isA ? (
-        <div
-          className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 text-center"
-          style={{ top: '11.8%' }}
-        >
-          <p style={{ color: sceneTheme.titleText, fontSize: 34, letterSpacing: '0.02em', lineHeight: 1.05 }}>
-            我愛你
-          </p>
-          <p style={{ color: sceneTheme.titleText, lineHeight: 1, marginTop: 4 }}>
-            <span style={{ fontSize: 94, fontWeight: 800, letterSpacing: -3 }}>{letters.length}</span>
-            <span style={{ fontSize: 30, marginLeft: 8 }}>次</span>
-          </p>
-        </div>
-      ) : (
-        <div className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 text-center" style={{ top: '28%' }}>
-          <p
-            style={{
-              fontSize: 64,
-              lineHeight: 0.92,
-              fontWeight: 800,
-              letterSpacing: -3,
-              color: sceneTheme.titleText,
-            }}
-          >
-            {letters.length}
-          </p>
-          <p className="mt-2 text-[13px]" style={{ color: sceneTheme.titleMuted, letterSpacing: '0.06em' }}>
-            封思念，等你打開
-          </p>
+      {isB && (
+        <div className="pointer-events-none absolute inset-0" style={{ zIndex: 3 }}>
+          {bFlowerDecor.map((decor, index) => (
+            <div
+              key={`b-flower-${index}`}
+              className="absolute"
+              style={{
+                top: decor.top,
+                left: decor.left,
+                opacity: decor.opacity,
+                transform: `translate(-50%, -50%) rotate(${decor.rotate}deg) scale(${decor.scale})`,
+              }}
+            >
+              <PressedFlowerCluster arrangement={decor.arrangement} tone={decor.tone} />
+            </div>
+          ))}
         </div>
       )}
 
@@ -710,12 +784,9 @@ function LetterDeskScene({
           />
           <div
             className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                'repeating-linear-gradient(2.5deg, transparent, transparent 36px, rgba(0,0,0,0.09) 36px, rgba(0,0,0,0.09) 38px)',
-            }}
+            style={{ background: sceneTheme.deskGrain }}
           />
-          <div className="pointer-events-none absolute right-4 top-[5%] opacity-80">
+          <div className="pointer-events-none absolute right-4 top-[5%]" style={{ opacity: sceneTheme.flowerOpacity }}>
             <DriedFlowers />
           </div>
         </div>
@@ -724,37 +795,23 @@ function LetterDeskScene({
       <div
         className="absolute z-10"
         style={{
-          top: isA ? '35%' : '17%',
+          top: '35%',
           left: '50%',
           transform: 'translateX(-50%)',
         }}
       >
-        <LetterPile hasLetters={hasLetters} onClick={onPickRandom} variant={uiVariant} scale={isA ? 1.5 : 1} />
+        <LetterPile hasLetters={hasLetters} onClick={onPickRandom} variant={uiVariant} scale={1.5} />
       </div>
-
-      {isB && (
-        <>
-          <div className="pointer-events-none absolute right-4 top-[10%] opacity-55">
-            <DriedFlowers />
-          </div>
-          <div className="pointer-events-none absolute bottom-10 left-4 flex items-end gap-2">
-            <div className="h-[46px] w-[38px] rounded-[4px] border-2 border-[rgba(180,140,80,0.4)] bg-[rgba(255,255,255,0.6)]" />
-            <div className="flex h-[50px] w-[50px] items-center justify-center rounded-full border-2 border-[rgba(168,64,48,0.28)] text-[10px] text-[rgba(168,64,48,0.7)]">
-              POST
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Floating chibi + browse trigger */}
       {chibiSrc && (
         <div
           className="absolute"
           style={{
-            bottom: isA ? '4.5%' : '14%',
-            left: isA ? '62%' : '53%',
+            bottom: '4.5%',
+            left: '62%',
             transform: 'translateX(-50%)',
-            width: isA ? 126 : 116,
+            width: 126,
             zIndex: 12,
           }}
         >
@@ -765,25 +822,12 @@ function LetterDeskScene({
             className="w-full transition active:scale-95"
             style={{ cursor: hasLetters ? 'pointer' : 'default' }}
           >
-            {!isA && (
-              <span
-                className="mb-1 block rounded-[14px] px-3 py-2 text-[11px] leading-[1.45] shadow-[0_3px_12px_rgba(0,0,0,0.18)]"
-                style={{
-                  color: isB ? '#6B5040' : 'rgba(220,210,255,0.88)',
-                  background: isB ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.08)',
-                  border: isB ? '1px solid rgba(180,140,90,0.18)' : '1px solid rgba(255,255,255,0.12)',
-                  backdropFilter: isB ? 'none' : 'blur(8px)',
-                }}
-              >
-                {isB ? '點我看全部信件' : '點我看全部信件'}
-              </span>
-            )}
-            <img src={chibiSrc} alt="" draggable={false} className="calendar-chibi w-full select-none" />
-            {!isA && (
-              <span className="mt-1 block text-center text-[9px]" style={{ color: sceneTheme.titleMuted }}>
-                點一下打開清單
-              </span>
-            )}
+            <img
+              src={chibiSrc}
+              alt=""
+              draggable={false}
+              className="calendar-chibi w-full select-none"
+            />
           </button>
         </div>
       )}
@@ -823,18 +867,73 @@ function LetterBrowseSheet({
   showFavoritesOnly: boolean;
   onToggleFavoritesOnly: () => void;
 }) {
-  const isB = uiVariant === 'B';
-  const isC = uiVariant === 'C';
   const visibleLetters = showFavoritesOnly
     ? letters.filter((letter) => favoritedNames.has(letter.name))
     : letters;
+  const sheetTheme =
+    uiVariant === 'A'
+      ? {
+          backdrop: 'rgba(0,0,0,0.5)',
+          panelBg: '#3A1E0F',
+          panelBorder: '1px solid rgba(255,255,255,0.08)',
+          handle: 'rgba(255,255,255,0.16)',
+          title: '#C9A87A',
+          toggleBorder: '1px solid rgba(255,255,255,0.2)',
+          toggleOnText: '#F7EBD2',
+          toggleOffText: '#D1B992',
+          toggleOnBg: 'rgba(255,255,255,0.11)',
+          toggleOffBg: 'rgba(0,0,0,0.14)',
+          emptyText: '#A88B62',
+          rowDivider: 'rgba(255,255,255,0.05)',
+          rowIcon: '#8B6B3C',
+          rowTitle: '#F0DFB8',
+          rowDate: '#8B7355',
+          rowFavorite: '#D98A95',
+        }
+      : uiVariant === 'B'
+        ? {
+            backdrop: 'rgba(34,16,26,0.52)',
+            panelBg: 'linear-gradient(170deg, #fef8fb 0%, #f8eaf1 100%)',
+            panelBorder: '1px solid rgba(208,154,178,0.34)',
+            handle: 'rgba(156,97,122,0.36)',
+            title: '#A16C86',
+            toggleBorder: '1px solid rgba(156,97,122,0.28)',
+            toggleOnText: '#8A4D68',
+            toggleOffText: '#A47D91',
+            toggleOnBg: 'rgba(224,138,168,0.18)',
+            toggleOffBg: 'rgba(255,255,255,0.64)',
+            emptyText: '#B28EA1',
+            rowDivider: 'rgba(162,112,137,0.18)',
+            rowIcon: '#B86F90',
+            rowTitle: '#5F3B4D',
+            rowDate: '#A98A9B',
+            rowFavorite: '#C4697A',
+          }
+        : {
+            backdrop: 'rgba(8,18,30,0.58)',
+            panelBg: 'linear-gradient(170deg, #edf5fb 0%, #dce9f5 100%)',
+            panelBorder: '1px solid rgba(118,156,189,0.35)',
+            handle: 'rgba(93,130,163,0.36)',
+            title: '#6388AC',
+            toggleBorder: '1px solid rgba(93,130,163,0.28)',
+            toggleOnText: '#365E87',
+            toggleOffText: '#7697B6',
+            toggleOnBg: 'rgba(111,152,192,0.2)',
+            toggleOffBg: 'rgba(255,255,255,0.64)',
+            emptyText: '#6E8EAD',
+            rowDivider: 'rgba(112,148,179,0.2)',
+            rowIcon: '#5C84A8',
+            rowTitle: '#2E4D6C',
+            rowDate: '#6E8EAD',
+            rowFavorite: '#6F98C0',
+          };
 
   return (
     <div className="absolute inset-0" style={{ zIndex: 20 }}>
       {/* Backdrop */}
       <div
         className="absolute inset-0"
-        style={{ background: isC ? 'rgba(5,3,15,0.65)' : 'rgba(0,0,0,0.5)' }}
+        style={{ background: sheetTheme.backdrop }}
         onClick={onClose}
       />
 
@@ -843,11 +942,9 @@ function LetterBrowseSheet({
         className="absolute bottom-0 left-0 right-0 flex flex-col overflow-hidden"
         style={{
           borderRadius: '22px 22px 0 0',
-          background:
-            uiVariant === 'A' ? '#3A1E0F' : uiVariant === 'B' ? 'linear-gradient(170deg, #fdf6e8 0%, #faf0da 100%)' : 'rgba(14,11,30,0.93)',
-          border: isC ? '1px solid rgba(255,255,255,0.08)' : 'none',
+          background: sheetTheme.panelBg,
+          border: sheetTheme.panelBorder,
           borderBottom: 'none',
-          backdropFilter: isC ? 'blur(12px)' : 'none',
           maxHeight: '65%',
         }}
       >
@@ -855,7 +952,7 @@ function LetterBrowseSheet({
         <div className="flex shrink-0 justify-center pb-2 pt-3">
           <div
             className="h-1 w-10 rounded-full"
-            style={{ background: isC ? 'rgba(255,255,255,0.2)' : isB ? 'rgba(180,140,80,0.35)' : 'rgba(255,255,255,0.16)' }}
+            style={{ background: sheetTheme.handle }}
           />
         </div>
 
@@ -865,7 +962,7 @@ function LetterBrowseSheet({
             <p
               className="text-xs"
               style={{
-                color: isC ? 'rgba(206,196,236,0.78)' : isB ? '#9A8070' : '#C9A87A',
+                color: sheetTheme.title,
                 letterSpacing: '0.12em',
               }}
             >
@@ -876,29 +973,9 @@ function LetterBrowseSheet({
               onClick={onToggleFavoritesOnly}
               className="rounded-full px-3 py-1 text-xs transition active:scale-95"
               style={{
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: showFavoritesOnly
-                  ? isC
-                    ? '#F3EEFF'
-                    : isB
-                      ? '#A84030'
-                      : '#F7EBD2'
-                  : isC
-                    ? 'rgba(207,197,236,0.76)'
-                    : isB
-                      ? '#9A8070'
-                      : '#D1B992',
-                background: showFavoritesOnly
-                  ? isC
-                    ? 'rgba(126,110,214,0.34)'
-                    : isB
-                      ? 'rgba(168,64,48,0.12)'
-                      : 'rgba(255,255,255,0.11)'
-                  : isC
-                    ? 'rgba(255,255,255,0.06)'
-                    : isB
-                      ? 'rgba(0,0,0,0.04)'
-                      : 'rgba(0,0,0,0.14)',
+                border: sheetTheme.toggleBorder,
+                color: showFavoritesOnly ? sheetTheme.toggleOnText : sheetTheme.toggleOffText,
+                background: showFavoritesOnly ? sheetTheme.toggleOnBg : sheetTheme.toggleOffBg,
               }}
             >
               {showFavoritesOnly ? '♥ 只看收藏' : '♡ 全部'}
@@ -911,7 +988,7 @@ function LetterBrowseSheet({
           {visibleLetters.length === 0 && (
             <p
               className="px-5 py-8 text-sm"
-              style={{ color: isC ? 'rgba(190,176,224,0.62)' : isB ? '#B8A080' : '#A88B62' }}
+              style={{ color: sheetTheme.emptyText }}
             >
               還沒有收藏的信件
             </p>
@@ -928,15 +1005,13 @@ function LetterBrowseSheet({
                 borderTop:
                   i === 0
                     ? 'none'
-                    : `1px solid ${
-                        isC ? 'rgba(255,255,255,0.08)' : isB ? 'rgba(180,140,80,0.1)' : 'rgba(255,255,255,0.05)'
-                      }`,
+                    : `1px solid ${sheetTheme.rowDivider}`,
                 minHeight: 52,
               }}
             >
               <span
                 style={{
-                  color: isC ? 'rgba(218,204,255,0.72)' : isB ? '#A84030' : '#8B6B3C',
+                  color: sheetTheme.rowIcon,
                   fontSize: 14,
                   marginTop: 2,
                   flexShrink: 0,
@@ -947,19 +1022,19 @@ function LetterBrowseSheet({
               <div className="min-w-0 flex-1">
                 <p
                   className="truncate text-sm"
-                  style={{ color: isC ? 'rgba(244,238,255,0.9)' : isB ? '#3D2414' : '#F0DFB8' }}
+                  style={{ color: sheetTheme.rowTitle }}
                 >
                   {stripExt(letter.name)}
                 </p>
                 <p
                   className="mt-0.5 text-xs"
-                  style={{ color: isC ? 'rgba(184,170,220,0.62)' : isB ? '#B8A080' : '#8B7355' }}
+                  style={{ color: sheetTheme.rowDate }}
                 >
                   {formatDate(letter.importedAt)}
                 </p>
               </div>
               {favoritedNames.has(letter.name) && (
-                <span className="pt-0.5 text-sm" style={{ color: isC ? '#E6C56A' : isB ? '#C4697A' : '#D98A95' }}>
+                <span className="pt-0.5 text-sm" style={{ color: sheetTheme.rowFavorite }}>
                   ♥
                 </span>
               )}
@@ -1012,7 +1087,8 @@ function LetterFullscreenView({
   const effectiveFontFamily = letterFontFamily || "'Ma Shan Zheng', cursive";
   const displayName = stripExt(letter.name);
   const night = isNightVariant(uiVariant);
-  const showCenteredRerollChibi = night && hasMultiple && !!rerollChibiSrc;
+  const rerollLabel = hasMultiple ? '再抽一封' : '再看一次';
+  const rerollDisplaySrc = rerollChibiSrc || LETTER_CHIBI_SOURCES[0] || getActiveBaseChibiSources()[0] || '';
   const theme =
     uiVariant === 'A'
       ? {
@@ -1027,24 +1103,24 @@ function LetterFullscreenView({
         }
       : uiVariant === 'B'
         ? {
-            overlay: 'radial-gradient(ellipse 60% 50% at 50% 40%,rgba(60,50,120,0.42) 0%,rgba(8,6,20,0.92) 100%)',
-            bar: 'rgba(8,6,20,0.86)',
-            iconMuted: 'rgba(240,233,255,0.62)',
-            labelMuted: 'rgba(190,176,224,0.62)',
-            closeIcon: 'rgba(240,233,255,0.7)',
-            favOn: '#E8C060',
+            overlay: 'rgba(36,12,24,0.56)',
+            bar: 'linear-gradient(to top, rgba(54,20,34,0.86), rgba(54,20,34,0.26))',
+            iconMuted: 'rgba(255,237,246,0.72)',
+            labelMuted: 'rgba(248,219,232,0.68)',
+            closeIcon: 'rgba(255,240,248,0.76)',
+            favOn: '#E08AA8',
             paperShadow:
-              '0 20px 82px rgba(0,0,0,0.72), 0 4px 28px rgba(0,0,0,0.48), 0 0 60px rgba(200,160,80,0.10), inset 0 0 0 1px rgba(180,140,80,0.14)',
+              '0 12px 56px rgba(0,0,0,0.56), 0 3px 18px rgba(0,0,0,0.34), inset 0 0 0 1px rgba(196,130,160,0.16)',
           }
         : {
-            overlay: 'radial-gradient(ellipse 62% 52% at 50% 40%,rgba(40,78,118,0.42) 0%,rgba(5,13,22,0.92) 100%)',
-            bar: 'rgba(5,13,22,0.86)',
-            iconMuted: 'rgba(226,243,255,0.66)',
-            labelMuted: 'rgba(172,206,229,0.66)',
-            closeIcon: 'rgba(226,243,255,0.74)',
-            favOn: '#67C8FF',
+            overlay: 'rgba(10,28,44,0.56)',
+            bar: 'linear-gradient(to top, rgba(16,42,66,0.86), rgba(16,42,66,0.26))',
+            iconMuted: 'rgba(220,238,255,0.72)',
+            labelMuted: 'rgba(188,216,238,0.68)',
+            closeIcon: 'rgba(226,244,255,0.76)',
+            favOn: '#6F98C0',
             paperShadow:
-              '0 20px 82px rgba(0,0,0,0.72), 0 4px 28px rgba(0,0,0,0.48), 0 0 60px rgba(108,192,230,0.12), inset 0 0 0 1px rgba(180,140,80,0.14)',
+              '0 12px 56px rgba(0,0,0,0.56), 0 3px 18px rgba(0,0,0,0.34), inset 0 0 0 1px rgba(120,168,204,0.16)',
           };
 
   return (
@@ -1120,24 +1196,6 @@ function LetterFullscreenView({
 
       </div>
 
-      {showCenteredRerollChibi && (
-        <button
-          type="button"
-          onClick={onPickRandom}
-          aria-label="再抽一封"
-          className="absolute z-20 flex flex-col items-center gap-1 transition active:scale-95"
-          style={{ bottom: 70, left: '50%', transform: 'translateX(-50%)' }}
-        >
-          <img
-            src={rerollChibiSrc}
-            alt=""
-            draggable={false}
-            className="calendar-chibi w-16 select-none drop-shadow-[0_8px_16px_rgba(0,0,0,0.45)]"
-          />
-          <span style={{ fontSize: 10, color: theme.labelMuted }}>再抽一封</span>
-        </button>
-      )}
-
       {/* Action bar */}
       <div
         className="absolute bottom-0 left-0 right-0 flex items-center justify-around"
@@ -1148,6 +1206,7 @@ function LetterFullscreenView({
           background: theme.bar,
           backdropFilter: night ? 'blur(10px)' : 'none',
           borderTop: night ? '1px solid rgba(255,255,255,0.06)' : 'none',
+          overflow: 'visible',
         }}
       >
         {/* ❤ Favorite */}
@@ -1169,28 +1228,30 @@ function LetterFullscreenView({
           <span style={{ fontSize: 10, color: theme.labelMuted }}>收藏</span>
         </button>
 
-        {/* ✉ Re-draw — only when multiple letters */}
-        {hasMultiple && !showCenteredRerollChibi && (
-          <button
-            type="button"
-            onClick={onPickRandom}
-            aria-label="再抽一封"
-            className="flex flex-col items-center gap-1 transition active:opacity-55"
-            style={{ minWidth: 64, minHeight: 48 }}
-          >
-            {rerollChibiSrc ? (
-              <img
-                src={rerollChibiSrc}
-                alt=""
-                draggable={false}
-                className="w-14 select-none drop-shadow"
-              />
-            ) : (
-              <span style={{ fontSize: 22, color: theme.iconMuted }}>✉</span>
-            )}
-            <span style={{ fontSize: 10, color: theme.labelMuted }}>再抽一封</span>
-          </button>
-        )}
+        {/* ✉ Re-draw */}
+        <button
+          type="button"
+          onClick={onPickRandom}
+          aria-label={rerollLabel}
+          className="flex flex-col items-center gap-1 transition active:opacity-55"
+          style={{
+            minWidth: 64,
+            minHeight: 48,
+            transform: 'translateY(-14px)',
+          }}
+        >
+          {rerollDisplaySrc ? (
+            <img
+              src={rerollDisplaySrc}
+              alt=""
+              draggable={false}
+              className="calendar-chibi w-20 select-none drop-shadow"
+            />
+          ) : (
+            <span style={{ fontSize: 22, color: theme.iconMuted }}>✉</span>
+          )}
+          <span style={{ fontSize: 10, color: theme.labelMuted }}>{rerollLabel}</span>
+        </button>
 
         {/* ↩ Close */}
         <button
