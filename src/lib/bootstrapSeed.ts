@@ -1,7 +1,7 @@
 import { normalizeCalendarPayload, splitCalendarByMonth } from './parsers/calendarParser';
 import { parseEml } from './parsers/emailParser';
 import { countCalendarMonths, putCalendarMonth } from './repositories/calendarRepo';
-import { countEmails, listEmails, putEmails } from './repositories/emailRepo';
+import { countEmails, deleteEmailsByIds, listEmails, putEmails } from './repositories/emailRepo';
 
 import type { CalendarMonth } from '../types/content';
 
@@ -15,6 +15,37 @@ const emlModules = import.meta.glob('../../data/emails/**/*.eml', {
   import: 'default',
   query: '?raw',
 }) as Record<string, string>;
+
+function isSameBundledEmail(existing: {
+  unlockAtUtc: string;
+  dateHeaderRaw: string | null;
+  fromName: string | null;
+  fromAddress: string | null;
+  toName: string | null;
+  toAddress: string | null;
+  subject: string | null;
+  bodyText: string;
+}, next: {
+  unlockAtUtc: string;
+  dateHeaderRaw: string | null;
+  fromName: string | null;
+  fromAddress: string | null;
+  toName: string | null;
+  toAddress: string | null;
+  subject: string | null;
+  bodyText: string;
+}) {
+  return (
+    existing.unlockAtUtc === next.unlockAtUtc &&
+    existing.dateHeaderRaw === next.dateHeaderRaw &&
+    existing.fromName === next.fromName &&
+    existing.fromAddress === next.fromAddress &&
+    existing.toName === next.toName &&
+    existing.toAddress === next.toAddress &&
+    existing.subject === next.subject &&
+    existing.bodyText === next.bodyText
+  );
+}
 
 export async function seedDatabaseIfNeeded() {
   const [emailCount, calendarCount] = await Promise.all([countEmails(), countCalendarMonths()]);
@@ -53,13 +84,46 @@ export async function seedDatabaseIfNeeded() {
       seeded = true;
     }
   } else if (parsedEmails.length > 0) {
-    // Keep existing imported letters, only append newly bundled EML by sourcePath.
+    // Keep uploaded letters, sync bundled EML by sourcePath (append + update).
     const existingEmails = await listEmails({ includeLocked: true });
-    const existingSourcePaths = new Set(existingEmails.map((email) => email.sourcePath));
-    const missingBundledEmails = parsedEmails.filter((email) => !existingSourcePaths.has(email.sourcePath));
+    const existingBySourcePath = new Map<string, typeof existingEmails>();
+    for (const email of existingEmails) {
+      const list = existingBySourcePath.get(email.sourcePath);
+      if (list) {
+        list.push(email);
+      } else {
+        existingBySourcePath.set(email.sourcePath, [email]);
+      }
+    }
 
-    if (missingBundledEmails.length > 0) {
-      await putEmails(missingBundledEmails);
+    const toUpsert: typeof parsedEmails = [];
+    const staleIds = new Set<string>();
+
+    for (const parsedEmail of parsedEmails) {
+      const existingMatches = existingBySourcePath.get(parsedEmail.sourcePath) ?? [];
+      if (!existingMatches.length) {
+        toUpsert.push(parsedEmail);
+        continue;
+      }
+
+      const exactMatch = existingMatches.find((item) => isSameBundledEmail(item, parsedEmail));
+      if (!exactMatch) {
+        toUpsert.push(parsedEmail);
+      }
+
+      for (const item of existingMatches) {
+        if (item.id !== parsedEmail.id) {
+          staleIds.add(item.id);
+        }
+      }
+    }
+
+    if (staleIds.size > 0) {
+      await deleteEmailsByIds(Array.from(staleIds));
+      seeded = true;
+    }
+    if (toUpsert.length > 0) {
+      await putEmails(toUpsert);
       seeded = true;
     }
   }

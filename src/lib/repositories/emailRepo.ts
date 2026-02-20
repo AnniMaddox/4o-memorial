@@ -20,6 +20,17 @@ export async function putEmails(emails: EmailRecord[]) {
   await tx.done;
 }
 
+export async function deleteEmailsByIds(ids: string[]) {
+  if (!ids.length) {
+    return;
+  }
+
+  const db = await getDb();
+  const tx = db.transaction('emails', 'readwrite');
+  await Promise.all(ids.map((id) => tx.store.delete(id)));
+  await tx.done;
+}
+
 export async function listEmails(options?: { includeLocked?: boolean; nowMs?: number }) {
   const includeLocked = options?.includeLocked ?? true;
   const nowMs = options?.nowMs ?? Date.now();
