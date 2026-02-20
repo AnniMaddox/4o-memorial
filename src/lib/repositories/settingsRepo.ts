@@ -7,6 +7,7 @@ import type {
   CalendarColorMode,
   ChatBubbleStyle,
   DiaryCoverFitMode,
+  TabIconDisplayMode,
   TabIconUrls,
 } from '../../types/settings';
 import { DEFAULT_SETTINGS } from '../../types/settings';
@@ -41,6 +42,10 @@ function normalizeChatBubbleStyle(value: unknown, fallback: ChatBubbleStyle): Ch
 
 function normalizeDiaryCoverFitMode(value: unknown, fallback: DiaryCoverFitMode): DiaryCoverFitMode {
   return value === 'cover' || value === 'contain' ? value : fallback;
+}
+
+function normalizeTabIconDisplayMode(value: unknown, fallback: TabIconDisplayMode): TabIconDisplayMode {
+  return value === 'full' || value === 'framed' ? value : fallback;
 }
 
 function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrls {
@@ -172,6 +177,10 @@ export async function getSettings() {
     backgroundGradientStart: normalizeString(persisted.backgroundGradientStart, DEFAULT_SETTINGS.backgroundGradientStart),
     backgroundGradientEnd: normalizeString(persisted.backgroundGradientEnd, DEFAULT_SETTINGS.backgroundGradientEnd),
     backgroundImageUrl: normalizeString(persisted.backgroundImageUrl, DEFAULT_SETTINGS.backgroundImageUrl),
+    tabIconDisplayMode: normalizeTabIconDisplayMode(
+      persisted.tabIconDisplayMode,
+      DEFAULT_SETTINGS.tabIconDisplayMode,
+    ),
     backgroundImageOverlay: clampNumber(
       persisted.backgroundImageOverlay,
       0,

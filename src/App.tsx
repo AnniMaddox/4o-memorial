@@ -886,6 +886,7 @@ function App() {
         node: (
           <HomePage
             tabIconUrls={settings.tabIconUrls}
+            tabIconDisplayMode={settings.tabIconDisplayMode}
             launcherLabels={appLabels}
             homeSwipeEnabled={settings.swipeEnabled}
             widgetTitle={settings.homeWidgetTitle}
@@ -1097,6 +1098,7 @@ function App() {
             <BottomTabs
               activeIndex={activeTab}
               onSelect={setActiveTab}
+              iconDisplayMode={settings.tabIconDisplayMode}
               tabs={pages.map((page) => {
                 const tabId = page.id as TabIconKey;
                 return {

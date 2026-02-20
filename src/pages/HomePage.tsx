@@ -17,6 +17,7 @@ type LauncherAppId =
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
+  tabIconDisplayMode: 'framed' | 'full';
   launcherLabels: AppLabels;
   homeSwipeEnabled: boolean;
   widgetTitle: string;
@@ -106,8 +107,17 @@ function calcMemorialDayCount(startDate: Date, now: Date) {
   return Math.max(1, diffDays + 1);
 }
 
-function HomeAppButton({ slot, onLaunch }: { slot: HomeAppSlot; onLaunch: (appId: LauncherAppId) => void }) {
+function HomeAppButton({
+  slot,
+  iconDisplayMode,
+  onLaunch,
+}: {
+  slot: HomeAppSlot;
+  iconDisplayMode: 'framed' | 'full';
+  onLaunch: (appId: LauncherAppId) => void;
+}) {
   const clickable = !!slot.launch && !slot.disabled;
+  const useFullMode = iconDisplayMode === 'full' && !!slot.iconUrl;
 
   return (
     <button
@@ -119,14 +129,20 @@ function HomeAppButton({ slot, onLaunch }: { slot: HomeAppSlot; onLaunch: (appId
       title={slot.label}
     >
       <div
-        className="grid h-16 w-16 place-items-center rounded-2xl border border-white/45 bg-white/25 shadow-[0_18px_42px_rgba(0,0,0,0.14)] backdrop-blur"
-        style={{ boxShadow: '0 18px 42px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.65)' }}
+        className={`grid h-16 w-16 place-items-center overflow-hidden rounded-2xl ${
+          useFullMode
+            ? 'border border-transparent bg-transparent shadow-[0_18px_42px_rgba(0,0,0,0.22)]'
+            : 'border border-white/45 bg-white/25 shadow-[0_18px_42px_rgba(0,0,0,0.14)] backdrop-blur'
+        }`}
+        style={useFullMode ? undefined : { boxShadow: '0 18px 42px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.65)' }}
       >
         {slot.iconUrl ? (
           <img
             src={slot.iconUrl}
             alt=""
-            className="h-10 w-10 rounded-xl object-cover"
+            className={`${
+              useFullMode ? 'h-16 w-16 rounded-2xl object-cover' : 'h-10 w-10 rounded-xl object-cover'
+            }`}
             loading="lazy"
             draggable={false}
           />
@@ -157,6 +173,7 @@ function HomePlaceholderTile() {
 
 export function HomePage({
   tabIconUrls,
+  tabIconDisplayMode,
   launcherLabels,
   homeSwipeEnabled,
   widgetTitle,
@@ -680,7 +697,12 @@ export function HomePage({
                   <div className={`grid grid-cols-4 gap-x-4 gap-y-6 px-1 ${screen.showDashboard ? '' : 'pt-2'}`}>
                     {screen.slots.map((slot) =>
                       slot.label ? (
-                        <HomeAppButton key={slot.id} slot={slot} onLaunch={onLaunchApp} />
+                        <HomeAppButton
+                          key={slot.id}
+                          slot={slot}
+                          iconDisplayMode={tabIconDisplayMode}
+                          onLaunch={onLaunchApp}
+                        />
                       ) : (
                         <HomePlaceholderTile key={slot.id} />
                       ),

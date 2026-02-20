@@ -134,6 +134,7 @@ type AppearancePresetPayload = {
     customFontFamily: string;
     fontScale: number;
     tabIconUrls: TabIconUrls;
+    tabIconDisplayMode: AppSettings['tabIconDisplayMode'];
     calendarCellRadius: number;
     calendarCellShadow: number;
     calendarCellDepth: number;
@@ -331,6 +332,22 @@ export function SettingsPage({
     setTabIconStatus('');
   }
 
+  function handleTabIconUpload(tab: TabIconKey, file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        return;
+      }
+      setTabIconDraft(tab, reader.result);
+      setTabIconStatus(`${TAB_ICON_LABELS.find((item) => item.key === tab)?.label ?? tab} 圖示已放入草稿`);
+    };
+    reader.readAsDataURL(file);
+  }
+
   function setLabelDraft(key: AppLabelKey, value: string) {
     setLabelDrafts((current) => ({
       ...current,
@@ -416,6 +433,7 @@ export function SettingsPage({
         customFontFamily: settings.customFontFamily,
         fontScale: settings.fontScale,
         tabIconUrls: settings.tabIconUrls,
+        tabIconDisplayMode: settings.tabIconDisplayMode,
         calendarCellRadius: settings.calendarCellRadius,
         calendarCellShadow: settings.calendarCellShadow,
         calendarCellDepth: settings.calendarCellDepth,
@@ -525,6 +543,9 @@ export function SettingsPage({
           notes: typeof input.notes === 'string' ? input.notes.trim() : '',
           settings: typeof input.settings === 'string' ? input.settings.trim() : '',
         };
+      }
+      if (source.tabIconDisplayMode === 'framed' || source.tabIconDisplayMode === 'full') {
+        next.tabIconDisplayMode = source.tabIconDisplayMode;
       }
       if (typeof source.calendarCellRadius === 'number' && Number.isFinite(source.calendarCellRadius)) {
         next.calendarCellRadius = source.calendarCellRadius;
@@ -1251,6 +1272,40 @@ export function SettingsPage({
           onToggle={() => togglePanel('tabIcons')}
         >
           <div className="space-y-3">
+            <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+              <p className="text-xs text-stone-600">圖示顯示模式</p>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSettingChange({ tabIconDisplayMode: 'framed' });
+                    setTabIconStatus('已切換為：卡片框');
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-xs ${
+                    settings.tabIconDisplayMode === 'framed'
+                      ? 'bg-stone-900 text-white'
+                      : 'border border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  卡片框
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSettingChange({ tabIconDisplayMode: 'full' });
+                    setTabIconStatus('已切換為：滿版');
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-xs ${
+                    settings.tabIconDisplayMode === 'full'
+                      ? 'bg-stone-900 text-white'
+                      : 'border border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  滿版
+                </button>
+              </div>
+            </div>
+
             {TAB_ICON_LABELS.map((tab) => {
               const iconUrl = tabIconDrafts[tab.key];
               return (
@@ -1259,7 +1314,15 @@ export function SettingsPage({
                   <div className="flex items-center gap-2">
                     <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-300 bg-white text-lg">
                       {iconUrl ? (
-                        <img src={iconUrl} alt="" className="h-6 w-6 rounded-md object-cover" />
+                        <img
+                          src={iconUrl}
+                          alt=""
+                          className={`${
+                            settings.tabIconDisplayMode === 'full'
+                              ? 'h-8 w-8 rounded-lg object-cover'
+                              : 'h-6 w-6 rounded-md object-cover'
+                          }`}
+                        />
                       ) : (
                         TAB_ICON_FALLBACK[tab.key]
                       )}
@@ -1271,6 +1334,27 @@ export function SettingsPage({
                       placeholder="https://example.com/icon.png"
                       className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
                     />
+                    <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-2.5 py-2 text-xs text-stone-700">
+                      上傳
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => {
+                          handleTabIconUpload(tab.key, event.target.files?.[0] ?? null);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                    {iconUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setTabIconDraft(tab.key, '')}
+                        className="rounded-lg border border-stone-300 bg-white px-2.5 py-2 text-xs text-stone-700"
+                      >
+                        清除
+                      </button>
+                    )}
                   </div>
                 </label>
               );
@@ -1293,7 +1377,7 @@ export function SettingsPage({
             </div>
             {tabIconStatus && <p className="text-xs text-stone-600">{tabIconStatus}</p>}
             <p className="text-xs text-stone-500">
-              留空就用預設圖示。圖片建議正方形（PNG/JPG/WebP），網址需可直接存取。
+              留空就用預設圖示。可貼網址或直接上傳圖片（會存成本機 data URL）。
             </p>
           </div>
         </SettingPanel>

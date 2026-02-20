@@ -10,10 +10,11 @@ type TabItem = {
 type BottomTabsProps = {
   tabs: TabItem[];
   activeIndex: number;
+  iconDisplayMode: 'framed' | 'full';
   onSelect: (index: number) => void;
 };
 
-export function BottomTabs({ tabs, activeIndex, onSelect }: BottomTabsProps) {
+export function BottomTabs({ tabs, activeIndex, iconDisplayMode, onSelect }: BottomTabsProps) {
   const [failedIconIds, setFailedIconIds] = useState<Record<string, boolean>>({});
 
   return (
@@ -38,7 +39,9 @@ export function BottomTabs({ tabs, activeIndex, onSelect }: BottomTabsProps) {
                     <img
                       src={tab.iconUrl}
                       alt=""
-                      className="h-9 w-9 rounded-lg object-cover"
+                      className={`${
+                        iconDisplayMode === 'full' ? 'h-11 w-11 rounded-xl object-cover' : 'h-9 w-9 rounded-lg object-cover'
+                      }`}
                       loading="lazy"
                       onError={() =>
                         setFailedIconIds((current) => ({

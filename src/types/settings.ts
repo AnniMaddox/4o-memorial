@@ -10,6 +10,7 @@ export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type DiaryCoverFitMode = 'cover' | 'contain';
+export type TabIconDisplayMode = 'framed' | 'full';
 export type TabIconKey =
   | 'home'
   | 'inbox'
@@ -112,6 +113,7 @@ export type AppSettings = {
   backgroundGradientEnd: string;
   backgroundImageUrl: string;
   backgroundImageOverlay: number;
+  tabIconDisplayMode: TabIconDisplayMode;
   tabIconUrls: TabIconUrls;
   appLabels: AppLabels;
   fontScale: number;
@@ -176,6 +178,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   backgroundGradientEnd: '#ece4d5',
   backgroundImageUrl: '',
   backgroundImageOverlay: 36,
+  tabIconDisplayMode: 'framed',
   tabIconUrls: DEFAULT_TAB_ICON_URLS,
   appLabels: DEFAULT_APP_LABELS,
   fontScale: 1,
