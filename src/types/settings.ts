@@ -11,6 +11,7 @@ export type BackgroundMode = 'gradient' | 'image';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type DiaryCoverFitMode = 'cover' | 'contain';
 export type TabIconDisplayMode = 'framed' | 'full';
+export type LetterUiMode = 'classic' | 'preview';
 export type TabIconKey =
   | 'home'
   | 'inbox'
@@ -129,6 +130,7 @@ export type AppSettings = {
   tarotNameColor: string;
   tarotNameScale: number;
   letterFontUrl: string;
+  letterUiMode: LetterUiMode;
   diaryCoverImageUrl: string;
   diaryFontUrl: string;
   diaryCoverFitMode: DiaryCoverFitMode;
@@ -194,6 +196,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   tarotNameColor: '#374151',
   tarotNameScale: 1,
   letterFontUrl: '',
+  letterUiMode: 'classic',
   diaryCoverImageUrl: '',
   diaryFontUrl: '',
   diaryCoverFitMode: 'cover',

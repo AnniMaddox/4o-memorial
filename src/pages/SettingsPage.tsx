@@ -1590,7 +1590,7 @@ export function SettingsPage({
         <SettingPanel
           icon="💌"
           title="情書"
-          subtitle="匯入 · 字體"
+          subtitle="模式 · 匯入 · 字體"
           isOpen={openPanel === 'letters'}
           onToggle={() => togglePanel('letters')}
         >
@@ -1599,6 +1599,35 @@ export function SettingsPage({
             <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
               <p className="text-xs text-stone-500">已匯入情書</p>
               <p className="mt-0.5 truncate text-sm text-stone-800">{letterCount} 封</p>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-xs font-medium text-stone-600">情書頁模式</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ letterUiMode: 'classic' })}
+                  className={`rounded-xl border px-3 py-2 text-xs transition active:opacity-80 ${
+                    settings.letterUiMode === 'classic'
+                      ? 'border-stone-900 bg-stone-900 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  經典（A/B/C）
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSettingChange({ letterUiMode: 'preview' })}
+                  className={`rounded-xl border px-3 py-2 text-xs transition active:opacity-80 ${
+                    settings.letterUiMode === 'preview'
+                      ? 'border-stone-900 bg-stone-900 text-white'
+                      : 'border-stone-300 bg-white text-stone-700'
+                  }`}
+                >
+                  Preview（B/C）
+                </button>
+              </div>
+              <p className="text-xs text-stone-400">經典保留目前三款；Preview 使用你給的 B/C 版面。</p>
             </div>
 
             {/* File import */}

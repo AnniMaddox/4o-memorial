@@ -7,6 +7,7 @@ import type {
   CalendarColorMode,
   ChatBubbleStyle,
   DiaryCoverFitMode,
+  LetterUiMode,
   TabIconDisplayMode,
   TabIconUrls,
 } from '../../types/settings';
@@ -46,6 +47,10 @@ function normalizeDiaryCoverFitMode(value: unknown, fallback: DiaryCoverFitMode)
 
 function normalizeTabIconDisplayMode(value: unknown, fallback: TabIconDisplayMode): TabIconDisplayMode {
   return value === 'full' || value === 'framed' ? value : fallback;
+}
+
+function normalizeLetterUiMode(value: unknown, fallback: LetterUiMode): LetterUiMode {
+  return value === 'preview' || value === 'classic' ? value : fallback;
 }
 
 function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrls {
@@ -167,6 +172,7 @@ export async function getSettings() {
     tarotNameColor: normalizeString(persisted.tarotNameColor, DEFAULT_SETTINGS.tarotNameColor),
     tarotNameScale: clampNumber(persisted.tarotNameScale, 0.8, 2, DEFAULT_SETTINGS.tarotNameScale),
     letterFontUrl: normalizeString(persisted.letterFontUrl, DEFAULT_SETTINGS.letterFontUrl),
+    letterUiMode: normalizeLetterUiMode(persisted.letterUiMode, DEFAULT_SETTINGS.letterUiMode),
     diaryCoverImageUrl: normalizeString(persisted.diaryCoverImageUrl, DEFAULT_SETTINGS.diaryCoverImageUrl),
     diaryFontUrl: normalizeString(persisted.diaryFontUrl, DEFAULT_SETTINGS.diaryFontUrl),
     diaryCoverFitMode: normalizeDiaryCoverFitMode(

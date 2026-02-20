@@ -1163,6 +1163,7 @@ function App() {
                 <LetterPage
                   letters={letters}
                   letterFontFamily={letterFontFamily}
+                  uiMode={settings.letterUiMode}
                   onExit={() => setLauncherApp(null)}
                 />
               </div>
