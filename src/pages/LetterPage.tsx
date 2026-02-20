@@ -1196,15 +1196,16 @@ function PreviewLetterDeskScene({
           type="button"
           onClick={onExit}
           aria-label="返回"
-          className="absolute left-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full transition active:opacity-55"
+          className="absolute left-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-xl transition active:opacity-60"
           style={{
-            background: isB ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.06)',
-            border: isB ? '1px solid rgba(180,140,90,0.25)' : '1px solid rgba(255,255,255,0.12)',
-            color: isB ? '#8B6B45' : 'rgba(255,255,255,0.72)',
-            boxShadow: isB ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+            background: isB ? 'rgba(255,255,255,0.52)' : 'rgba(255,255,255,0.08)',
+            border: isB ? '1px solid rgba(170,132,92,0.2)' : '1px solid rgba(255,255,255,0.14)',
+            color: isB ? '#7D6240' : 'rgba(236,230,255,0.78)',
+            boxShadow: 'none',
+            backdropFilter: 'blur(4px)',
           }}
         >
-          <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden="true">
+          <svg width="16" height="12" viewBox="0 0 18 14" fill="none" aria-hidden="true">
             <path d="M17 7H1M7 1L1 7L7 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
@@ -1377,7 +1378,7 @@ function PreviewLetterDeskScene({
         <div
           className="absolute z-10"
           style={{
-            bottom: 86,
+            bottom: 72,
             left: '50%',
             transform: 'translateX(-15%)',
             width: 126,
@@ -1782,7 +1783,7 @@ function PreviewLetterFullscreenView({
         onClick={onPickRandom}
         aria-label={rerollLabel}
         className="absolute left-1/2 z-[18] flex -translate-x-1/2 flex-col items-center gap-[3px] transition active:opacity-65"
-        style={{ bottom: 58 }}
+        style={{ bottom: 48 }}
       >
         {rerollDisplaySrc ? (
           <img

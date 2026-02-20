@@ -1624,10 +1624,9 @@ export function SettingsPage({
                       : 'border-stone-300 bg-white text-stone-700'
                   }`}
                 >
-                  Preview（B/C）
+                  Preview（I/II）
                 </button>
               </div>
-              <p className="text-xs text-stone-400">經典保留目前三款；Preview 使用你給的 B/C 版面。</p>
             </div>
 
             {/* File import */}
