@@ -8,6 +8,45 @@ import { seededShuffle, todayDateKey } from '../lib/tarotSeed';
 type TarotCard = (typeof cardsData)[number];
 type CardPhase = 'image' | 'text' | 'bonusImage' | 'bonus';
 
+const TAROT_IMAGE_MODULES = import.meta.glob('../../public/tarot/*.{png,PNG,jpg,jpeg,webp,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+
+const TAROT_IMAGE_LOOKUP = new Map<string, string>();
+for (const [path, url] of Object.entries(TAROT_IMAGE_MODULES)) {
+  const fileName = path.split('/').pop();
+  if (!fileName) {
+    continue;
+  }
+
+  const normalizedName = fileName.toLowerCase();
+  TAROT_IMAGE_LOOKUP.set(normalizedName, url);
+
+  const stem = normalizedName.replace(/\.[^.]+$/, '');
+  if (!TAROT_IMAGE_LOOKUP.has(stem)) {
+    TAROT_IMAGE_LOOKUP.set(stem, url);
+  }
+}
+
+function resolveTarotImage(basePath: string, imageName: string | undefined) {
+  if (!imageName) {
+    return '';
+  }
+
+  const normalized = imageName.trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const lower = normalized.toLowerCase();
+  return (
+    TAROT_IMAGE_LOOKUP.get(lower) ??
+    TAROT_IMAGE_LOOKUP.get(lower.replace(/\.[^.]+$/, '')) ??
+    `${basePath}${normalized}`
+  );
+}
+
 const SPREAD_POSITIONS = ['過去', '現在', '未來'] as const;
 type SpreadPosition = (typeof SPREAD_POSITIONS)[number];
 
@@ -104,7 +143,7 @@ export function TarotPage({ tarotGalleryImageUrl, tarotNameColor, tarotNameScale
             {/* Thumbnail */}
             <div className="relative w-full overflow-hidden rounded-xl border border-stone-300/70 shadow-md transition-all duration-150 group-active:scale-95 group-active:shadow-sm">
               <img
-                src={`${basePath}${card.image}`}
+                src={resolveTarotImage(basePath, card.image)}
                 alt={`${card.name} tarot card`}
                 className="h-auto w-full object-cover"
                 loading="lazy"
@@ -246,7 +285,7 @@ function TarotGallery({
           >
             <div className="relative w-full overflow-hidden rounded-xl border border-stone-300/70 shadow-sm transition-all duration-150 group-active:scale-95 group-active:shadow-sm">
               <img
-                src={`${basePath}${card.image}`}
+                src={resolveTarotImage(basePath, card.image)}
                 alt={card.name}
                 className="h-auto w-full object-cover"
                 loading="lazy"
@@ -373,7 +412,7 @@ function CardModal({
               onClick={onAdvance}
             >
               <img
-                src={`${basePath}${frontImage}`}
+                src={resolveTarotImage(basePath, frontImage)}
                 alt={card.name}
                 className="h-full w-full object-contain"
               />
@@ -408,7 +447,7 @@ function CardModal({
               {/* Mini header */}
               <div className="flex shrink-0 items-center gap-3 border-b border-stone-200/70 p-4">
                 <img
-                  src={`${basePath}${backImage}`}
+                  src={resolveTarotImage(basePath, backImage)}
                   alt={card.name}
                   className="h-16 w-auto rounded-lg object-contain shadow"
                 />
