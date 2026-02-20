@@ -1853,12 +1853,12 @@ function PreviewLetterFullscreenView({
         <button
           type="button"
           onClick={onClose}
-          aria-label="收回"
+          aria-label="收起"
           className="flex min-w-14 flex-col items-center gap-1 transition active:opacity-60"
         >
-          <span style={{ fontSize: 22, color: theme.iconMuted }}>↩</span>
+          <span style={{ fontSize: 22, color: theme.iconMuted }}>✕</span>
           <span className="text-[10px]" style={{ color: theme.labelMuted, letterSpacing: '0.04em' }}>
-            收回
+            收起
           </span>
         </button>
       </div>
