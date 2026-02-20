@@ -749,18 +749,14 @@ function LetterDeskScene({
             appearance: 'none',
             WebkitAppearance: 'none',
             WebkitTapHighlightColor: 'transparent',
+            outline: 'none',
+            boxShadow: 'none',
             textShadow: uiVariant === 'C' ? '0 1px 4px rgba(0,0,0,0.35)' : '0 1px 3px rgba(255,255,255,0.42)',
           }}
         >
-          <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden="true">
-            <path
-              d="M17 7H1M7 1L1 7L7 13"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <span aria-hidden="true" style={{ fontSize: 28, lineHeight: 1, transform: 'translateX(-1px)' }}>
+            ‹
+          </span>
         </button>
       )}
 
@@ -1213,13 +1209,15 @@ function PreviewLetterDeskScene({
             appearance: 'none',
             WebkitAppearance: 'none',
             WebkitTapHighlightColor: 'transparent',
+            outline: 'none',
+            boxShadow: 'none',
             color: isB ? '#7D6240' : 'rgba(236,230,255,0.84)',
             textShadow: isB ? '0 1px 3px rgba(255,255,255,0.45)' : '0 1px 4px rgba(0,0,0,0.35)',
           }}
         >
-          <svg width="16" height="12" viewBox="0 0 18 14" fill="none" aria-hidden="true">
-            <path d="M17 7H1M7 1L1 7L7 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span aria-hidden="true" style={{ fontSize: 28, lineHeight: 1, transform: 'translateX(-1px)' }}>
+            ‹
+          </span>
         </button>
       )}
 
