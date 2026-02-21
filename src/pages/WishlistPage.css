@@ -139,6 +139,17 @@
 }
 
 .wl-wish-card {
+  --wl-card-label-color: rgba(160, 130, 60, 0.45);
+  --wl-card-count-color: rgba(160, 130, 60, 0.38);
+  --wl-card-header-border: rgba(160, 130, 60, 0.1);
+  --wl-card-rule-color: rgba(160, 130, 60, 0.065);
+  --wl-card-margin-line: rgba(160, 80, 80, 0.12);
+  --wl-card-title-color: #2c2010;
+  --wl-card-note-label-color: rgba(160, 130, 60, 0.5);
+  --wl-card-note-text-color: rgba(44, 32, 16, 0.84);
+  --wl-card-footer-border: rgba(160, 130, 60, 0.08);
+  --wl-card-hint-color: rgba(160, 130, 60, 0.28);
+  --wl-card-date-color: rgba(160, 70, 70, 0.7);
   position: absolute;
   left: 50%;
   top: 50%;
@@ -166,50 +177,182 @@
 
 .wl-card-c1 {
   background: linear-gradient(165deg, #fff9ec 0%, #fdf4db 100%);
+  --wl-card-label-color: rgba(162, 121, 28, 0.56);
+  --wl-card-count-color: rgba(145, 108, 24, 0.44);
+  --wl-card-header-border: rgba(179, 140, 63, 0.16);
+  --wl-card-rule-color: rgba(179, 140, 63, 0.09);
+  --wl-card-margin-line: rgba(168, 102, 60, 0.14);
+  --wl-card-title-color: #74531b;
+  --wl-card-note-label-color: rgba(162, 121, 28, 0.58);
+  --wl-card-note-text-color: rgba(90, 62, 22, 0.9);
+  --wl-card-footer-border: rgba(179, 140, 63, 0.13);
+  --wl-card-hint-color: rgba(145, 108, 24, 0.4);
+  --wl-card-date-color: rgba(152, 79, 79, 0.72);
 }
 
 .wl-card-c2 {
   background: linear-gradient(165deg, #fff4ec 0%, #ffe7d4 100%);
+  --wl-card-label-color: rgba(177, 99, 73, 0.56);
+  --wl-card-count-color: rgba(160, 84, 58, 0.44);
+  --wl-card-header-border: rgba(190, 120, 88, 0.16);
+  --wl-card-rule-color: rgba(190, 120, 88, 0.09);
+  --wl-card-margin-line: rgba(177, 92, 92, 0.13);
+  --wl-card-title-color: #874433;
+  --wl-card-note-label-color: rgba(177, 99, 73, 0.58);
+  --wl-card-note-text-color: rgba(104, 55, 42, 0.89);
+  --wl-card-footer-border: rgba(190, 120, 88, 0.13);
+  --wl-card-hint-color: rgba(160, 84, 58, 0.4);
+  --wl-card-date-color: rgba(150, 72, 72, 0.72);
 }
 
 .wl-card-c3 {
   background: linear-gradient(165deg, #f4faeb 0%, #e7f4d8 100%);
+  --wl-card-label-color: rgba(80, 128, 74, 0.56);
+  --wl-card-count-color: rgba(63, 108, 58, 0.44);
+  --wl-card-header-border: rgba(104, 154, 92, 0.16);
+  --wl-card-rule-color: rgba(104, 154, 92, 0.09);
+  --wl-card-margin-line: rgba(133, 97, 122, 0.12);
+  --wl-card-title-color: #355f2f;
+  --wl-card-note-label-color: rgba(80, 128, 74, 0.58);
+  --wl-card-note-text-color: rgba(42, 82, 40, 0.9);
+  --wl-card-footer-border: rgba(104, 154, 92, 0.13);
+  --wl-card-hint-color: rgba(63, 108, 58, 0.4);
+  --wl-card-date-color: rgba(123, 86, 86, 0.69);
 }
 
 .wl-card-c4 {
   background: linear-gradient(165deg, #edf5ff 0%, #dfeeff 100%);
+  --wl-card-label-color: rgba(87, 126, 188, 0.56);
+  --wl-card-count-color: rgba(73, 106, 161, 0.45);
+  --wl-card-header-border: rgba(96, 131, 190, 0.17);
+  --wl-card-rule-color: rgba(96, 131, 190, 0.09);
+  --wl-card-margin-line: rgba(129, 100, 150, 0.13);
+  --wl-card-title-color: #335b93;
+  --wl-card-note-label-color: rgba(87, 126, 188, 0.58);
+  --wl-card-note-text-color: rgba(43, 73, 121, 0.9);
+  --wl-card-footer-border: rgba(96, 131, 190, 0.14);
+  --wl-card-hint-color: rgba(73, 106, 161, 0.4);
+  --wl-card-date-color: rgba(125, 83, 112, 0.68);
 }
 
 .wl-card-c5 {
   background: linear-gradient(165deg, #f8efff 0%, #eadfff 100%);
+  --wl-card-label-color: rgba(138, 102, 178, 0.58);
+  --wl-card-count-color: rgba(119, 84, 158, 0.46);
+  --wl-card-header-border: rgba(145, 109, 184, 0.16);
+  --wl-card-rule-color: rgba(145, 109, 184, 0.09);
+  --wl-card-margin-line: rgba(152, 100, 136, 0.13);
+  --wl-card-title-color: #664692;
+  --wl-card-note-label-color: rgba(138, 102, 178, 0.58);
+  --wl-card-note-text-color: rgba(76, 53, 112, 0.9);
+  --wl-card-footer-border: rgba(145, 109, 184, 0.14);
+  --wl-card-hint-color: rgba(119, 84, 158, 0.4);
+  --wl-card-date-color: rgba(137, 80, 103, 0.7);
 }
 
 .wl-card-c6 {
   background: linear-gradient(165deg, #fff8e6 0%, #fbeccc 100%);
+  --wl-card-label-color: rgba(173, 125, 40, 0.57);
+  --wl-card-count-color: rgba(154, 108, 27, 0.45);
+  --wl-card-header-border: rgba(190, 149, 65, 0.17);
+  --wl-card-rule-color: rgba(190, 149, 65, 0.1);
+  --wl-card-margin-line: rgba(171, 108, 66, 0.14);
+  --wl-card-title-color: #80581f;
+  --wl-card-note-label-color: rgba(173, 125, 40, 0.58);
+  --wl-card-note-text-color: rgba(98, 68, 24, 0.9);
+  --wl-card-footer-border: rgba(190, 149, 65, 0.14);
+  --wl-card-hint-color: rgba(154, 108, 27, 0.41);
+  --wl-card-date-color: rgba(153, 76, 76, 0.71);
 }
 
 .wl-card-c7 {
   background: linear-gradient(165deg, #eefaf4 0%, #dff3e8 100%);
+  --wl-card-label-color: rgba(72, 140, 112, 0.56);
+  --wl-card-count-color: rgba(58, 118, 93, 0.44);
+  --wl-card-header-border: rgba(84, 155, 126, 0.16);
+  --wl-card-rule-color: rgba(84, 155, 126, 0.09);
+  --wl-card-margin-line: rgba(142, 96, 120, 0.12);
+  --wl-card-title-color: #2f6650;
+  --wl-card-note-label-color: rgba(72, 140, 112, 0.58);
+  --wl-card-note-text-color: rgba(38, 88, 70, 0.9);
+  --wl-card-footer-border: rgba(84, 155, 126, 0.13);
+  --wl-card-hint-color: rgba(58, 118, 93, 0.4);
+  --wl-card-date-color: rgba(126, 84, 101, 0.68);
 }
 
 .wl-card-c8 {
   background: linear-gradient(165deg, #fff1ec 0%, #fde2d8 100%);
+  --wl-card-label-color: rgba(181, 92, 96, 0.56);
+  --wl-card-count-color: rgba(160, 76, 82, 0.45);
+  --wl-card-header-border: rgba(198, 112, 116, 0.17);
+  --wl-card-rule-color: rgba(198, 112, 116, 0.09);
+  --wl-card-margin-line: rgba(170, 92, 128, 0.13);
+  --wl-card-title-color: #8a424f;
+  --wl-card-note-label-color: rgba(181, 92, 96, 0.58);
+  --wl-card-note-text-color: rgba(104, 50, 59, 0.9);
+  --wl-card-footer-border: rgba(198, 112, 116, 0.14);
+  --wl-card-hint-color: rgba(160, 76, 82, 0.41);
+  --wl-card-date-color: rgba(153, 74, 92, 0.71);
 }
 
 .wl-card-c9 {
   background: linear-gradient(165deg, #f1f3ff 0%, #e2e6ff 100%);
+  --wl-card-label-color: rgba(88, 102, 182, 0.57);
+  --wl-card-count-color: rgba(73, 86, 163, 0.45);
+  --wl-card-header-border: rgba(96, 111, 190, 0.17);
+  --wl-card-rule-color: rgba(96, 111, 190, 0.09);
+  --wl-card-margin-line: rgba(140, 96, 155, 0.13);
+  --wl-card-title-color: #3e4f9a;
+  --wl-card-note-label-color: rgba(88, 102, 182, 0.58);
+  --wl-card-note-text-color: rgba(50, 61, 128, 0.9);
+  --wl-card-footer-border: rgba(96, 111, 190, 0.14);
+  --wl-card-hint-color: rgba(73, 86, 163, 0.4);
+  --wl-card-date-color: rgba(135, 76, 104, 0.69);
 }
 
 .wl-card-c10 {
   background: linear-gradient(165deg, #fff7ef 0%, #ffe7d9 100%);
+  --wl-card-label-color: rgba(180, 108, 60, 0.57);
+  --wl-card-count-color: rgba(159, 91, 47, 0.45);
+  --wl-card-header-border: rgba(196, 126, 76, 0.17);
+  --wl-card-rule-color: rgba(196, 126, 76, 0.1);
+  --wl-card-margin-line: rgba(173, 92, 93, 0.13);
+  --wl-card-title-color: #8a5328;
+  --wl-card-note-label-color: rgba(180, 108, 60, 0.58);
+  --wl-card-note-text-color: rgba(106, 63, 30, 0.9);
+  --wl-card-footer-border: rgba(196, 126, 76, 0.14);
+  --wl-card-hint-color: rgba(159, 91, 47, 0.41);
+  --wl-card-date-color: rgba(151, 77, 77, 0.71);
 }
 
 .wl-card-c11 {
   background: linear-gradient(165deg, #eefaff 0%, #dff4ff 100%);
+  --wl-card-label-color: rgba(67, 140, 171, 0.57);
+  --wl-card-count-color: rgba(53, 118, 147, 0.45);
+  --wl-card-header-border: rgba(74, 151, 183, 0.17);
+  --wl-card-rule-color: rgba(74, 151, 183, 0.1);
+  --wl-card-margin-line: rgba(131, 99, 156, 0.13);
+  --wl-card-title-color: #2e6f85;
+  --wl-card-note-label-color: rgba(67, 140, 171, 0.58);
+  --wl-card-note-text-color: rgba(37, 87, 104, 0.9);
+  --wl-card-footer-border: rgba(74, 151, 183, 0.14);
+  --wl-card-hint-color: rgba(53, 118, 147, 0.41);
+  --wl-card-date-color: rgba(120, 81, 121, 0.68);
 }
 
 .wl-card-c12 {
   background: linear-gradient(165deg, #faf4ea 0%, #f2e7d7 100%);
+  --wl-card-label-color: rgba(138, 115, 76, 0.58);
+  --wl-card-count-color: rgba(117, 96, 63, 0.46);
+  --wl-card-header-border: rgba(146, 123, 81, 0.16);
+  --wl-card-rule-color: rgba(146, 123, 81, 0.09);
+  --wl-card-margin-line: rgba(141, 96, 96, 0.12);
+  --wl-card-title-color: #5f4c2f;
+  --wl-card-note-label-color: rgba(138, 115, 76, 0.58);
+  --wl-card-note-text-color: rgba(82, 66, 42, 0.9);
+  --wl-card-footer-border: rgba(146, 123, 81, 0.13);
+  --wl-card-hint-color: rgba(117, 96, 63, 0.4);
+  --wl-card-date-color: rgba(129, 83, 83, 0.67);
 }
 
 .wl-card-header {
@@ -217,19 +360,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(160, 130, 60, 0.1);
+  border-bottom: 1px solid var(--wl-card-header-border);
 }
 
 .wl-card-label {
   font-size: 8.5px;
   letter-spacing: 0.22em;
-  color: rgba(160, 130, 60, 0.45);
+  color: var(--wl-card-label-color);
   text-transform: uppercase;
 }
 
 .wl-card-count {
   font-size: 10px;
-  color: rgba(160, 130, 60, 0.38);
+  color: var(--wl-card-count-color);
 }
 
 .wl-card-body {
@@ -244,8 +387,8 @@
     to bottom,
     transparent,
     transparent 31px,
-    rgba(160, 130, 60, 0.065) 31px,
-    rgba(160, 130, 60, 0.065) 32px
+    var(--wl-card-rule-color) 31px,
+    var(--wl-card-rule-color) 32px
   );
   background-position-y: 18px;
 }
@@ -257,12 +400,12 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgba(160, 80, 80, 0.12);
+  background: var(--wl-card-margin-line);
 }
 
 .wl-card-title {
   font-size: 19px;
-  color: #2c2010;
+  color: var(--wl-card-title-color);
   line-height: 1.6;
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
   padding-left: 7px;
@@ -279,7 +422,7 @@
 
 .wl-card-note-label {
   font-size: 10px;
-  color: rgba(160, 130, 60, 0.5);
+  color: var(--wl-card-note-label-color);
   letter-spacing: 0.08em;
   margin: 0 0 2px;
 }
@@ -288,7 +431,7 @@
   margin: 0;
   font-size: 12px;
   line-height: 1.55;
-  color: rgba(44, 32, 16, 0.84);
+  color: var(--wl-card-note-text-color);
   font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
   white-space: pre-wrap;
   word-break: break-word;
@@ -300,7 +443,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border-top: 1px solid rgba(160, 130, 60, 0.08);
+  border-top: 1px solid var(--wl-card-footer-border);
 }
 
 .wl-card-fav {
@@ -323,13 +466,13 @@
 
 .wl-card-hint {
   font-size: 8.5px;
-  color: rgba(160, 130, 60, 0.28);
+  color: var(--wl-card-hint-color);
   letter-spacing: 0.08em;
 }
 
 .wl-card-date {
   font-size: 10px;
-  color: rgba(160, 70, 70, 0.7);
+  color: var(--wl-card-date-color);
   letter-spacing: 0.04em;
   font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
 }
@@ -524,6 +667,8 @@
   --wl-bday-border: rgba(160, 130, 60, 0.14);
   --wl-bday-top-bg: rgba(160, 130, 60, 0.05);
   --wl-bday-year: #a07830;
+  --wl-bday-text: #2c2010;
+  --wl-bday-text-done: rgba(44, 32, 16, 0.32);
   border: 0;
   background: transparent;
   border-radius: 13px;
@@ -638,7 +783,7 @@
   margin: 0;
   font-size: 12.5px;
   line-height: 1.55;
-  color: #2c2010;
+  color: var(--wl-bday-text);
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
   white-space: pre-wrap;
   word-break: break-word;
@@ -653,7 +798,7 @@
 
 .wl-bday-text {
   font-size: 12.5px;
-  color: #2c2010;
+  color: var(--wl-bday-text);
   line-height: 1.65;
   font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
   white-space: pre-wrap;
@@ -666,7 +811,7 @@
 }
 
 .wl-bday-card.done .wl-bday-text {
-  color: rgba(44, 32, 16, 0.32);
+  color: var(--wl-bday-text-done);
 }
 
 .wl-bday-card.done .wl-bday-year {
@@ -739,6 +884,8 @@
   --wl-bday-border: rgba(179, 140, 63, 0.2);
   --wl-bday-top-bg: rgba(190, 149, 65, 0.12);
   --wl-bday-year: #ad7b1b;
+  --wl-bday-text: #6b4f1f;
+  --wl-bday-text-done: rgba(107, 79, 31, 0.45);
 }
 
 .wl-bday-c2 {
@@ -746,6 +893,8 @@
   --wl-bday-border: rgba(190, 120, 88, 0.2);
   --wl-bday-top-bg: rgba(190, 120, 88, 0.11);
   --wl-bday-year: #bf6f4f;
+  --wl-bday-text: #7a4636;
+  --wl-bday-text-done: rgba(122, 70, 54, 0.46);
 }
 
 .wl-bday-c3 {
@@ -753,6 +902,8 @@
   --wl-bday-border: rgba(104, 154, 92, 0.2);
   --wl-bday-top-bg: rgba(104, 154, 92, 0.11);
   --wl-bday-year: #5c9464;
+  --wl-bday-text: #2f6040;
+  --wl-bday-text-done: rgba(47, 96, 64, 0.44);
 }
 
 .wl-bday-c4 {
@@ -760,6 +911,8 @@
   --wl-bday-border: rgba(96, 131, 190, 0.2);
   --wl-bday-top-bg: rgba(96, 131, 190, 0.11);
   --wl-bday-year: #577ebc;
+  --wl-bday-text: #2f5488;
+  --wl-bday-text-done: rgba(47, 84, 136, 0.44);
 }
 
 .wl-bday-c5 {
@@ -767,6 +920,8 @@
   --wl-bday-border: rgba(145, 109, 184, 0.2);
   --wl-bday-top-bg: rgba(145, 109, 184, 0.1);
   --wl-bday-year: #8a66b2;
+  --wl-bday-text: #5b3f84;
+  --wl-bday-text-done: rgba(91, 63, 132, 0.44);
 }
 
 .wl-bday-c6 {
@@ -774,6 +929,8 @@
   --wl-bday-border: rgba(83, 149, 149, 0.2);
   --wl-bday-top-bg: rgba(83, 149, 149, 0.1);
   --wl-bday-year: #4f8f8d;
+  --wl-bday-text: #2f6766;
+  --wl-bday-text-done: rgba(47, 103, 102, 0.44);
 }
 
 .wl-bday-c7 {
@@ -781,6 +938,8 @@
   --wl-bday-border: rgba(186, 137, 96, 0.2);
   --wl-bday-top-bg: rgba(186, 137, 96, 0.1);
   --wl-bday-year: #b36f3f;
+  --wl-bday-text: #764e2d;
+  --wl-bday-text-done: rgba(118, 78, 45, 0.44);
 }
 
 .wl-bday-c8 {
@@ -788,6 +947,8 @@
   --wl-bday-border: rgba(126, 117, 88, 0.2);
   --wl-bday-top-bg: rgba(126, 117, 88, 0.1);
   --wl-bday-year: #7c7251;
+  --wl-bday-text: #5b5542;
+  --wl-bday-text-done: rgba(91, 85, 66, 0.44);
 }
 
 .wl-overlay {
@@ -947,7 +1108,7 @@
   margin: 0;
   font-size: 15.5px;
   line-height: 1.92;
-  color: rgba(44, 32, 16, 0.95);
+  color: var(--wl-bday-text, rgba(44, 32, 16, 0.95));
   white-space: pre-wrap;
   word-break: break-word;
   font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));

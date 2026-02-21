@@ -23,11 +23,18 @@ export type LetterPageProps = {
 const LOCAL_FAVORITES_KEY = 'memorial-letter-favorites-v1';
 const LOCAL_VARIANT_CLASSIC_KEY = 'memorial-letter-ui-variant-v1';
 const LOCAL_VARIANT_PREVIEW_KEY = 'memorial-letter-ui-variant-preview-v1';
+const LOCAL_READING_PREFS_KEY = 'memorial-letter-reading-prefs-v1';
 const LETTER_VARIANTS = ['A', 'B', 'C'] as const;
 const PREVIEW_VARIANTS = ['B', 'C'] as const;
+const DEFAULT_READING_FONT_SIZE = 15;
+const DEFAULT_READING_LINE_HEIGHT = 2.15;
 
 type LetterUiVariant = (typeof LETTER_VARIANTS)[number];
 type PreviewLetterVariant = (typeof PREVIEW_VARIANTS)[number];
+type LetterReadingPrefs = {
+  fontSize: number;
+  lineHeight: number;
+};
 
 const LETTER_CHIBI_MODULES = import.meta.glob('../../public/letter-chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
   eager: true,
@@ -106,6 +113,44 @@ function isNightVariant(variant: LetterUiVariant) {
   return variant !== 'A';
 }
 
+function clampReadingFontSize(value: unknown, fallback = DEFAULT_READING_FONT_SIZE) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return fallback;
+  return Math.max(13, Math.min(21, Number(value.toFixed(2))));
+}
+
+function clampReadingLineHeight(value: unknown, fallback = DEFAULT_READING_LINE_HEIGHT) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return fallback;
+  return Math.max(1.55, Math.min(2.75, Number(value.toFixed(2))));
+}
+
+function readReadingPrefs(): LetterReadingPrefs {
+  if (typeof window === 'undefined') {
+    return {
+      fontSize: DEFAULT_READING_FONT_SIZE,
+      lineHeight: DEFAULT_READING_LINE_HEIGHT,
+    };
+  }
+  try {
+    const raw = window.localStorage.getItem(LOCAL_READING_PREFS_KEY);
+    if (!raw) {
+      return {
+        fontSize: DEFAULT_READING_FONT_SIZE,
+        lineHeight: DEFAULT_READING_LINE_HEIGHT,
+      };
+    }
+    const parsed = JSON.parse(raw) as Partial<LetterReadingPrefs>;
+    return {
+      fontSize: clampReadingFontSize(parsed.fontSize, DEFAULT_READING_FONT_SIZE),
+      lineHeight: clampReadingLineHeight(parsed.lineHeight, DEFAULT_READING_LINE_HEIGHT),
+    };
+  } catch {
+    return {
+      fontSize: DEFAULT_READING_FONT_SIZE,
+      lineHeight: DEFAULT_READING_LINE_HEIGHT,
+    };
+  }
+}
+
 // ─── LetterPage ───────────────────────────────────────────────────────────────
 
 export function LetterPage({
@@ -122,6 +167,8 @@ export function LetterPage({
   const [showSheet, setShowSheet] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [localFavoritedNames, setLocalFavoritedNames] = useState<Set<string>>(new Set<string>());
+  const [readingPrefs, setReadingPrefs] = useState<LetterReadingPrefs>(() => readReadingPrefs());
+  const [showReadingSettings, setShowReadingSettings] = useState(false);
   const [uiVariant, setUiVariant] = useState<LetterUiVariant>('A');
   const availableVariants = getAvailableVariants(uiMode);
 
@@ -177,6 +224,13 @@ export function LetterPage({
     window.localStorage.setItem(storageKey, uiVariant);
   }, [availableVariants, uiMode, uiVariant]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(LOCAL_READING_PREFS_KEY, JSON.stringify(readingPrefs));
+  }, [readingPrefs]);
+
   const effectiveFavoritedNames = onFavorite ? favoritedNames : localFavoritedNames;
 
   function toggleFavorite(name: string) {
@@ -200,6 +254,7 @@ export function LetterPage({
     setCurrent(letter);
     setAnimKey((k) => k + 1);
     setShowSheet(false);
+    setShowReadingSettings(false);
   }
 
   function pickRandom() {
@@ -210,6 +265,7 @@ export function LetterPage({
 
   function handleClose() {
     setCurrent(null);
+    setShowReadingSettings(false);
     setDeskChibiSrc((prev) => randomChibiSrc(prev));
   }
 
@@ -262,6 +318,9 @@ export function LetterPage({
             letterFontFamily={letterFontFamily}
             rerollChibiSrc={deskChibiSrc}
             isFavorited={effectiveFavoritedNames.has(current.name)}
+            readingFontSize={readingPrefs.fontSize}
+            readingLineHeight={readingPrefs.lineHeight}
+            onOpenReadingSettings={() => setShowReadingSettings(true)}
             onFavorite={() => toggleFavorite(current.name)}
             onPickRandom={pickRandom}
             onClose={handleClose}
@@ -275,12 +334,90 @@ export function LetterPage({
             letterFontFamily={letterFontFamily}
             rerollChibiSrc={deskChibiSrc}
             isFavorited={effectiveFavoritedNames.has(current.name)}
+            readingFontSize={readingPrefs.fontSize}
+            readingLineHeight={readingPrefs.lineHeight}
             onFavorite={() => toggleFavorite(current.name)}
             onPickRandom={pickRandom}
             onClose={handleClose}
           />
         )
       )}
+
+      {current && showReadingSettings ? (
+        <LetterReadingSettingsSheet
+          fontSize={readingPrefs.fontSize}
+          lineHeight={readingPrefs.lineHeight}
+          onFontSizeChange={(value) => setReadingPrefs((prev) => ({ ...prev, fontSize: clampReadingFontSize(value, prev.fontSize) }))}
+          onLineHeightChange={(value) =>
+            setReadingPrefs((prev) => ({ ...prev, lineHeight: clampReadingLineHeight(value, prev.lineHeight) }))
+          }
+          onClose={() => setShowReadingSettings(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function LetterReadingSettingsSheet({
+  fontSize,
+  lineHeight,
+  onFontSizeChange,
+  onLineHeightChange,
+  onClose,
+}: {
+  fontSize: number;
+  lineHeight: number;
+  onFontSizeChange: (value: number) => void;
+  onLineHeightChange: (value: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-[26]" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/35" />
+      <div
+        className="absolute bottom-0 left-0 right-0 rounded-t-[22px] border-t border-[#ceb596]/70 bg-[#fdf7ec] px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.18)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-[#d7c3aa]" />
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-[12px] tracking-[0.12em] text-[#9b7a53]">閱讀排版</p>
+          <button type="button" onClick={onClose} className="text-[18px] leading-none text-[#9b7a53]" aria-label="關閉排版設定">
+            ×
+          </button>
+        </div>
+
+        <label className="mb-4 block">
+          <div className="mb-1.5 flex items-center justify-between text-[12px] text-[#6d4f2f]">
+            <span>字體大小</span>
+            <span>{fontSize.toFixed(1)}</span>
+          </div>
+          <input
+            type="range"
+            min={13}
+            max={21}
+            step={0.1}
+            value={fontSize}
+            onChange={(event) => onFontSizeChange(Number(event.target.value))}
+            className="w-full accent-[#ad8052]"
+          />
+        </label>
+
+        <label className="mb-1 block">
+          <div className="mb-1.5 flex items-center justify-between text-[12px] text-[#6d4f2f]">
+            <span>行距</span>
+            <span>{lineHeight.toFixed(2)}</span>
+          </div>
+          <input
+            type="range"
+            min={1.55}
+            max={2.75}
+            step={0.01}
+            value={lineHeight}
+            onChange={(event) => onLineHeightChange(Number(event.target.value))}
+            className="w-full accent-[#ad8052]"
+          />
+        </label>
+      </div>
     </div>
   );
 }
@@ -1632,6 +1769,9 @@ function PreviewLetterFullscreenView({
   letterFontFamily,
   rerollChibiSrc,
   isFavorited,
+  readingFontSize,
+  readingLineHeight,
+  onOpenReadingSettings,
   onFavorite,
   onPickRandom,
   onClose,
@@ -1643,6 +1783,9 @@ function PreviewLetterFullscreenView({
   letterFontFamily: string;
   rerollChibiSrc: string;
   isFavorited: boolean;
+  readingFontSize: number;
+  readingLineHeight: number;
+  onOpenReadingSettings: () => void;
   onFavorite?: () => void;
   onPickRandom: () => void;
   onClose: () => void;
@@ -1677,8 +1820,19 @@ function PreviewLetterFullscreenView({
         favoriteOffIcon: '♡',
         stampIcon: '🌸',
         stampLabel: 'LOVE',
+        stampBorder: '1.5px solid rgba(170,132,73,0.45)',
+        stampBg: 'rgba(255,248,230,0.82)',
+        stampTextColor: '#ad8445',
         paperShadow:
           '0 20px 60px rgba(0,0,0,0.55), 0 4px 20px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(190,150,80,0.18), inset 0 1px 0 rgba(255,255,255,0.9)',
+        paperBackground: 'linear-gradient(176deg, #fffef7 0%, #f7f1df 44%, #efe4c9 100%)',
+        paperLineColor: 'rgba(152,126,72,0.11)',
+        paperHeaderBorder: 'rgba(166,134,78,0.2)',
+        paperLabelColor: '#a3824b',
+        paperTitleColor: '#5a4120',
+        paperContentColor: '#4c3820',
+        paperFooterStrong: 'rgba(166,134,78,0.22)',
+        paperFooterSoft: 'rgba(166,134,78,0.1)',
         chibiCardBg: 'linear-gradient(145deg, #fde9d7, #f0ddd0)',
         chibiCardBorder: '1px solid rgba(255,255,255,0.16)',
         chibiCardShadow: '0 8px 24px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.18)',
@@ -1695,8 +1849,19 @@ function PreviewLetterFullscreenView({
         favoriteOffIcon: '☆',
         stampIcon: '✦',
         stampLabel: '夜',
+        stampBorder: '1.5px solid rgba(124,100,184,0.45)',
+        stampBg: 'rgba(243,238,255,0.85)',
+        stampTextColor: '#7b64b4',
         paperShadow:
           '0 20px 80px rgba(0,0,0,0.7), 0 4px 30px rgba(0,0,0,0.5), 0 0 60px rgba(200,160,80,0.08), inset 0 0 0 1px rgba(200,160,80,0.14), inset 0 1px 0 rgba(255,255,255,0.85)',
+        paperBackground: 'linear-gradient(176deg, #f8f7ff 0%, #eee9ff 44%, #e3dcf8 100%)',
+        paperLineColor: 'rgba(114, 92, 168, 0.12)',
+        paperHeaderBorder: 'rgba(124,100,184,0.2)',
+        paperLabelColor: '#7d67b8',
+        paperTitleColor: '#3b2f66',
+        paperContentColor: '#342a5c',
+        paperFooterStrong: 'rgba(124,100,184,0.22)',
+        paperFooterSoft: 'rgba(124,100,184,0.1)',
         chibiCardBg: 'linear-gradient(145deg, rgba(120,100,200,0.3), rgba(80,60,160,0.2))',
         chibiCardBorder: '1px solid rgba(255,255,255,0.1)',
         chibiCardShadow: '0 8px 24px rgba(0,0,0,0.55), 0 0 20px rgba(120,100,220,0.2)',
@@ -1715,7 +1880,7 @@ function PreviewLetterFullscreenView({
           left: 14,
           right: 14,
           bottom: 80,
-          background: 'linear-gradient(175deg, #fffdf7 0%, #fdf9ee 45%, #faf4e2 100%)',
+          background: theme.paperBackground,
           boxShadow: theme.paperShadow,
           zIndex: 12,
         }}
@@ -1724,29 +1889,32 @@ function PreviewLetterFullscreenView({
           className="pointer-events-none absolute inset-0 rounded-[22px]"
           style={{
             backgroundImage:
-              'repeating-linear-gradient(to bottom, transparent, transparent 32px, rgba(150,110,55,0.07) 32px, rgba(150,110,55,0.07) 33px)',
+              `repeating-linear-gradient(to bottom, transparent, transparent 32px, ${theme.paperLineColor} 32px, ${theme.paperLineColor} 33px)`,
             backgroundPositionY: 82,
           }}
         />
 
-        <div
-          className="pointer-events-none absolute right-5 top-[18px] flex h-10 w-8 flex-col items-center justify-center gap-0.5 rounded border"
+        <button
+          type="button"
+          onClick={onOpenReadingSettings}
+          aria-label="開啟閱讀排版設定"
+          className="absolute right-5 top-[18px] z-[14] flex h-10 w-8 flex-col items-center justify-center gap-0.5 rounded border transition active:scale-95"
           style={{
-            border: '1.5px solid rgba(180,140,80,0.35)',
-            background: 'rgba(255,255,255,0.5)',
+            border: theme.stampBorder,
+            background: theme.stampBg,
           }}
         >
           <span className="text-sm">{theme.stampIcon}</span>
-          <span className="text-[6px]" style={{ color: '#C4A060', letterSpacing: '0.05em' }}>
+          <span className="text-[6px]" style={{ color: theme.stampTextColor, letterSpacing: '0.05em' }}>
             {theme.stampLabel}
           </span>
-        </div>
+        </button>
 
-        <div className="shrink-0 border-b px-[22px] pb-[14px] pt-[18px]" style={{ borderColor: 'rgba(160,120,60,0.14)' }}>
-          <p className="text-[9px] uppercase" style={{ color: '#C4A060', letterSpacing: '0.32em' }}>
+        <div className="shrink-0 border-b px-[22px] pb-[14px] pt-[18px]" style={{ borderColor: theme.paperHeaderBorder }}>
+          <p className="text-[9px] uppercase" style={{ color: theme.paperLabelColor, letterSpacing: '0.32em' }}>
             Letter · 情書
           </p>
-          <p className="mt-1 truncate text-[17px]" style={{ color: '#3D2414', fontFamily: effectiveFontFamily, lineHeight: 1.3 }}>
+          <p className="mt-1 truncate text-[17px]" style={{ color: theme.paperTitleColor, fontFamily: effectiveFontFamily, lineHeight: 1.3 }}>
             {displayName}
           </p>
         </div>
@@ -1755,9 +1923,9 @@ function PreviewLetterFullscreenView({
           <p
             className="letter-content-fade whitespace-pre-wrap"
             style={{
-              fontSize: 15,
-              lineHeight: 2.15,
-              color: '#4A3520',
+              fontSize: readingFontSize,
+              lineHeight: readingLineHeight,
+              color: theme.paperContentColor,
               fontFamily: effectiveFontFamily,
             }}
           >
@@ -1766,8 +1934,8 @@ function PreviewLetterFullscreenView({
         </div>
 
         <div className="shrink-0 px-[22px] pb-[14px] pt-[10px]">
-          <div className="mb-[5px] h-px" style={{ background: 'rgba(160,120,60,0.16)' }} />
-          <div className="h-px" style={{ background: 'rgba(160,120,60,0.07)' }} />
+          <div className="mb-[5px] h-px" style={{ background: theme.paperFooterStrong }} />
+          <div className="h-px" style={{ background: theme.paperFooterSoft }} />
         </div>
       </div>
 
@@ -2051,6 +2219,8 @@ function LetterFullscreenView({
   letterFontFamily,
   rerollChibiSrc,
   isFavorited,
+  readingFontSize,
+  readingLineHeight,
   onFavorite,
   onPickRandom,
   onClose,
@@ -2062,6 +2232,8 @@ function LetterFullscreenView({
   letterFontFamily: string;
   rerollChibiSrc: string;
   isFavorited: boolean;
+  readingFontSize: number;
+  readingLineHeight: number;
   onFavorite?: () => void;
   onPickRandom: () => void;
   onClose: () => void;
@@ -2095,6 +2267,14 @@ function LetterFullscreenView({
           favOn: '#D4616E',
           paperShadow:
             '0 10px 48px rgba(0,0,0,0.55), 0 2px 14px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(180,140,80,0.14)',
+          paperBackground: 'linear-gradient(175deg, #fffdf7 0%, #fdf8ee 40%, #faf3e2 100%)',
+          paperLineColor: 'rgba(140,100,50,0.08)',
+          paperBorder: 'rgba(160,120,70,0.14)',
+          paperDecoStrong: 'rgba(160,120,70,0.18)',
+          paperDecoSoft: 'rgba(160,120,70,0.07)',
+          paperLabelColor: '#B8956A',
+          paperTitleColor: '#4A3520',
+          paperContentColor: '#4A3520',
         }
       : uiVariant === 'B'
         ? {
@@ -2106,6 +2286,14 @@ function LetterFullscreenView({
             favOn: '#E08AA8',
             paperShadow:
               '0 12px 56px rgba(0,0,0,0.56), 0 3px 18px rgba(0,0,0,0.34), inset 0 0 0 1px rgba(196,130,160,0.16)',
+            paperBackground: 'linear-gradient(176deg, #fff8fb 0%, #fbeff5 42%, #f6e4ed 100%)',
+            paperLineColor: 'rgba(170, 108, 136, 0.10)',
+            paperBorder: 'rgba(182, 112, 142, 0.18)',
+            paperDecoStrong: 'rgba(182, 112, 142, 0.22)',
+            paperDecoSoft: 'rgba(182, 112, 142, 0.09)',
+            paperLabelColor: '#B67A96',
+            paperTitleColor: '#64394d',
+            paperContentColor: '#5a3245',
           }
         : {
             overlay: 'rgba(10,28,44,0.56)',
@@ -2116,6 +2304,14 @@ function LetterFullscreenView({
             favOn: '#6F98C0',
             paperShadow:
               '0 12px 56px rgba(0,0,0,0.56), 0 3px 18px rgba(0,0,0,0.34), inset 0 0 0 1px rgba(120,168,204,0.16)',
+            paperBackground: 'linear-gradient(176deg, #f8fcff 0%, #eef5ff 42%, #e3eef9 100%)',
+            paperLineColor: 'rgba(100, 140, 182, 0.10)',
+            paperBorder: 'rgba(112, 156, 196, 0.18)',
+            paperDecoStrong: 'rgba(112, 156, 196, 0.22)',
+            paperDecoSoft: 'rgba(112, 156, 196, 0.09)',
+            paperLabelColor: '#6f95ba',
+            paperTitleColor: '#2f4a63',
+            paperContentColor: '#2b445d',
           };
 
   return (
@@ -2135,7 +2331,7 @@ function LetterFullscreenView({
           left: 16,
           right: 16,
           bottom: 86,
-          background: 'linear-gradient(175deg, #fffdf7 0%, #fdf8ee 40%, #faf3e2 100%)',
+          background: theme.paperBackground,
           boxShadow: theme.paperShadow,
         }}
       >
@@ -2144,7 +2340,7 @@ function LetterFullscreenView({
           className="pointer-events-none absolute inset-0 rounded-2xl"
           style={{
             backgroundImage:
-              'repeating-linear-gradient(to bottom, transparent, transparent 31px, rgba(140,100,50,0.08) 31px, rgba(140,100,50,0.08) 32px)',
+              `repeating-linear-gradient(to bottom, transparent, transparent 31px, ${theme.paperLineColor} 31px, ${theme.paperLineColor} 32px)`,
             backgroundPositionY: 72,
           }}
         />
@@ -2152,17 +2348,17 @@ function LetterFullscreenView({
         {/* Paper header */}
         <div
           className="shrink-0 px-5 py-4"
-          style={{ borderBottom: '1px solid rgba(160,120,70,0.14)' }}
+          style={{ borderBottom: `1px solid ${theme.paperBorder}` }}
         >
           <p
             className="text-[10px] uppercase tracking-widest"
-            style={{ color: '#B8956A' }}
+            style={{ color: theme.paperLabelColor }}
           >
             Letter
           </p>
           <p
             className="mt-0.5 truncate text-base"
-            style={{ fontFamily: effectiveFontFamily, color: '#4A3520' }}
+            style={{ fontFamily: effectiveFontFamily, color: theme.paperTitleColor }}
           >
             {displayName}
           </p>
@@ -2174,9 +2370,9 @@ function LetterFullscreenView({
             className="letter-content-fade whitespace-pre-wrap"
             style={{
               fontFamily: effectiveFontFamily,
-              fontSize: '1.05rem',
-              lineHeight: 2.1,
-              color: '#4A3520',
+              fontSize: readingFontSize,
+              lineHeight: readingLineHeight,
+              color: theme.paperContentColor,
             }}
           >
             {letter.content}
@@ -2185,8 +2381,8 @@ function LetterFullscreenView({
 
         {/* Bottom decoration lines */}
         <div className="shrink-0 space-y-1.5 px-6 pb-4 pt-2">
-          <div className="h-px" style={{ background: 'rgba(160,120,70,0.18)' }} />
-          <div className="h-px" style={{ background: 'rgba(160,120,70,0.07)' }} />
+          <div className="h-px" style={{ background: theme.paperDecoStrong }} />
+          <div className="h-px" style={{ background: theme.paperDecoSoft }} />
         </div>
 
       </div>
