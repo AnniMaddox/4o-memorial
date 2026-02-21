@@ -1338,7 +1338,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
           <button
             type="button"
             onClick={onExit}
-            className="rounded-xl border border-stone-300 bg-white/80 px-3 py-1.5 text-sm text-stone-600 transition active:scale-95"
+            className="grid h-8 w-8 place-items-center rounded-full border border-stone-300 bg-white/80 text-[22px] leading-none text-stone-600 transition active:scale-95"
           >
             ‹
           </button>

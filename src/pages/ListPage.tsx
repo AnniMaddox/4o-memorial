@@ -215,7 +215,7 @@ export function ListPage() {
             <button
               type="button"
               onClick={goBack}
-              className="rounded-xl border border-stone-200 bg-white/80 px-3 py-1.5 text-xs text-stone-500 transition active:scale-95"
+              className="grid h-8 w-8 place-items-center rounded-full border border-stone-200 bg-white/80 text-[22px] leading-none text-stone-500 transition active:scale-95"
               aria-label="返回"
               title="返回"
             >

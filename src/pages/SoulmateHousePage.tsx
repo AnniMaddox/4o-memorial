@@ -1319,7 +1319,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
           <button
             type="button"
             onClick={onExit}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/18 text-2xl leading-none text-white/90 transition active:scale-95"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stone-300/80 bg-white/85 text-2xl leading-none text-stone-500 shadow-sm transition active:scale-95"
             aria-label="離開家頁"
           >
             ‹

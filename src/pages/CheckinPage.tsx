@@ -647,8 +647,7 @@ export function CheckinPage() {
         <header className={`rounded-2xl border p-4 shadow-sm ${variant.card}`}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className={`text-xs uppercase tracking-[0.16em] ${variant.muted}`}>Check In</p>
-              <h1 className="mt-0.5 text-2xl text-stone-900">打卡簽到</h1>
+              <h1 className="text-2xl text-stone-900">打卡簽到</h1>
             </div>
             <button
               type="button"

@@ -372,7 +372,7 @@ function AlbumManager({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-xl border border-stone-300 bg-white/85 px-3 py-1.5 text-xs text-stone-700 transition active:scale-95"
+          className="grid h-8 w-8 place-items-center rounded-full border border-stone-300 bg-white/85 text-[22px] leading-none text-stone-700 transition active:scale-95"
         >
           ‹
         </button>

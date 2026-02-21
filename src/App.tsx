@@ -1261,13 +1261,13 @@ function App() {
                 <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    className="grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-white/10 text-[22px] leading-none text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
                     ‹
                   </button>
-                  <p className="text-sm text-white/85">打卡簽到</p>
-                  <span className="w-16" />
+                  <span className="h-9 w-9" aria-hidden="true" />
+                  <span className="h-9 w-9" aria-hidden="true" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden pt-3">
                   <CheckinPage />
@@ -1315,13 +1315,13 @@ function App() {
                 <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    className="grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-white/10 text-[22px] leading-none text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
                     ‹
                   </button>
                   <p className="text-sm text-white/85">{appLabels.heart}</p>
-                  <span className="w-16" />
+                  <span className="h-9 w-9" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden pt-3">
                   <HeartWallPage />
@@ -1336,13 +1336,13 @@ function App() {
                 <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    className="grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-white/10 text-[22px] leading-none text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
                     ‹
                   </button>
-                  <span className="w-16" />
-                  <span className="w-16" />
+                  <span className="h-9 w-9" />
+                  <span className="h-9 w-9" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
                   <ListPage />
@@ -1450,13 +1450,13 @@ function App() {
                 <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
+                    className="grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-white/10 text-[22px] leading-none text-white transition active:scale-95"
                     onClick={() => setLauncherApp(null)}
                   >
                     ‹
                   </button>
-                  <span className="w-16" />
-                  <span className="w-16" />
+                  <span className="h-9 w-9" />
+                  <span className="h-9 w-9" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden pt-3">
                   <AlbumPage />
