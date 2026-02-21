@@ -493,29 +493,56 @@ function isBoxBackupPayload(value: unknown): value is SoulmateBoxBackupPayload {
   );
 }
 
-function parseBackupPayload(value: unknown): SoulmateSnapshot {
+type ParsedBackupPayload =
+  | {
+      kind: 'page';
+      snapshot: SoulmateSnapshot;
+    }
+  | {
+      kind: 'box';
+      boxId: string;
+      snapshot: SoulmateSnapshot;
+    };
+
+function parseBackupPayload(value: unknown): ParsedBackupPayload {
   if (isPageBackupPayload(value)) {
-    return normalizeSnapshot({
-      boxes: value.boxes,
-      entries: value.entries,
-    });
+    return {
+      kind: 'page',
+      snapshot: normalizeSnapshot({
+        boxes: value.boxes,
+        entries: value.entries,
+      }),
+    };
   }
   if (isBoxBackupPayload(value)) {
-    return normalizeSnapshot({
+    const snapshot = normalizeSnapshot({
       boxes: [value.box],
       entries: value.entries,
     });
+    const preferredBoxId = trimOrFallback((value.box as RawRecord).id, '');
+    const resolvedBox =
+      snapshot.boxes.find((box) => box.id === preferredBoxId) ??
+      snapshot.boxes.find((box) => !isFixedBoxId(box.id));
+    if (!resolvedBox) {
+      throw new Error('方塊備份缺少有效方塊資料');
+    }
+    return {
+      kind: 'box',
+      boxId: resolvedBox.id,
+      snapshot,
+    };
   }
   throw new Error('不是有效的搬家計劃書備份檔');
 }
 
 export async function importSoulmateBackupFiles(files: File[], mode: BackupMode): Promise<SoulmateSnapshot> {
-  const snapshots: SoulmateSnapshot[] = [];
+  const payloads: ParsedBackupPayload[] = [];
   for (const file of files) {
     const text = await file.text();
     const parsed = JSON.parse(text) as unknown;
-    snapshots.push(parseBackupPayload(parsed));
+    payloads.push(parseBackupPayload(parsed));
   }
+  const snapshots = payloads.map((payload) => payload.snapshot);
   const mergedInput: SoulmateSnapshot = snapshots.reduce<SoulmateSnapshot>(
     (acc, current) => ({
       boxes: [...acc.boxes, ...current.boxes],
@@ -524,6 +551,31 @@ export async function importSoulmateBackupFiles(files: File[], mode: BackupMode)
     { boxes: [], entries: [] },
   );
   if (mode === 'overwrite') {
+    // Overwrite behavior is content-aware:
+    // - Contains any page backup: replace the whole page.
+    // - Contains only box backups: overwrite only those target boxes.
+    const hasPageBackup = payloads.some((payload) => payload.kind === 'page');
+    if (!hasPageBackup) {
+      const current = await loadSoulmateSnapshot();
+      let next: SoulmateSnapshot = {
+        boxes: [...current.boxes],
+        entries: [...current.entries],
+      };
+
+      for (const payload of payloads) {
+        if (payload.kind !== 'box') continue;
+        const incomingBox = payload.snapshot.boxes.find((box) => box.id === payload.boxId);
+        if (!incomingBox) continue;
+        const incomingEntries = payload.snapshot.entries.filter((entry) => entry.boxId === payload.boxId);
+        next = {
+          boxes: [...next.boxes.filter((box) => box.id !== payload.boxId), incomingBox],
+          entries: [...next.entries.filter((entry) => entry.boxId !== payload.boxId), ...incomingEntries],
+        };
+      }
+
+      await replaceSoulmateSnapshot(next);
+      return loadSoulmateSnapshot();
+    }
     await replaceSoulmateSnapshot(mergedInput);
     return loadSoulmateSnapshot();
   }

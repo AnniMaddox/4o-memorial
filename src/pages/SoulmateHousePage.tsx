@@ -1307,7 +1307,7 @@ export default function SoulmateHousePage({ onExit, soulmateFontFamily = '' }: P
 
             <ManageSection
               title="本頁備份"
-              description="完整匯入匯出，或單方塊匯出"
+              description="完整匯入匯出；單方塊可匯出，覆蓋匯入會自動判斷"
               isOpen={openPanels.backup}
               onToggle={() => toggleManagePanel('backup')}
             >
@@ -1369,6 +1369,9 @@ export default function SoulmateHousePage({ onExit, soulmateFontFamily = '' }: P
                   匯出單方塊
                 </button>
               </div>
+              <p className="mt-2 text-[11px] text-stone-500">
+                覆蓋匯入規則：整頁備份會覆蓋整頁；單方塊備份只覆蓋該方塊，不影響其他方塊。
+              </p>
             </ManageSection>
 
             {status && <p className="text-xs text-stone-600">{status}</p>}
