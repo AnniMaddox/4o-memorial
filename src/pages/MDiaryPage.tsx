@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getActiveBaseChibiSources } from '../lib/chibiPool';
-import type { StoredDiary } from '../lib/diaryDB';
+import type { StoredMDiary } from '../lib/mDiaryDB';
 import type { AppSettings } from '../types/settings';
 
 const FAVORITES_STORAGE_KEY = 'memorial-m-diary-favorites-v1';
@@ -30,12 +30,12 @@ type ParsedEntry = {
   parsedDate: Date | null;
   dayKey: string | null;
   importedAt: number;
-  source: StoredDiary;
+  source: StoredMDiary;
 };
 type KnownParsedEntry = ParsedEntry & { parsedDate: Date; dayKey: string };
 
 type MDiaryPageProps = {
-  entries: StoredDiary[];
+  entries: StoredMDiary[];
   onExit: () => void;
   diaryCoverImageUrl?: string;
   diaryCoverFitMode?: 'cover' | 'contain';
@@ -600,17 +600,8 @@ export function MDiaryPage({
               </div>
             </button>
 
-            <p
-              className="mt-6 text-[30px] font-extrabold leading-none tracking-[-0.04em] text-[#2a2818]"
-              style={{ textShadow: '0 2px 0 rgba(90,112,96,0.15)' }}
-            >
-              輕觸翻閱
-            </p>
-            <p className="mt-1 text-[12px] tracking-[0.08em]" style={{ color: 'rgba(90,112,96,0.5)' }}>
-              點書本隨機打開一篇
-            </p>
             {showCount && (
-              <p className="mt-1 text-[10px] tracking-[0.12em]" style={{ color: 'rgba(90,112,96,0.3)' }}>
+              <p className="mt-7 text-[10px] tracking-[0.12em]" style={{ color: 'rgba(90,112,96,0.3)' }}>
                 共 {allReadingEntries.length} 篇
               </p>
             )}

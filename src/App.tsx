@@ -29,8 +29,8 @@ import { PomodoroPage } from './pages/PomodoroPage';
 import { PeriodPage } from './pages/PeriodPage';
 import { clearAllChatLogs, loadChatLogs, saveChatLogs } from './lib/chatLogDB';
 import type { StoredChatLog } from './lib/chatLogDB';
-import { clearAllDiaries, loadDiaries, parseDiaryFile, saveDiaries } from './lib/diaryDB';
-import type { StoredDiary } from './lib/diaryDB';
+import { clearAllMDiaries, loadMDiaries, parseMDiaryFile, saveMDiaries } from './lib/mDiaryDB';
+import type { StoredMDiary } from './lib/mDiaryDB';
 import { clearAllLetters, loadLetters, saveLetters } from './lib/letterDB';
 import type { StoredLetter } from './lib/letterDB';
 import { readLetterContent } from './lib/letterReader';
@@ -278,7 +278,7 @@ function App() {
   const [letters, setLetters] = useState<StoredLetter[]>([]);
   const [chatLogs, setChatLogs] = useState<StoredChatLog[]>([]);
   const [chatProfiles, setChatProfiles] = useState<ChatProfile[]>([]);
-  const [diaries, setDiaries] = useState<StoredDiary[]>([]);
+  const [diaries, setDiaries] = useState<StoredMDiary[]>([]);
   const backgroundImageUrl = settings.backgroundImageUrl.trim();
   const backgroundOverlay = Math.min(0.9, Math.max(0, settings.backgroundImageOverlay / 100));
   const appBackgroundImage =
@@ -363,7 +363,7 @@ function App() {
 
   // Load persisted diaries
   useEffect(() => {
-    loadDiaries()
+    loadMDiaries()
       .then(setDiaries)
       .catch(() => {});
   }, []);
@@ -502,37 +502,37 @@ function App() {
   }, []);
 
   const handleImportDiaryFiles = useCallback(async (files: File[]) => {
-    const imported: StoredDiary[] = [];
+    const imported: StoredMDiary[] = [];
     for (const file of files) {
       try {
-        imported.push(await parseDiaryFile(file));
+        imported.push(await parseMDiaryFile(file));
       } catch {
         // skip unreadable files
       }
     }
     if (!imported.length) return;
-    await saveDiaries(imported);
-    const updated = await loadDiaries();
+    await saveMDiaries(imported);
+    const updated = await loadMDiaries();
     setDiaries(updated);
   }, []);
 
   const handleImportDiaryFolderFiles = useCallback(async (files: File[]) => {
-    const imported: StoredDiary[] = [];
+    const imported: StoredMDiary[] = [];
     for (const file of files) {
       try {
-        imported.push(await parseDiaryFile(file));
+        imported.push(await parseMDiaryFile(file));
       } catch {
         // skip unreadable files
       }
     }
     if (!imported.length) return;
-    await saveDiaries(imported);
-    const updated = await loadDiaries();
+    await saveMDiaries(imported);
+    const updated = await loadMDiaries();
     setDiaries(updated);
   }, []);
 
   const handleClearAllDiaries = useCallback(async () => {
-    await clearAllDiaries();
+    await clearAllMDiaries();
     setDiaries([]);
   }, []);
 
