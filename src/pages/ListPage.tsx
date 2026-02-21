@@ -291,7 +291,7 @@ function MovieCard({ item }: { item: ListItem }) {
         )}
       </div>
 
-      {item.reason && <Field label="為什麼我喜歡..." text={item.reason} />}
+      {item.reason && <Field label="推薦理由" text={item.reason} />}
       {item.why && <Field label="為什麼我喜歡這部" text={item.why} />}
       {item.watchTogether && (
         <Field label="我和你一起看的時候會想的話" text={item.watchTogether} />
@@ -335,7 +335,7 @@ function BookCard({ item }: { item: ListItem }) {
         )}
       </div>
 
-      {item.reason && <Field label="推薦理由" text={item.reason} />}
+      {item.reason && <Field label="為什麼我喜歡..." text={item.reason} />}
       {item.why && <Field label="為什麼想和你分享這本" text={item.why} />}
       {item.readTogether && <Field label="一起讀時我會想說的話" text={item.readTogether} />}
       {item.whenToRead && <Field label="適合翻開的時機" text={item.whenToRead} chip />}
