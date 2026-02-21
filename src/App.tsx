@@ -35,7 +35,13 @@ import { clearAllLetters, loadLetters, saveLetters } from './lib/letterDB';
 import type { StoredLetter } from './lib/letterDB';
 import { readLetterContent } from './lib/letterReader';
 import { detectBestChatProfileId } from './lib/chatProfileMatcher';
-import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
+import {
+  APP_CUSTOM_FONT_FAMILY,
+  DIARY_CUSTOM_FONT_FAMILY,
+  LETTER_CUSTOM_FONT_FAMILY,
+  SOULMATE_CUSTOM_FONT_FAMILY,
+  buildFontFaceRule,
+} from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import { getBaseChibiPoolInfo, getScopedMixedChibiSources, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
 import {
@@ -292,6 +298,7 @@ function App() {
     preferredCustomFontFamily || "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
   const letterFontFamily = settings.letterFontUrl.trim() ? LETTER_CUSTOM_FONT_FAMILY : '';
   const diaryFontFamily = settings.diaryFontUrl.trim() ? DIARY_CUSTOM_FONT_FAMILY : '';
+  const soulmateFontFamily = settings.soulmateFontUrl.trim() ? SOULMATE_CUSTOM_FONT_FAMILY : '';
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [starredEmailIds, setStarredEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
@@ -433,6 +440,23 @@ function App() {
     }
     style.textContent = buildFontFaceRule(DIARY_CUSTOM_FONT_FAMILY, href);
   }, [settings.diaryFontUrl]);
+
+  // Load soulmate custom font
+  useEffect(() => {
+    const href = settings.soulmateFontUrl.trim();
+    const styleId = 'soulmate-custom-font-style';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!href) {
+      style?.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = buildFontFaceRule(SOULMATE_CUSTOM_FONT_FAMILY, href);
+  }, [settings.soulmateFontUrl]);
 
   const handleImportLetterFiles = useCallback(async (files: File[]) => {
     const now = Date.now();
@@ -1508,7 +1532,10 @@ function App() {
           {launcherApp === 'soulmate' && (
             <div className="fixed inset-0 z-30" style={{ background: '#fdf6ee' }}>
               <div className="mx-auto h-full w-full max-w-xl">
-                <SoulmateHousePage onExit={() => setLauncherApp(null)} />
+                <SoulmateHousePage
+                  onExit={() => setLauncherApp(null)}
+                  soulmateFontFamily={soulmateFontFamily}
+                />
               </div>
             </div>
           )}

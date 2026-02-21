@@ -25,6 +25,15 @@ function normalizeString(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
 
+function normalizeStringSlots(value: unknown, fallback: string[], length = 3) {
+  const input = Array.isArray(value) ? value : [];
+  const normalized: string[] = [];
+  for (let i = 0; i < length; i += 1) {
+    normalized.push(typeof input[i] === 'string' ? input[i] : fallback[i] ?? '');
+  }
+  return normalized;
+}
+
 function normalizeBoolean(value: unknown, fallback: boolean) {
   return typeof value === 'boolean' ? value : fallback;
 }
@@ -144,6 +153,11 @@ export async function getSettings() {
     customFontCssUrl: normalizeString(persisted.customFontCssUrl, DEFAULT_SETTINGS.customFontCssUrl),
     customFontFileUrl: normalizeString(persisted.customFontFileUrl, DEFAULT_SETTINGS.customFontFileUrl),
     customFontFamily: normalizeString(persisted.customFontFamily, DEFAULT_SETTINGS.customFontFamily),
+    customFontUrlSlots: normalizeStringSlots(persisted.customFontUrlSlots, DEFAULT_SETTINGS.customFontUrlSlots),
+    customFontUrlSlotNames: normalizeStringSlots(
+      persisted.customFontUrlSlotNames,
+      DEFAULT_SETTINGS.customFontUrlSlotNames,
+    ),
     chatUserBubbleColor: normalizeString(persisted.chatUserBubbleColor, DEFAULT_SETTINGS.chatUserBubbleColor),
     chatUserBubbleBorderColor: normalizeString(persisted.chatUserBubbleBorderColor, DEFAULT_SETTINGS.chatUserBubbleBorderColor),
     chatUserBubbleTextColor: normalizeString(persisted.chatUserBubbleTextColor, DEFAULT_SETTINGS.chatUserBubbleTextColor),
@@ -175,9 +189,25 @@ export async function getSettings() {
     tarotNameColor: normalizeString(persisted.tarotNameColor, DEFAULT_SETTINGS.tarotNameColor),
     tarotNameScale: clampNumber(persisted.tarotNameScale, 0.8, 2, DEFAULT_SETTINGS.tarotNameScale),
     letterFontUrl: normalizeString(persisted.letterFontUrl, DEFAULT_SETTINGS.letterFontUrl),
+    letterFontUrlSlots: normalizeStringSlots(persisted.letterFontUrlSlots, DEFAULT_SETTINGS.letterFontUrlSlots),
+    letterFontUrlSlotNames: normalizeStringSlots(
+      persisted.letterFontUrlSlotNames,
+      DEFAULT_SETTINGS.letterFontUrlSlotNames,
+    ),
     letterUiMode: normalizeLetterUiMode(persisted.letterUiMode, DEFAULT_SETTINGS.letterUiMode),
     diaryCoverImageUrl: normalizeString(persisted.diaryCoverImageUrl, DEFAULT_SETTINGS.diaryCoverImageUrl),
     diaryFontUrl: normalizeString(persisted.diaryFontUrl, DEFAULT_SETTINGS.diaryFontUrl),
+    diaryFontUrlSlots: normalizeStringSlots(persisted.diaryFontUrlSlots, DEFAULT_SETTINGS.diaryFontUrlSlots),
+    diaryFontUrlSlotNames: normalizeStringSlots(
+      persisted.diaryFontUrlSlotNames,
+      DEFAULT_SETTINGS.diaryFontUrlSlotNames,
+    ),
+    soulmateFontUrl: normalizeString(persisted.soulmateFontUrl, DEFAULT_SETTINGS.soulmateFontUrl),
+    soulmateFontUrlSlots: normalizeStringSlots(persisted.soulmateFontUrlSlots, DEFAULT_SETTINGS.soulmateFontUrlSlots),
+    soulmateFontUrlSlotNames: normalizeStringSlots(
+      persisted.soulmateFontUrlSlotNames,
+      DEFAULT_SETTINGS.soulmateFontUrlSlotNames,
+    ),
     diaryCoverFitMode: normalizeDiaryCoverFitMode(
       persisted.diaryCoverFitMode,
       DEFAULT_SETTINGS.diaryCoverFitMode,

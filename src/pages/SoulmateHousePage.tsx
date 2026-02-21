@@ -35,16 +35,19 @@ type ManageSectionProps = {
 
 interface Props {
   onExit: () => void;
+  soulmateFontFamily?: string;
 }
 
 const PAGE_TITLE_STORAGE_KEY = 'memorial-soulmate-page-title-v1';
 const READER_PREFS_STORAGE_KEY = 'memorial-soulmate-reader-prefs-v1';
 const DEFAULT_PAGE_TITLE = '家';
 
-type ReaderPaperKey = 'lined' | 'soft' | 'plain';
+type ReaderPaperKey = 'lined' | 'soft' | 'plain' | 'petal' | 'mist';
+type ReaderTextColorKey = 'ink' | 'brown' | 'slate' | 'forest' | 'rose' | 'navy';
 
 type ReaderPrefs = {
   paperKey: ReaderPaperKey;
+  textColorKey: ReaderTextColorKey;
   fontSize: number;
   lineHeight: number;
   showChibi: boolean;
@@ -55,6 +58,7 @@ type ReaderPrefs = {
 
 const DEFAULT_READER_PREFS: ReaderPrefs = {
   paperKey: 'lined',
+  textColorKey: 'ink',
   fontSize: 16,
   lineHeight: 1.95,
   showChibi: true,
@@ -80,9 +84,22 @@ function clampReaderPrefs(raw: Partial<ReaderPrefs> | null | undefined): ReaderP
     legacyFontKey === 'mono' ? 'plain' : legacyFontKey === 'sans' ? 'soft' : legacyFontKey === 'serif' ? 'lined' : null;
   return {
     paperKey:
-      source.paperKey === 'lined' || source.paperKey === 'soft' || source.paperKey === 'plain'
+      source.paperKey === 'lined' ||
+      source.paperKey === 'soft' ||
+      source.paperKey === 'plain' ||
+      source.paperKey === 'petal' ||
+      source.paperKey === 'mist'
         ? source.paperKey
         : (legacyPaperKey ?? 'lined'),
+    textColorKey:
+      source.textColorKey === 'ink' ||
+      source.textColorKey === 'brown' ||
+      source.textColorKey === 'slate' ||
+      source.textColorKey === 'forest' ||
+      source.textColorKey === 'rose' ||
+      source.textColorKey === 'navy'
+        ? source.textColorKey
+        : 'ink',
     fontSize: Math.round(clampNumber(source.fontSize ?? NaN, 13, 24, DEFAULT_READER_PREFS.fontSize)),
     lineHeight: Number(clampNumber(source.lineHeight ?? NaN, 1.45, 2.6, DEFAULT_READER_PREFS.lineHeight).toFixed(2)),
     showChibi: source.showChibi !== false,
@@ -111,7 +128,36 @@ function readReaderPrefs() {
   }
 }
 
+function resolveReaderTextColor(textColorKey: ReaderTextColorKey) {
+  if (textColorKey === 'brown') return '#5f4330';
+  if (textColorKey === 'slate') return '#374151';
+  if (textColorKey === 'forest') return '#2f5544';
+  if (textColorKey === 'rose') return '#7a4755';
+  if (textColorKey === 'navy') return '#324a68';
+  return '#3f3327';
+}
+
 function resolveReaderPaperStyle(paperKey: ReaderPaperKey) {
+  if (paperKey === 'petal') {
+    return {
+      className: 'border-[#e6cfd3]/85 bg-[#fff4f1]',
+      style: {
+        backgroundImage:
+          'radial-gradient(circle at 12% 18%, rgba(242, 193, 201, 0.24) 0, rgba(242, 193, 201, 0) 42%), radial-gradient(circle at 88% 84%, rgba(240, 206, 177, 0.2) 0, rgba(240, 206, 177, 0) 38%)',
+      } as Record<string, string>,
+    };
+  }
+  if (paperKey === 'mist') {
+    return {
+      className: 'border-[#cfdde7]/85 bg-[#f3f9ff]',
+      style: {
+        backgroundImage:
+          'linear-gradient(165deg, rgba(255, 255, 255, 0.72) 0%, rgba(227, 239, 252, 0.72) 100%), repeating-linear-gradient(to bottom, rgba(105, 136, 172, 0.08) 0, rgba(105, 136, 172, 0.08) 1px, transparent 1px, transparent 30px)',
+        backgroundPosition: '0 0, 0 16px',
+        backgroundSize: '100% 100%, 100% 31px',
+      } as Record<string, string>,
+    };
+  }
   if (paperKey === 'soft') {
     return {
       className: 'border-stone-200/80 bg-white',
@@ -214,7 +260,7 @@ function ManageSection({ title, description, isOpen, onToggle, children }: Manag
   );
 }
 
-export default function SoulmateHousePage({ onExit }: Props) {
+export default function SoulmateHousePage({ onExit, soulmateFontFamily = '' }: Props) {
   const [mode, setMode] = useState<ViewMode>('shelf');
   const [snapshot, setSnapshot] = useState<SoulmateSnapshot>({ boxes: [], entries: [] });
   const [draftBoxes, setDraftBoxes] = useState<SoulmateBox[]>([]);
@@ -242,7 +288,8 @@ export default function SoulmateHousePage({ onExit }: Props) {
   const boxes = snapshot.boxes;
   const entries = snapshot.entries;
   const resolvedPageTitle = pageTitle.trim() || DEFAULT_PAGE_TITLE;
-  const resolvedReaderFont = "'Iansui', 'Klee One', 'Noto Serif TC', 'PingFang TC', serif";
+  const resolvedReaderFont = soulmateFontFamily || "'Iansui', 'Klee One', 'Noto Serif TC', 'PingFang TC', serif";
+  const resolvedReaderTextColor = resolveReaderTextColor(readerPrefs.textColorKey);
   const readerPaper = resolveReaderPaperStyle(readerPrefs.paperKey);
   const hideReaderChibi = !readerPrefs.showChibi || !chibiSrc;
 
@@ -469,6 +516,22 @@ export default function SoulmateHousePage({ onExit }: Props) {
 
               <div className="mt-4 space-y-3">
                 <label className="space-y-1 text-xs text-stone-500">
+                  <span>閱讀文字顏色</span>
+                  <select
+                    value={readerPrefs.textColorKey}
+                    onChange={(event) => patchReaderPrefs({ textColorKey: event.target.value as ReaderTextColorKey })}
+                    className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+                  >
+                    <option value="ink">墨黑</option>
+                    <option value="brown">深棕</option>
+                    <option value="slate">石板灰</option>
+                    <option value="forest">森林綠</option>
+                    <option value="rose">莓果紫</option>
+                    <option value="navy">深海藍</option>
+                  </select>
+                </label>
+
+                <label className="space-y-1 text-xs text-stone-500">
                   <span>閱讀底部樣式</span>
                   <select
                     value={readerPrefs.paperKey}
@@ -478,6 +541,8 @@ export default function SoulmateHousePage({ onExit }: Props) {
                     <option value="lined">淺黃筆記線</option>
                     <option value="soft">柔白紙張</option>
                     <option value="plain">清爽素底</option>
+                    <option value="petal">杏粉霧紙</option>
+                    <option value="mist">晨霧藍箋</option>
                   </select>
                 </label>
 
@@ -845,6 +910,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
             style={{
               ...readerPaper.style,
               fontFamily: resolvedReaderFont,
+              color: resolvedReaderTextColor,
               fontSize: readerPrefs.fontSize,
               lineHeight: readerPrefs.lineHeight,
             }}

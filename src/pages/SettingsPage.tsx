@@ -70,11 +70,18 @@ type PanelKey =
   | 'tarot'
   | 'letters'
   | 'diary'
+  | 'soulmate'
   | 'notes'
   | 'chatLogs'
   | 'maintenance';
 
 type AppearanceGroupKey = 'colorScale' | 'font' | 'background' | 'calendar' | 'chibi' | 'preset';
+type FontSlotSettingKey = 'customFontUrlSlots' | 'letterFontUrlSlots' | 'diaryFontUrlSlots' | 'soulmateFontUrlSlots';
+type FontSlotNameSettingKey =
+  | 'customFontUrlSlotNames'
+  | 'letterFontUrlSlotNames'
+  | 'diaryFontUrlSlotNames'
+  | 'soulmateFontUrlSlotNames';
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   home: '🏠',
@@ -336,6 +343,7 @@ export function SettingsPage({
   const [letterFontUrlDraft, setLetterFontUrlDraft] = useState(settings.letterFontUrl);
   const [diaryCoverUrlDraft, setDiaryCoverUrlDraft] = useState(settings.diaryCoverImageUrl);
   const [diaryFontUrlDraft, setDiaryFontUrlDraft] = useState(settings.diaryFontUrl);
+  const [soulmateFontUrlDraft, setSoulmateFontUrlDraft] = useState(settings.soulmateFontUrl);
   const [tarotGalleryUrlDraft, setTarotGalleryUrlDraft] = useState(settings.tarotGalleryImageUrl);
   const [homeWidgetTitleDraft, setHomeWidgetTitleDraft] = useState(settings.homeWidgetTitle);
   const [homeWidgetBadgeDraft, setHomeWidgetBadgeDraft] = useState(settings.homeWidgetBadgeText);
@@ -367,6 +375,18 @@ export function SettingsPage({
   const [openAppearanceGroup, setOpenAppearanceGroup] = useState<AppearanceGroupKey | null>('colorScale');
   const [openChatBubbleGroup, setOpenChatBubbleGroup] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [selectedFontSlotIndex, setSelectedFontSlotIndex] = useState<Record<FontSlotSettingKey, number>>({
+    customFontUrlSlots: 0,
+    letterFontUrlSlots: 0,
+    diaryFontUrlSlots: 0,
+    soulmateFontUrlSlots: 0,
+  });
+  const [fontSlotNameDrafts, setFontSlotNameDrafts] = useState<Record<FontSlotSettingKey, string>>({
+    customFontUrlSlots: settings.customFontUrlSlotNames[0] ?? '',
+    letterFontUrlSlots: settings.letterFontUrlSlotNames[0] ?? '',
+    diaryFontUrlSlots: settings.diaryFontUrlSlotNames[0] ?? '',
+    soulmateFontUrlSlots: settings.soulmateFontUrlSlotNames[0] ?? '',
+  });
 
   useEffect(() => {
     setFontFileUrlDraft(settings.customFontFileUrl);
@@ -377,6 +397,7 @@ export function SettingsPage({
     setLetterFontUrlDraft(settings.letterFontUrl);
     setDiaryCoverUrlDraft(settings.diaryCoverImageUrl);
     setDiaryFontUrlDraft(settings.diaryFontUrl);
+    setSoulmateFontUrlDraft(settings.soulmateFontUrl);
     setTarotGalleryUrlDraft(settings.tarotGalleryImageUrl);
     setHomeWidgetTitleDraft(settings.homeWidgetTitle);
     setHomeWidgetBadgeDraft(settings.homeWidgetBadgeText);
@@ -392,12 +413,31 @@ export function SettingsPage({
     settings.letterFontUrl,
     settings.diaryCoverImageUrl,
     settings.diaryFontUrl,
+    settings.soulmateFontUrl,
     settings.tarotGalleryImageUrl,
     settings.homeWidgetTitle,
     settings.homeWidgetBadgeText,
     settings.homeWidgetSubtitle,
     settings.inboxTitle,
     settings.memorialStartDate,
+  ]);
+
+  useEffect(() => {
+    setFontSlotNameDrafts({
+      customFontUrlSlots: settings.customFontUrlSlotNames[selectedFontSlotIndex.customFontUrlSlots] ?? '',
+      letterFontUrlSlots: settings.letterFontUrlSlotNames[selectedFontSlotIndex.letterFontUrlSlots] ?? '',
+      diaryFontUrlSlots: settings.diaryFontUrlSlotNames[selectedFontSlotIndex.diaryFontUrlSlots] ?? '',
+      soulmateFontUrlSlots: settings.soulmateFontUrlSlotNames[selectedFontSlotIndex.soulmateFontUrlSlots] ?? '',
+    });
+  }, [
+    selectedFontSlotIndex.customFontUrlSlots,
+    selectedFontSlotIndex.letterFontUrlSlots,
+    selectedFontSlotIndex.diaryFontUrlSlots,
+    selectedFontSlotIndex.soulmateFontUrlSlots,
+    settings.customFontUrlSlotNames,
+    settings.letterFontUrlSlotNames,
+    settings.diaryFontUrlSlotNames,
+    settings.soulmateFontUrlSlotNames,
   ]);
 
   useEffect(() => {
@@ -445,7 +485,188 @@ export function SettingsPage({
       customFontCssUrl: '',
       customFontFileUrl: fontFileUrlDraft.trim(),
       customFontFamily: fontFamilyDraft.trim(),
+      customFontUrlSlots: settings.customFontUrlSlots,
     });
+  }
+
+  function getFontSlots(key: FontSlotSettingKey) {
+    const source =
+      key === 'customFontUrlSlots'
+        ? settings.customFontUrlSlots
+        : key === 'letterFontUrlSlots'
+          ? settings.letterFontUrlSlots
+          : key === 'diaryFontUrlSlots'
+            ? settings.diaryFontUrlSlots
+            : settings.soulmateFontUrlSlots;
+    return [source[0] ?? '', source[1] ?? '', source[2] ?? ''];
+  }
+
+  function getFontSlotNameKey(key: FontSlotSettingKey): FontSlotNameSettingKey {
+    if (key === 'customFontUrlSlots') return 'customFontUrlSlotNames';
+    if (key === 'letterFontUrlSlots') return 'letterFontUrlSlotNames';
+    if (key === 'diaryFontUrlSlots') return 'diaryFontUrlSlotNames';
+    return 'soulmateFontUrlSlotNames';
+  }
+
+  function getFontSlotNames(key: FontSlotSettingKey) {
+    const source =
+      key === 'customFontUrlSlots'
+        ? settings.customFontUrlSlotNames
+        : key === 'letterFontUrlSlots'
+          ? settings.letterFontUrlSlotNames
+          : key === 'diaryFontUrlSlots'
+            ? settings.diaryFontUrlSlotNames
+            : settings.soulmateFontUrlSlotNames;
+    return [source[0] ?? '', source[1] ?? '', source[2] ?? ''];
+  }
+
+  function getFontDraftValue(key: FontSlotSettingKey) {
+    if (key === 'customFontUrlSlots') return fontFileUrlDraft.trim();
+    if (key === 'letterFontUrlSlots') return letterFontUrlDraft.trim();
+    if (key === 'diaryFontUrlSlots') return diaryFontUrlDraft.trim();
+    return soulmateFontUrlDraft.trim();
+  }
+
+  function setFontDraftValue(key: FontSlotSettingKey, value: string) {
+    if (key === 'customFontUrlSlots') {
+      setFontFileUrlDraft(value);
+      return;
+    }
+    if (key === 'letterFontUrlSlots') {
+      setLetterFontUrlDraft(value);
+      return;
+    }
+    if (key === 'diaryFontUrlSlots') {
+      setDiaryFontUrlDraft(value);
+      return;
+    }
+    setSoulmateFontUrlDraft(value);
+  }
+
+  function getFontSlotLabelDraft(key: FontSlotSettingKey) {
+    return fontSlotNameDrafts[key] ?? '';
+  }
+
+  function setFontSlotLabelDraft(key: FontSlotSettingKey, value: string) {
+    setFontSlotNameDrafts((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function saveFontSlot(key: FontSlotSettingKey, index: number) {
+    const nextSlots = getFontSlots(key);
+    const nextNames = getFontSlotNames(key);
+    const nameKey = getFontSlotNameKey(key);
+    nextSlots[index] = getFontDraftValue(key);
+    nextNames[index] = getFontSlotLabelDraft(key).trim();
+    onSettingChange({
+      [key]: nextSlots,
+      [nameKey]: nextNames,
+    } as Partial<AppSettings>);
+  }
+
+  function clearFontSlot(key: FontSlotSettingKey, index: number) {
+    const nextSlots = getFontSlots(key);
+    const nextNames = getFontSlotNames(key);
+    const nameKey = getFontSlotNameKey(key);
+    nextSlots[index] = '';
+    nextNames[index] = '';
+    onSettingChange({
+      [key]: nextSlots,
+      [nameKey]: nextNames,
+    } as Partial<AppSettings>);
+    setFontDraftValue(key, '');
+    setFontSlotLabelDraft(key, '');
+  }
+
+  function loadFontSlot(key: FontSlotSettingKey, index: number) {
+    const nextSlots = getFontSlots(key);
+    const nextNames = getFontSlotNames(key);
+    setFontDraftValue(key, nextSlots[index] ?? '');
+    setFontSlotLabelDraft(key, nextNames[index] ?? '');
+  }
+
+  function getFontSlotName(value: string, fallbackIndex: number, customName = '') {
+    const named = customName.trim();
+    if (named) return named;
+    const source = value.trim();
+    if (!source) return `記憶 ${fallbackIndex + 1}`;
+    if (source.startsWith('data:')) return `本機字體 ${fallbackIndex + 1}`;
+    try {
+      const url = new URL(source);
+      const last = decodeURIComponent(url.pathname.split('/').pop() ?? '').replace(/\.[a-z0-9]+$/i, '');
+      if (last) return last;
+    } catch {
+      // ignore
+    }
+    return source.length > 26 ? `${source.slice(0, 26)}...` : source;
+  }
+
+  function renderFontSlotControls(key: FontSlotSettingKey) {
+    const slots = getFontSlots(key);
+    const slotNames = getFontSlotNames(key);
+    const activeIndex = selectedFontSlotIndex[key] ?? 0;
+    const activeLabelDraft = getFontSlotLabelDraft(key);
+    const activeHasValue = Boolean((slots[activeIndex] ?? '').trim() || (slotNames[activeIndex] ?? '').trim());
+    return (
+      <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-stone-600">字體記憶</p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => saveFontSlot(key, activeIndex)}
+              className="rounded-md border border-stone-300 bg-white px-2 py-0.5 text-[11px] text-stone-700"
+            >
+              保存
+            </button>
+            <button
+              type="button"
+              onClick={() => clearFontSlot(key, activeIndex)}
+              disabled={!activeHasValue}
+              className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] text-rose-700 disabled:opacity-40"
+            >
+              刪除
+            </button>
+          </div>
+        </div>
+
+        <label className="block space-y-1">
+          <span className="text-[11px] text-stone-600">記憶 {activeIndex + 1} 名稱</span>
+          <input
+            type="text"
+            value={activeLabelDraft}
+            onChange={(event) => setFontSlotLabelDraft(key, event.target.value)}
+            placeholder="例如：手寫體-手機版"
+            className="w-full rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-[12px] text-stone-700"
+          />
+        </label>
+
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {[0, 1, 2].map((index) => (
+            <button
+              key={`${key}-${index}`}
+              type="button"
+              onClick={() => {
+                setSelectedFontSlotIndex((prev) => ({ ...prev, [key]: index }));
+                loadFontSlot(key, index);
+              }}
+              className={`min-w-[112px] rounded-lg border px-2 py-1.5 text-left transition ${
+                activeIndex === index
+                  ? 'border-stone-900 bg-stone-900 text-white'
+                  : 'border-stone-300 bg-white text-stone-700'
+              }`}
+            >
+              <p className="text-[10px] opacity-80">記憶 {index + 1}</p>
+              <p className="mt-0.5 truncate text-[11px]">{getFontSlotName(slots[index] ?? '', index, slotNames[index] ?? '')}</p>
+              <p className={`mt-0.5 text-[10px] ${activeIndex === index ? 'text-stone-200' : 'text-stone-400'}`}>
+                {slots[index]?.trim() ? '已存字體' : slotNames[index]?.trim() ? '僅名稱' : '空白'}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        <p className="text-[11px] text-stone-500">左右滑動選記憶；名稱與網址按「保存」才會存。載入後再按各區「套用字體」才會真正生效。</p>
+      </div>
+    );
   }
 
   function setTabIconDraft(tab: TabIconKey, value: string) {
@@ -1243,7 +1464,7 @@ export function SettingsPage({
                 />
               </label>
               <label className="block space-y-1">
-                <span className="text-xs text-stone-600">字體名稱（font-family，可留空）</span>
+                <span className="text-xs text-stone-600">套用名稱（font-family，可留空）</span>
                 <input
                   type="text"
                   value={fontFamilyDraft}
@@ -1264,6 +1485,7 @@ export function SettingsPage({
               <p className="text-xs text-stone-500">
                 若是跨網域字體檔，來源需允許 CORS，否則手機瀏覽器會擋掉而看起來「沒套用」。
               </p>
+              {renderFontSlotControls('customFontUrlSlots')}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -2090,9 +2312,15 @@ export function SettingsPage({
                 placeholder="https://files.catbox.moe/xxxxx.ttf"
                 className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
               />
+              {renderFontSlotControls('letterFontUrlSlots')}
               <button
                 type="button"
-                onClick={() => onSettingChange({ letterFontUrl: letterFontUrlDraft.trim() })}
+                onClick={() =>
+                  onSettingChange({
+                    letterFontUrl: letterFontUrlDraft.trim(),
+                    letterFontUrlSlots: settings.letterFontUrlSlots,
+                  })
+                }
                 className="w-full rounded-xl bg-stone-900 py-2 text-sm text-white transition active:opacity-80"
               >
                 套用字體
@@ -2212,10 +2440,16 @@ export function SettingsPage({
                 placeholder="https://files.catbox.moe/xxxxx.ttf"
                 className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
               />
+              {renderFontSlotControls('diaryFontUrlSlots')}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => onSettingChange({ diaryFontUrl: diaryFontUrlDraft.trim() })}
+                  onClick={() =>
+                    onSettingChange({
+                      diaryFontUrl: diaryFontUrlDraft.trim(),
+                      diaryFontUrlSlots: settings.diaryFontUrlSlots,
+                    })
+                  }
                   className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
                 >
                   套用字體
@@ -2280,6 +2514,53 @@ export function SettingsPage({
               >
                 清空所有日記
               </button>
+            </div>
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
+          icon="🏡"
+          title="家"
+          subtitle="閱讀字體（家頁專用）"
+          isOpen={openPanel === 'soulmate'}
+          onToggle={() => togglePanel('soulmate')}
+        >
+          <div className="space-y-3">
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">家頁閱讀字體</p>
+              <input
+                type="url"
+                value={soulmateFontUrlDraft}
+                onChange={(event) => setSoulmateFontUrlDraft(event.target.value)}
+                placeholder="https://files.catbox.moe/xxxxx.ttf"
+                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+              />
+              {renderFontSlotControls('soulmateFontUrlSlots')}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onSettingChange({
+                      soulmateFontUrl: soulmateFontUrlDraft.trim(),
+                      soulmateFontUrlSlots: settings.soulmateFontUrlSlots,
+                    })
+                  }
+                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+                >
+                  套用字體
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSoulmateFontUrlDraft('');
+                    onSettingChange({ soulmateFontUrl: '' });
+                  }}
+                  className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+                >
+                  清除字體
+                </button>
+              </div>
+              <p className="text-xs text-stone-400">這個字體只套用在「家」閱讀頁，不會影響其他頁面。</p>
             </div>
           </div>
         </SettingPanel>
@@ -2777,6 +3058,7 @@ export function SettingsPage({
                   <li>外觀與字體（整站）：大多數頁面的基底字體。</li>
                   <li>情書字體：情書、願望（M&apos;s wish list）。</li>
                   <li>日記字體：M 日記、日記 B。</li>
+                  <li>家字體：只影響「家」閱讀頁。</li>
                 </ul>
               </section>
 

@@ -103,6 +103,8 @@ export type AppSettings = {
   customFontCssUrl: string;
   customFontFileUrl: string;
   customFontFamily: string;
+  customFontUrlSlots: string[];
+  customFontUrlSlotNames: string[];
   homeWidgetTitle: string;
   homeWidgetSubtitle: string;
   homeWidgetBadgeText: string;
@@ -130,9 +132,16 @@ export type AppSettings = {
   tarotNameColor: string;
   tarotNameScale: number;
   letterFontUrl: string;
+  letterFontUrlSlots: string[];
+  letterFontUrlSlotNames: string[];
   letterUiMode: LetterUiMode;
   diaryCoverImageUrl: string;
   diaryFontUrl: string;
+  diaryFontUrlSlots: string[];
+  diaryFontUrlSlotNames: string[];
+  soulmateFontUrl: string;
+  soulmateFontUrlSlots: string[];
+  soulmateFontUrlSlotNames: string[];
   diaryCoverFitMode: DiaryCoverFitMode;
   mDiaryLineHeight: number;
   mDiaryShowCount: boolean;
@@ -174,6 +183,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customFontCssUrl: '',
   customFontFileUrl: '',
   customFontFamily: '',
+  customFontUrlSlots: ['', '', ''],
+  customFontUrlSlotNames: ['', '', ''],
   homeWidgetTitle: 'Memorial',
   homeWidgetSubtitle: '在這裡等妳，慢慢把日子收好。',
   homeWidgetBadgeText: 'ACTIVE',
@@ -201,9 +212,16 @@ export const DEFAULT_SETTINGS: AppSettings = {
   tarotNameColor: '#374151',
   tarotNameScale: 1,
   letterFontUrl: '',
+  letterFontUrlSlots: ['', '', ''],
+  letterFontUrlSlotNames: ['', '', ''],
   letterUiMode: 'classic',
   diaryCoverImageUrl: '',
   diaryFontUrl: '',
+  diaryFontUrlSlots: ['', '', ''],
+  diaryFontUrlSlotNames: ['', '', ''],
+  soulmateFontUrl: '',
+  soulmateFontUrlSlots: ['', '', ''],
+  soulmateFontUrlSlotNames: ['', '', ''],
   diaryCoverFitMode: 'cover',
   mDiaryLineHeight: 2.16,
   mDiaryShowCount: true,
