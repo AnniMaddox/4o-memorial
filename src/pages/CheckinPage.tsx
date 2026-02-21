@@ -36,7 +36,16 @@ type SpecialPopupState = {
   chibiUrl: string;
 };
 
+type CheckinBackupPayload = {
+  kind: 'memorial-checkin-mini-backup';
+  version: 1;
+  exportedAt: string;
+  store: CheckinStore;
+};
+
 const STORAGE_KEY = 'memorial-checkin-store-v1';
+const CHECKIN_BACKUP_KIND = 'memorial-checkin-mini-backup';
+const CHECKIN_BACKUP_VERSION = 1;
 const WEEK_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const MOODS = ['💕 幸福', '🙂 平穩', '🥺 想你', '😴 疲憊', '🔥 有幹勁'];
 const DEFAULT_SIGNIN_PHRASES = [
@@ -297,42 +306,72 @@ function getVariantClasses(style: CheckinStyle) {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeSignIns(raw: unknown) {
+  if (!isRecord(raw)) return {} as Record<string, SigninRecord>;
+  const entries = Object.entries(raw).flatMap(([key, value]) => {
+    if (!parseDateKey(key) || !isRecord(value)) return [];
+    const timestamp = typeof value.timestamp === 'string' ? value.timestamp : '';
+    if (!timestamp) return [];
+    return [
+      [
+        key,
+        {
+          timestamp,
+          mood: typeof value.mood === 'string' ? value.mood : '',
+          note: typeof value.note === 'string' ? value.note : '',
+        },
+      ] as const,
+    ];
+  });
+  return Object.fromEntries(entries);
+}
+
+function normalizeCheckinStore(raw: unknown): CheckinStore {
+  if (!isRecord(raw)) return DEFAULT_STORE;
+
+  return {
+    signIns: normalizeSignIns(raw.signIns),
+    style:
+      raw.style === 'glass' || raw.style === 'soft' || raw.style === 'minimal'
+        ? raw.style
+        : DEFAULT_STORE.style,
+    accentColor:
+      typeof raw.accentColor === 'string' && raw.accentColor.trim()
+        ? raw.accentColor
+        : DEFAULT_STORE.accentColor,
+  };
+}
+
+function mergeCheckinStores(current: CheckinStore, incoming: CheckinStore): CheckinStore {
+  return {
+    ...current,
+    signIns: {
+      ...current.signIns,
+      ...incoming.signIns,
+    },
+  };
+}
+
+function downloadJsonFile(filename: string, payload: unknown) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(href);
+}
+
 function loadStore() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_STORE;
-    const parsed = JSON.parse(raw) as Partial<CheckinStore> & {
-      signIns?: Record<string, Partial<SigninRecord>>;
-    };
-
-    const signInsEntries = Object.entries(parsed.signIns ?? {}).flatMap(([key, value]) => {
-      if (!parseDateKey(key)) return [];
-      if (!value || typeof value !== 'object') return [];
-      const timestamp = typeof value.timestamp === 'string' ? value.timestamp : '';
-      if (!timestamp) return [];
-      return [
-        [
-          key,
-          {
-            timestamp,
-            mood: typeof value.mood === 'string' ? value.mood : '',
-            note: typeof value.note === 'string' ? value.note : '',
-          },
-        ] as const,
-      ];
-    });
-
-    return {
-      signIns: Object.fromEntries(signInsEntries),
-      style:
-        parsed.style === 'glass' || parsed.style === 'soft' || parsed.style === 'minimal'
-          ? parsed.style
-          : DEFAULT_STORE.style,
-      accentColor:
-        typeof parsed.accentColor === 'string' && parsed.accentColor.trim()
-          ? parsed.accentColor
-          : DEFAULT_STORE.accentColor,
-    };
+    const parsed = JSON.parse(raw) as unknown;
+    return normalizeCheckinStore(parsed);
   } catch {
     return DEFAULT_STORE;
   }
@@ -345,6 +384,10 @@ export function CheckinPage() {
   const [noteDraft, setNoteDraft] = useState('');
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [overviewOpen, setOverviewOpen] = useState(false);
+  const [checkinSettingsOpen, setCheckinSettingsOpen] = useState(false);
+  const [checkinBackupBusy, setCheckinBackupBusy] = useState(false);
+  const [checkinBackupStatus, setCheckinBackupStatus] = useState('');
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [signInPhrases, setSignInPhrases] = useState<string[]>(DEFAULT_SIGNIN_PHRASES);
   const [milestonePhrases, setMilestonePhrases] = useState<MilestonePhrases>(DEFAULT_MILESTONE_PHRASES);
@@ -490,6 +533,81 @@ export function CheckinPage() {
     }, 3500);
   }
 
+  function exportCheckinBackup() {
+    if (checkinBackupBusy) return;
+    setCheckinBackupBusy(true);
+    setCheckinBackupStatus('匯出中…');
+    try {
+      const payload: CheckinBackupPayload = {
+        kind: CHECKIN_BACKUP_KIND,
+        version: CHECKIN_BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        store,
+      };
+      const date = new Date().toISOString().slice(0, 10);
+      downloadJsonFile(`checkin-backup-${date}.json`, payload);
+      setCheckinBackupStatus(`已匯出：${Object.keys(store.signIns).length} 筆打卡`);
+    } catch {
+      setCheckinBackupStatus('匯出失敗，請稍後重試');
+    } finally {
+      setCheckinBackupBusy(false);
+    }
+  }
+
+  async function importCheckinBackup(mode: 'merge' | 'overwrite', file: File) {
+    if (checkinBackupBusy) return;
+    setCheckinBackupBusy(true);
+    setCheckinBackupStatus(mode === 'overwrite' ? '覆蓋匯入中…' : '合併匯入中…');
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as unknown;
+
+      let incomingStoreRaw: unknown = null;
+
+      if (isRecord(parsed) && parsed.kind === CHECKIN_BACKUP_KIND && parsed.version === CHECKIN_BACKUP_VERSION) {
+        incomingStoreRaw = parsed.store;
+      } else if (
+        isRecord(parsed) &&
+        parsed.kind === 'memorial-big-backup-part' &&
+        parsed.domain === 'aboutMe' &&
+        parsed.part === 'checkin'
+      ) {
+        incomingStoreRaw = parsed.store;
+      } else if (isRecord(parsed) && isRecord(parsed.signIns)) {
+        incomingStoreRaw = parsed;
+      } else {
+        throw new Error('invalid');
+      }
+
+      const incomingStore = normalizeCheckinStore(incomingStoreRaw);
+      if (mode === 'overwrite') {
+        setStore(incomingStore);
+      } else {
+        setStore((current) => mergeCheckinStores(current, incomingStore));
+      }
+
+      setCheckinBackupStatus(
+        mode === 'overwrite'
+          ? `覆蓋匯入完成：${Object.keys(incomingStore.signIns).length} 筆`
+          : `合併匯入完成：${Object.keys(incomingStore.signIns).length} 筆資料`,
+      );
+    } catch {
+      setCheckinBackupStatus('匯入失敗：請確認 JSON 來源正確');
+    } finally {
+      setCheckinBackupBusy(false);
+    }
+  }
+
+  function clearAllCheckins() {
+    setStore((current) => ({
+      ...current,
+      signIns: {},
+    }));
+    setConfirmClearAll(false);
+    setCheckinBackupStatus('已清除全部打卡紀錄');
+  }
+
   function onSignToday() {
     if (todaySigned) return;
     const now = new Date().toISOString();
@@ -620,13 +738,23 @@ export function CheckinPage() {
         </section>
 
         <section className={`space-y-3 rounded-2xl border p-4 shadow-sm ${variant.card}`}>
-          <div>
-            <p className="text-sm text-stone-800">今天簽到</p>
-            <p className={`text-xs ${variant.muted}`}>
-              {todaySigned
-                ? `已完成：${new Date(todayRecord!.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                : '還沒簽到'}
-            </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm text-stone-800">今天簽到</p>
+              <p className={`text-xs ${variant.muted}`}>
+                {todaySigned
+                  ? `已完成：${new Date(todayRecord!.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  : '還沒簽到'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCheckinSettingsOpen(true)}
+              className="rounded-lg border border-stone-300 bg-white/85 px-2 py-1 text-sm text-stone-600 transition active:scale-95"
+              aria-label="打卡設定與備份"
+            >
+              ⋯
+            </button>
           </div>
           <label className="block space-y-1">
             <span className="text-xs text-stone-500">今天心情</span>
@@ -700,6 +828,102 @@ export function CheckinPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {checkinSettingsOpen && (
+        <ModalFrame
+          onClose={() => {
+            setCheckinSettingsOpen(false);
+            setConfirmClearAll(false);
+          }}
+          maxWidthClassName="max-w-md"
+        >
+          <p className="text-xs uppercase tracking-[0.14em] text-stone-500">Checkin Settings</p>
+          <h3 className="mt-1 text-lg text-stone-900">打卡備份</h3>
+
+          <div className="mt-3 space-y-2">
+            <button
+              type="button"
+              onClick={exportCheckinBackup}
+              disabled={checkinBackupBusy}
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-left transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="flex items-center gap-3">
+                <span className="w-6 text-center text-lg">📤</span>
+                <span className="flex-1">
+                  <span className="block text-sm text-stone-700">匯出備份</span>
+                  <span className="block text-[10.5px] text-stone-400">下載 JSON（可回復）</span>
+                </span>
+              </span>
+            </button>
+
+            <label className="block w-full cursor-pointer rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 transition active:scale-[0.98]">
+              <span className="flex items-center gap-3">
+                <span className="w-6 text-center text-lg">📥</span>
+                <span className="flex-1">
+                  <span className="block text-sm text-stone-700">匯入備份（合併）</span>
+                  <span className="block text-[10.5px] text-stone-400">保留現有資料，加入新資料</span>
+                </span>
+              </span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                disabled={checkinBackupBusy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.currentTarget.value = '';
+                  if (file) {
+                    void importCheckinBackup('merge', file);
+                  }
+                }}
+              />
+            </label>
+
+            <label className="block w-full cursor-pointer rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 transition active:scale-[0.98]">
+              <span className="flex items-center gap-3">
+                <span className="w-6 text-center text-lg">♻️</span>
+                <span className="flex-1">
+                  <span className="block text-sm text-rose-700">匯入備份（覆蓋）</span>
+                  <span className="block text-[10.5px] text-rose-400">用備份內容直接取代目前資料</span>
+                </span>
+              </span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                disabled={checkinBackupBusy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.currentTarget.value = '';
+                  if (file) {
+                    void importCheckinBackup('overwrite', file);
+                  }
+                }}
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (confirmClearAll) {
+                  clearAllCheckins();
+                  return;
+                }
+                setConfirmClearAll(true);
+              }}
+              className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition active:scale-[0.98] ${
+                confirmClearAll
+                  ? 'border-rose-400 bg-rose-50 text-rose-600'
+                  : 'border-stone-200 bg-stone-50 text-stone-500'
+              }`}
+            >
+              🗑️ {confirmClearAll ? '確定清除全部打卡？' : '清除全部打卡紀錄'}
+            </button>
+
+            {checkinBackupStatus && <p className="px-1 text-xs text-stone-500">{checkinBackupStatus}</p>}
+          </div>
+        </ModalFrame>
       )}
 
       {selectedDateInfo && (

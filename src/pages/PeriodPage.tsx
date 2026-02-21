@@ -45,9 +45,19 @@ type PostEndPopupState = {
   chibiUrl: string;
 };
 
+type PeriodBackupPayload = {
+  kind: 'memorial-period-mini-backup';
+  version: 1;
+  exportedAt: string;
+  store: PeriodStore;
+  seenPostEndDates: string[];
+};
+
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'memorial-period-diary-v1';
 const POST_END_SEEN_KEY = 'memorial-period-post-end-seen-v1';
+const PERIOD_BACKUP_KIND = 'memorial-period-mini-backup';
+const PERIOD_BACKUP_VERSION = 1;
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'] as const;
 
 const C = {
@@ -217,49 +227,112 @@ function toMonthDayLabel(dateKey: string) {
 }
 
 // ─── Data helpers ──────────────────────────────────────────────────────────────
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizePeriodRecords(records: unknown): PeriodRecord[] {
+  if (!Array.isArray(records)) return [];
+
+  const normalized: PeriodRecord[] = [];
+  const seen = new Set<string>();
+
+  records.forEach((item, index) => {
+    if (!isRecord(item)) return;
+    const startDate = typeof item.startDate === 'string' ? item.startDate : '';
+    const endDate = typeof item.endDate === 'string' ? item.endDate : '';
+    const note = typeof item.note === 'string' ? item.note : '';
+    const createdAt = typeof item.createdAt === 'string' && item.createdAt.trim() ? item.createdAt : new Date().toISOString();
+
+    const s = parseDateKey(startDate);
+    const e = parseDateKey(endDate);
+    if (!s || !e || dayDiff(s, e) < 0) return;
+
+    const idRaw = typeof item.id === 'string' && item.id.trim() ? item.id : `${startDate}-${createdAt}-${index}`;
+    if (seen.has(idRaw)) return;
+    seen.add(idRaw);
+
+    normalized.push({
+      id: idRaw,
+      startDate,
+      endDate,
+      note,
+      createdAt,
+    });
+  });
+
+  return normalized.sort((a, b) => a.startDate.localeCompare(b.startDate));
+}
+
+function normalizePeriodStore(input: unknown): PeriodStore {
+  if (!isRecord(input)) {
+    return DEFAULT_STORE;
+  }
+
+  const accentColor =
+    typeof input.accentColor === 'string' && input.accentColor.trim()
+      ? input.accentColor
+      : DEFAULT_STORE.accentColor;
+
+  const panelStyle: PeriodPanelStyle =
+    input.panelStyle === 'glass' || input.panelStyle === 'minimal' || input.panelStyle === 'soft'
+      ? input.panelStyle
+      : DEFAULT_STORE.panelStyle;
+
+  const periodChibiSize =
+    typeof input.periodChibiSize === 'number' && Number.isFinite(input.periodChibiSize)
+      ? clamp(input.periodChibiSize, 120, 220)
+      : DEFAULT_STORE.periodChibiSize;
+
+  return {
+    records: normalizePeriodRecords(input.records),
+    accentColor,
+    panelStyle,
+    periodChibiSize,
+  };
+}
+
 function loadStore(): PeriodStore {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_STORE;
-    const parsed = JSON.parse(raw) as Partial<PeriodStore>;
-    return {
-      records: Array.isArray(parsed.records)
-        ? parsed.records.filter(
-            (r): r is PeriodRecord =>
-              !!r && typeof r === 'object' &&
-              typeof r.id === 'string' &&
-              typeof r.startDate === 'string' &&
-              typeof r.endDate === 'string' &&
-              typeof r.note === 'string' &&
-              typeof r.createdAt === 'string',
-          )
-        : [],
-      accentColor:
-        typeof parsed.accentColor === 'string' && parsed.accentColor.trim()
-          ? parsed.accentColor
-          : DEFAULT_STORE.accentColor,
-      panelStyle:
-        parsed.panelStyle === 'glass' || parsed.panelStyle === 'minimal' || parsed.panelStyle === 'soft'
-          ? parsed.panelStyle
-          : DEFAULT_STORE.panelStyle,
-      periodChibiSize:
-        typeof parsed.periodChibiSize === 'number' && Number.isFinite(parsed.periodChibiSize)
-          ? clamp(parsed.periodChibiSize, 120, 220)
-          : DEFAULT_STORE.periodChibiSize,
-    };
+    const parsed = JSON.parse(raw) as unknown;
+    return normalizePeriodStore(parsed);
   } catch {
     return DEFAULT_STORE;
   }
 }
 
 function normalizeRecords(records: PeriodRecord[]) {
-  return records
-    .filter((r) => {
-      const s = parseDateKey(r.startDate);
-      const e = parseDateKey(r.endDate);
-      return s && e && dayDiff(s, e) >= 0;
-    })
-    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  return normalizePeriodRecords(records);
+}
+
+function normalizeSeenPostEndDates(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  input.forEach((item) => {
+    if (typeof item !== 'string' || !parseDateKey(item) || seen.has(item)) return;
+    seen.add(item);
+  });
+  return Array.from(seen);
+}
+
+function mergePeriodStores(current: PeriodStore, incoming: PeriodStore): PeriodStore {
+  const records = normalizePeriodRecords([...current.records, ...incoming.records]);
+  return {
+    ...current,
+    records,
+  };
+}
+
+function downloadJsonFile(filename: string, payload: unknown) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(href);
 }
 
 function calcPrediction(records: PeriodRecord[]) {
@@ -644,6 +717,10 @@ function PeriodSettingsSheet({
   onPanelStyleChange,
   chibiSize,
   onChibiSizeChange,
+  backupBusy,
+  backupStatus,
+  onExportBackup,
+  onImportBackup,
   onClearAll,
   onClose,
 }: {
@@ -651,6 +728,10 @@ function PeriodSettingsSheet({
   onPanelStyleChange: (style: PeriodPanelStyle) => void;
   chibiSize: number;
   onChibiSizeChange: (size: number) => void;
+  backupBusy: boolean;
+  backupStatus: string;
+  onExportBackup: () => void;
+  onImportBackup: (mode: 'merge' | 'overwrite', file: File) => void;
   onClearAll: () => void;
   onClose: () => void;
 }) {
@@ -714,6 +795,69 @@ function PeriodSettingsSheet({
           </div>
         </div>
 
+        <div className="mb-4 rounded-2xl bg-stone-50 p-4">
+          <p className="mb-2 text-xs text-stone-500">資料備份</p>
+
+          <button
+            type="button"
+            onClick={onExportBackup}
+            disabled={backupBusy}
+            className="mb-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-left transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="flex items-center gap-3">
+              <span className="w-6 text-center text-lg">📤</span>
+              <span className="flex-1">
+                <span className="block text-sm text-stone-700">匯出備份</span>
+                <span className="block text-[10.5px] text-stone-400">下載 JSON（可回復）</span>
+              </span>
+            </span>
+          </button>
+
+          <label className="mb-2 block w-full cursor-pointer rounded-xl border border-stone-200 bg-white px-4 py-3 transition active:scale-[0.98]">
+            <span className="flex items-center gap-3">
+              <span className="w-6 text-center text-lg">📥</span>
+              <span className="flex-1">
+                <span className="block text-sm text-stone-700">匯入備份（合併）</span>
+                <span className="block text-[10.5px] text-stone-400">保留現有資料，加入新資料</span>
+              </span>
+            </span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              disabled={backupBusy}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.currentTarget.value = '';
+                if (file) onImportBackup('merge', file);
+              }}
+            />
+          </label>
+
+          <label className="block w-full cursor-pointer rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 transition active:scale-[0.98]">
+            <span className="flex items-center gap-3">
+              <span className="w-6 text-center text-lg">♻️</span>
+              <span className="flex-1">
+                <span className="block text-sm text-rose-700">匯入備份（覆蓋）</span>
+                <span className="block text-[10.5px] text-rose-400">用備份內容直接取代目前資料</span>
+              </span>
+            </span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              disabled={backupBusy}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.currentTarget.value = '';
+                if (file) onImportBackup('overwrite', file);
+              }}
+            />
+          </label>
+
+          {backupStatus && <p className="mt-2 text-xs text-stone-500">{backupStatus}</p>}
+        </div>
+
         <button
           type="button"
           onClick={onClearAll}
@@ -745,6 +889,8 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [statusText, setStatusText] = useState('');
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [showPeriodSettings, setShowPeriodSettings] = useState(false);
+  const [periodBackupBusy, setPeriodBackupBusy] = useState(false);
+  const [periodBackupStatus, setPeriodBackupStatus] = useState('');
   const [hoverPhrases, setHoverPhrases] = useState<HoverPhraseMap>(DEFAULT_HOVER_PHRASES);
   const [chibiPhrases, setChibiPhrases] = useState<ChibiPhraseMap>(DEFAULT_CHIBI_PHRASES);
   const [postEndPhrases, setPostEndPhrases] = useState<string[]>(DEFAULT_POST_END_PHRASES);
@@ -991,6 +1137,83 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
 
   function deleteRecord(id: string) {
     setStore((cur) => ({ ...cur, records: cur.records.filter((r) => r.id !== id) }));
+  }
+
+  function exportPeriodBackup() {
+    if (periodBackupBusy) return;
+    setPeriodBackupBusy(true);
+    setPeriodBackupStatus('匯出中…');
+    try {
+      const seenPostEndDates = Array.from(loadSeenPostEndDates());
+      const payload: PeriodBackupPayload = {
+        kind: PERIOD_BACKUP_KIND,
+        version: PERIOD_BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        store,
+        seenPostEndDates,
+      };
+      const date = new Date().toISOString().slice(0, 10);
+      downloadJsonFile(`period-backup-${date}.json`, payload);
+      setPeriodBackupStatus(`已匯出：${store.records.length} 筆紀錄`);
+    } catch {
+      setPeriodBackupStatus('匯出失敗，請稍後重試');
+    } finally {
+      setPeriodBackupBusy(false);
+    }
+  }
+
+  async function importPeriodBackup(mode: 'merge' | 'overwrite', file: File) {
+    if (periodBackupBusy) return;
+    setPeriodBackupBusy(true);
+    setPeriodBackupStatus(mode === 'overwrite' ? '覆蓋匯入中…' : '合併匯入中…');
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as unknown;
+
+      let incomingStoreRaw: unknown = null;
+      let incomingSeenRaw: unknown = [];
+
+      if (isRecord(parsed) && parsed.kind === PERIOD_BACKUP_KIND && parsed.version === PERIOD_BACKUP_VERSION) {
+        incomingStoreRaw = parsed.store;
+        incomingSeenRaw = parsed.seenPostEndDates;
+      } else if (
+        isRecord(parsed) &&
+        parsed.kind === 'memorial-big-backup-part' &&
+        parsed.domain === 'aboutMe' &&
+        parsed.part === 'period'
+      ) {
+        incomingStoreRaw = parsed.store;
+        incomingSeenRaw = parsed.seenPostEndDates;
+      } else if (isRecord(parsed) && Array.isArray(parsed.records)) {
+        incomingStoreRaw = parsed;
+      } else {
+        throw new Error('invalid');
+      }
+
+      const incomingStore = normalizePeriodStore(incomingStoreRaw);
+      const incomingSeen = normalizeSeenPostEndDates(incomingSeenRaw);
+
+      if (mode === 'overwrite') {
+        setStore(incomingStore);
+        window.localStorage.setItem(POST_END_SEEN_KEY, JSON.stringify(incomingSeen));
+      } else {
+        setStore((current) => mergePeriodStores(current, incomingStore));
+        const existingSeen = Array.from(loadSeenPostEndDates());
+        const mergedSeen = normalizeSeenPostEndDates([...existingSeen, ...incomingSeen]);
+        window.localStorage.setItem(POST_END_SEEN_KEY, JSON.stringify(mergedSeen));
+      }
+
+      setPeriodBackupStatus(
+        mode === 'overwrite'
+          ? `覆蓋匯入完成：${incomingStore.records.length} 筆紀錄`
+          : `合併匯入完成：${incomingStore.records.length} 筆新資料`,
+      );
+    } catch {
+      setPeriodBackupStatus('匯入失敗：請確認 JSON 來源正確');
+    } finally {
+      setPeriodBackupBusy(false);
+    }
   }
 
   function clearAllRecords() {
@@ -1603,6 +1826,12 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
           onPanelStyleChange={(style) => setStore((cur) => ({ ...cur, panelStyle: style }))}
           chibiSize={store.periodChibiSize}
           onChibiSizeChange={(size) => setStore((cur) => ({ ...cur, periodChibiSize: clamp(size, 120, 220) }))}
+          backupBusy={periodBackupBusy}
+          backupStatus={periodBackupStatus}
+          onExportBackup={exportPeriodBackup}
+          onImportBackup={(mode, file) => {
+            void importPeriodBackup(mode, file);
+          }}
           onClearAll={clearAllRecords}
           onClose={() => setShowPeriodSettings(false)}
         />
