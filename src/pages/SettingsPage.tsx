@@ -136,6 +136,54 @@ const ABOUT_M_PART_FIELDS: Array<{ key: AboutMBackupPart; label: string; hint: s
   { key: 'soulmate', label: '搬家計劃書', hint: 'soulmate.json' },
 ];
 
+const CHIBI_POOL_GUIDE: Array<{ page: string; path: string; note?: string }> = [
+  { page: 'M 日記 / 願望 / 家 / 塔羅返回小人', path: 'public/mdiary-chibi/' },
+  { page: '健身', path: 'public/fitness-chibi/' },
+  { page: '番茄鐘', path: 'public/pomodoro-chibi/' },
+  { page: '便利貼', path: 'public/notes-chibi/' },
+  { page: '主月曆', path: 'public/calendar-chibi/' },
+  { page: '年度信件', path: 'public/letters-ab-chibi/' },
+  { page: '情書（舊 LetterPage）', path: 'public/letter-chibi/' },
+  { page: '經期日記', path: 'public/period-chibi/' },
+  { page: '打卡', path: 'public/checkin-chibi/' },
+  { page: '全域大池', path: 'public/chibi/', note: '其他頁面回退池與混池來源' },
+];
+
+const DATA_CONTENT_GUIDE: Array<{ path: string; target: string; note?: string }> = [
+  { path: 'public/data/movies.json', target: '清單-片單', note: '片單卡片內容' },
+  { path: 'public/data/songs.json', target: '清單-歌單', note: '歌單卡片內容' },
+  { path: 'public/data/books.json', target: '清單-書單', note: '書單卡片內容' },
+  { path: 'public/data/wishlist/wishes.json', target: '願望頁', note: '願望（翻閱/清單）內容' },
+  { path: 'public/data/wishlist/birthday-tasks.json', target: '願望頁', note: '生日任務內容' },
+  { path: 'public/data/letters-ab/index.json', target: '年度信件', note: '年份/文章索引' },
+  { path: 'public/data/letters-ab/content/*.txt', target: '年度信件', note: '每篇正文內容' },
+  { path: 'public/data/checkin/checkin_phrases.json', target: '打卡', note: '打卡語句（JSON）' },
+  { path: 'public/data/checkin/checkin_phrases.txt', target: '打卡', note: '打卡語句（TXT 備援）' },
+  { path: 'public/data/checkin/checkin_milestones.json', target: '打卡', note: '里程碑語句' },
+  { path: 'public/data/period/period_hover_phrases.json', target: '經期日記', note: '月曆 hover 語句' },
+  { path: 'public/data/period/period_post_end_phrases.json', target: '經期日記', note: '經期結束後語句' },
+  { path: 'public/data/period/period_chibi_phrases.json', target: '經期日記', note: '經期小人台詞' },
+  { path: 'public/data/fitness-weeks.json', target: '健身', note: '每週健身/飲食資料' },
+  { path: 'public/data/albums.json', target: '相冊', note: '相冊清單與設定' },
+];
+
+const ASSET_GUIDE: Array<{ path: string; target: string; note?: string }> = [
+  { path: 'public/diary-covers/', target: 'M日記 / 日記B', note: '日記封面圖池' },
+  { path: 'public/photos/', target: '相冊', note: '相簿圖片' },
+  { path: 'public/tarot/', target: '塔羅', note: '塔羅牌圖檔' },
+  { path: 'public/icons/', target: '網站 / PWA', note: '網站圖示與通知 icon' },
+  { path: 'public/chibi*/', target: '所有含小人頁面', note: '小人素材（含各專屬池）' },
+];
+
+const IMPORTANT_NOTES: string[] = [
+  'GitHub 網頁上傳檔案到 main 分支也可以更新，不一定要本機 git push。',
+  '上傳後需等待 Actions build/deploy（通常約 1-5 分鐘），手機端重整才會看到。',
+  '小人新增到 public/chibi/ 後，若暫時抽不到新圖，可在外觀設定按「重抽小人池」。',
+  '年度信件建議維持 index.json + txt 分檔（不要前端一次解析大量 docx）。',
+  '頁內「手動匯入」的資料是本機資料庫，不會被 GitHub 檔案直接覆蓋。',
+  '文字檔建議 UTF-8，圖片建議壓縮後再上傳，手機載入會更穩。',
+];
+
 type AppearancePresetPayload = {
   version: 1;
   savedAt: string;
@@ -318,6 +366,7 @@ export function SettingsPage({
   const [openBackupGroup, setOpenBackupGroup] = useState<'aboutMe' | 'aboutM' | null>('aboutMe');
   const [openAppearanceGroup, setOpenAppearanceGroup] = useState<AppearanceGroupKey | null>('colorScale');
   const [openChatBubbleGroup, setOpenChatBubbleGroup] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   useEffect(() => {
     setFontFileUrlDraft(settings.customFontFileUrl);
@@ -2603,19 +2652,156 @@ export function SettingsPage({
           onToggle={() => togglePanel('maintenance')}
         >
           <div className="space-y-3">
-            <button
-              type="button"
-              onClick={onRefresh}
-              className="rounded-lg bg-stone-900 px-4 py-2 text-sm text-white"
-            >
-              重新整理本機資料
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={onRefresh}
+                className="w-full rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80"
+              >
+                重新整理本機資料
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(true)}
+                className="w-full rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80"
+              >
+                說明書
+              </button>
+            </div>
             <p className="text-xs text-stone-500">
               上次更新：{settings.lastSyncAt ? new Date(settings.lastSyncAt).toLocaleString() : '尚未更新'}
             </p>
           </div>
         </SettingPanel>
       </div>
+
+      {showGuideModal && (
+        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/45 p-3 sm:items-center sm:p-6">
+          <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-stone-200 bg-[#f8f5ef] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Manual</p>
+                <h3 className="text-base text-stone-900">自助更新說明書</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(false)}
+                className="grid h-8 w-8 place-items-center rounded-full border border-stone-300 bg-white text-xl leading-none text-stone-600"
+                aria-label="關閉說明書"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-5 overflow-y-auto px-4 py-4 text-sm text-stone-700">
+              <section className="space-y-2">
+                <h4 className="text-sm text-stone-900">如何更新（不用本機推送）</h4>
+                <p>到 GitHub 專案主頁直接上傳到 `main` 分支也可以。提交後等待 Actions build/deploy，手機重整即可。</p>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="text-sm text-stone-900">小人專屬池對照</h4>
+                <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+                  <table className="min-w-full text-left text-xs">
+                    <thead className="bg-stone-100 text-stone-600">
+                      <tr>
+                        <th className="px-2 py-2">頁面</th>
+                        <th className="px-2 py-2">路徑</th>
+                        <th className="px-2 py-2">備註</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {CHIBI_POOL_GUIDE.map((row) => (
+                        <tr key={`${row.page}-${row.path}`} className="border-t border-stone-100">
+                          <td className="px-2 py-2 text-stone-800">{row.page}</td>
+                          <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
+                          <td className="px-2 py-2 text-stone-500">{row.note ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="text-sm text-stone-900">資料內容檔（JSON/TXT）對照</h4>
+                <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+                  <table className="min-w-full text-left text-xs">
+                    <thead className="bg-stone-100 text-stone-600">
+                      <tr>
+                        <th className="px-2 py-2">路徑</th>
+                        <th className="px-2 py-2">對應頁面</th>
+                        <th className="px-2 py-2">用途</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {DATA_CONTENT_GUIDE.map((row) => (
+                        <tr key={`${row.path}-${row.target}`} className="border-t border-stone-100">
+                          <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
+                          <td className="px-2 py-2 text-stone-800">{row.target}</td>
+                          <td className="px-2 py-2 text-stone-500">{row.note ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="text-sm text-stone-900">圖片/素材對照</h4>
+                <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+                  <table className="min-w-full text-left text-xs">
+                    <thead className="bg-stone-100 text-stone-600">
+                      <tr>
+                        <th className="px-2 py-2">路徑</th>
+                        <th className="px-2 py-2">對應頁面</th>
+                        <th className="px-2 py-2">用途</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ASSET_GUIDE.map((row) => (
+                        <tr key={`${row.path}-${row.target}`} className="border-t border-stone-100">
+                          <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
+                          <td className="px-2 py-2 text-stone-800">{row.target}</td>
+                          <td className="px-2 py-2 text-stone-500">{row.note ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="text-sm text-stone-900">字體關聯</h4>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
+                  <li>外觀與字體（整站）：大多數頁面的基底字體。</li>
+                  <li>情書字體：情書、願望（M&apos;s wish list）。</li>
+                  <li>日記字體：M 日記、日記 B。</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="text-sm text-stone-900">注意事項</h4>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
+                  {IMPORTANT_NOTES.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+
+            <div className="border-t border-stone-200 bg-[#f3eee5] px-4 py-3 text-right">
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(false)}
+                className="rounded-lg bg-stone-900 px-4 py-2 text-sm text-white"
+              >
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

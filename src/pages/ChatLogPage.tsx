@@ -28,6 +28,7 @@ type ChatLogPageProps = {
   onImportChatLogFiles: (files: File[]) => void;
   onImportChatLogFolderFiles: (files: File[]) => void;
   onClearAllChatLogs: () => void;
+  onDeleteChatLog: (name: string) => void;
   onSaveChatProfile: (profile: ChatProfile) => void;
   onDeleteChatProfile: (id: string) => void;
   onBindLogProfile?: (logName: string, profileId: string) => void;
@@ -316,6 +317,7 @@ export function ChatLogPage({
   onImportChatLogFiles,
   onImportChatLogFolderFiles,
   onClearAllChatLogs,
+  onDeleteChatLog,
   onSaveChatProfile,
   onDeleteChatProfile,
   onBindLogProfile,
@@ -572,21 +574,36 @@ export function ChatLogPage({
               />
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-              <ul className="divide-y divide-stone-100">
-                {filteredLogs.map((log) => (
-                  <li key={log.name}>
-                    <button
-                      type="button"
-                      onClick={() => openLog(log.name)}
-                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition active:bg-stone-100"
-                    >
-                      <span className="min-w-0 flex-1 truncate text-sm text-stone-800">{displayLogName(log.name)}</span>
-                      <span className="text-xs text-stone-400">›</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+	            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+	              <ul className="divide-y divide-stone-100">
+	                {filteredLogs.map((log) => (
+	                  <li key={log.name}>
+	                    <div className="flex items-center gap-2 px-3 py-2">
+	                      <button
+	                        type="button"
+	                        onClick={() => openLog(log.name)}
+	                        className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl px-2 py-2 text-left transition active:bg-stone-100"
+	                      >
+	                        <span className="min-w-0 flex-1 truncate text-sm text-stone-800">{displayLogName(log.name)}</span>
+	                        <span className="text-xs text-stone-400">›</span>
+	                      </button>
+	                      <button
+	                        type="button"
+	                        onClick={() => {
+	                          const ok = window.confirm(`要刪除這份對話紀錄嗎？\n\n${displayLogName(log.name)}`);
+	                          if (!ok) return;
+	                          onDeleteChatLog(log.name);
+	                        }}
+	                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-sm text-rose-600 transition active:scale-95"
+	                        aria-label={`刪除 ${displayLogName(log.name)}`}
+	                        title="刪除"
+	                      >
+	                        ✕
+	                      </button>
+	                    </div>
+	                  </li>
+	                ))}
+	              </ul>
               {!filteredLogs.length && (
                 <p className="px-4 py-6 text-center text-sm text-stone-400">沒有符合的紀錄</p>
               )}

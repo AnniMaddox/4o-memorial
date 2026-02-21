@@ -27,7 +27,7 @@ import { InboxPage } from './pages/InboxPage';
 import { LetterPage } from './pages/LetterPage';
 import { PomodoroPage } from './pages/PomodoroPage';
 import { PeriodPage } from './pages/PeriodPage';
-import { clearAllChatLogs, loadChatLogs, saveChatLogs } from './lib/chatLogDB';
+import { clearAllChatLogs, deleteChatLog, loadChatLogs, saveChatLogs } from './lib/chatLogDB';
 import type { StoredChatLog } from './lib/chatLogDB';
 import { clearAllMDiaries, loadMDiaries, parseMDiaryFile, saveMDiaries } from './lib/mDiaryDB';
 import type { StoredMDiary } from './lib/mDiaryDB';
@@ -506,6 +506,12 @@ function App() {
   const handleClearAllChatLogs = useCallback(async () => {
     await clearAllChatLogs();
     setChatLogs([]);
+  }, []);
+
+  const handleDeleteChatLog = useCallback(async (name: string) => {
+    await deleteChatLog(name);
+    const updated = await loadChatLogs();
+    setChatLogs(updated);
   }, []);
 
   const handleClearAllLetters = useCallback(async () => {
@@ -1320,6 +1326,7 @@ function App() {
                   onImportChatLogFiles={(files) => void handleImportChatLogFiles(files)}
                   onImportChatLogFolderFiles={(files) => void handleImportChatLogFolderFiles(files)}
                   onClearAllChatLogs={() => void handleClearAllChatLogs()}
+                  onDeleteChatLog={(name) => void handleDeleteChatLog(name)}
                   onSaveChatProfile={(profile) => void handleSaveChatProfile(profile)}
                   onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
                   onBindLogProfile={(logName, profileId) => void handleBindChatLogProfile(logName, profileId)}

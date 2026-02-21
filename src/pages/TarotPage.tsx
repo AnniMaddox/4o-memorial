@@ -260,7 +260,7 @@ function TarotGallery({
           <button
             type="button"
             onClick={onBack}
-            className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-xs text-stone-600 transition active:scale-95"
+            className="grid h-8 w-8 place-items-center text-[26px] leading-none text-stone-500 transition active:scale-95"
             aria-label="返回"
             title="返回"
           >
