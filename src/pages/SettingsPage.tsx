@@ -74,6 +74,8 @@ type PanelKey =
   | 'chatLogs'
   | 'maintenance';
 
+type AppearanceGroupKey = 'colorScale' | 'font' | 'background' | 'calendar' | 'chibi' | 'preset';
+
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   home: '🏠',
   inbox: '📮',
@@ -187,6 +189,14 @@ type SettingPanelProps = {
   children: ReactNode;
 };
 
+type SettingSubgroupProps = {
+  title: string;
+  subtitle?: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+};
+
 function SettingPanel({ icon, title, subtitle, isOpen, onToggle, children }: SettingPanelProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-stone-700/80 bg-[#161b26] shadow-sm">
@@ -209,6 +219,30 @@ function SettingPanel({ icon, title, subtitle, isOpen, onToggle, children }: Set
       </button>
       {isOpen && <div className="border-t border-stone-700/70 bg-white/95 p-4 text-sm text-stone-700">{children}</div>}
     </section>
+  );
+}
+
+function SettingSubgroup({ title, subtitle, isOpen, onToggle, children }: SettingSubgroupProps) {
+  return (
+    <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <span className="min-w-0">
+          <span className="block text-sm text-stone-800">{title}</span>
+          {subtitle ? <span className="mt-0.5 block text-xs text-stone-500">{subtitle}</span> : null}
+        </span>
+        <span
+          className={`text-lg leading-none text-stone-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        >
+          ⌄
+        </span>
+      </button>
+      {isOpen && <div className="mt-3 space-y-3 border-t border-stone-200 pt-3">{children}</div>}
+    </div>
   );
 }
 
@@ -282,6 +316,8 @@ export function SettingsPage({
   const [aboutMBackupStatus, setAboutMBackupStatus] = useState('');
   const [backupBusy, setBackupBusy] = useState<'aboutMe' | 'aboutM' | null>(null);
   const [openBackupGroup, setOpenBackupGroup] = useState<'aboutMe' | 'aboutM' | null>('aboutMe');
+  const [openAppearanceGroup, setOpenAppearanceGroup] = useState<AppearanceGroupKey | null>('colorScale');
+  const [openChatBubbleGroup, setOpenChatBubbleGroup] = useState(false);
 
   useEffect(() => {
     setFontFileUrlDraft(settings.customFontFileUrl);
@@ -349,6 +385,10 @@ export function SettingsPage({
 
   function toggleBackupGroup(group: 'aboutMe' | 'aboutM') {
     setOpenBackupGroup((current) => (current === group ? null : group));
+  }
+
+  function toggleAppearanceGroup(group: AppearanceGroupKey) {
+    setOpenAppearanceGroup((current) => (current === group ? null : group));
   }
 
   function applyFontSettings() {
@@ -1065,61 +1105,72 @@ export function SettingsPage({
           onToggle={() => togglePanel('appearance')}
         >
           <div className="space-y-3">
-            <label className="block space-y-2">
-              <span>自訂主題色（分頁與自訂月曆色）</span>
-              <input
-                type="color"
-                value={settings.themeMonthColor}
-                onChange={(event) => onSettingChange({ themeMonthColor: event.target.value })}
-                className="h-10 w-full rounded-md border border-stone-300"
-              />
-            </label>
+            <SettingSubgroup
+              title="色彩與字體比例"
+              subtitle="主題色、首頁文字、泡泡色、縮放"
+              isOpen={openAppearanceGroup === 'colorScale'}
+              onToggle={() => toggleAppearanceGroup('colorScale')}
+            >
+              <label className="block space-y-2">
+                <span>自訂主題色（分頁與自訂月曆色）</span>
+                <input
+                  type="color"
+                  value={settings.themeMonthColor}
+                  onChange={(event) => onSettingChange({ themeMonthColor: event.target.value })}
+                  className="h-10 w-full rounded-md border border-stone-300"
+                />
+              </label>
 
-            <label className="block space-y-2">
-              <span>首頁字體顏色</span>
-              <input
-                type="color"
-                value={settings.globalTextColor}
-                onChange={(event) => onSettingChange({ globalTextColor: event.target.value })}
-                className="h-10 w-full rounded-md border border-stone-300"
-              />
-            </label>
+              <label className="block space-y-2">
+                <span>首頁字體顏色</span>
+                <input
+                  type="color"
+                  value={settings.globalTextColor}
+                  onChange={(event) => onSettingChange({ globalTextColor: event.target.value })}
+                  className="h-10 w-full rounded-md border border-stone-300"
+                />
+              </label>
 
-            <label className="block space-y-2">
-              <span>未解鎖泡泡色</span>
-              <input
-                type="color"
-                value={settings.lockedBubbleColor}
-                onChange={(event) => onSettingChange({ lockedBubbleColor: event.target.value })}
-                className="h-10 w-full rounded-md border border-stone-300"
-              />
-            </label>
+              <label className="block space-y-2">
+                <span>未解鎖泡泡色</span>
+                <input
+                  type="color"
+                  value={settings.lockedBubbleColor}
+                  onChange={(event) => onSettingChange({ lockedBubbleColor: event.target.value })}
+                  className="h-10 w-full rounded-md border border-stone-300"
+                />
+              </label>
 
-            <label className="block space-y-2">
-              <span>月曆底下氣泡文字色</span>
-              <input
-                type="color"
-                value={settings.calendarHoverBubbleTextColor}
-                onChange={(event) => onSettingChange({ calendarHoverBubbleTextColor: event.target.value })}
-                className="h-10 w-full rounded-md border border-stone-300"
-              />
-            </label>
+              <label className="block space-y-2">
+                <span>月曆底下氣泡文字色</span>
+                <input
+                  type="color"
+                  value={settings.calendarHoverBubbleTextColor}
+                  onChange={(event) => onSettingChange({ calendarHoverBubbleTextColor: event.target.value })}
+                  className="h-10 w-full rounded-md border border-stone-300"
+                />
+              </label>
 
-            <label className="block space-y-2">
-              <span>字體大小：{settings.fontScale.toFixed(2)}x</span>
-              <input
-                type="range"
-                min={0.9}
-                max={1.25}
-                step={0.05}
-                value={settings.fontScale}
-                onChange={(event) => onSettingChange({ fontScale: Number(event.target.value) })}
-                className="w-full"
-              />
-            </label>
+              <label className="block space-y-2">
+                <span>字體大小：{settings.fontScale.toFixed(2)}x</span>
+                <input
+                  type="range"
+                  min={0.9}
+                  max={1.25}
+                  step={0.05}
+                  value={settings.fontScale}
+                  onChange={(event) => onSettingChange({ fontScale: Number(event.target.value) })}
+                  className="w-full"
+                />
+              </label>
+            </SettingSubgroup>
 
-            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <p className="text-sm text-stone-800">字體替換（整站）</p>
+            <SettingSubgroup
+              title="字體替換（整站）"
+              subtitle="網址或檔案上傳（ttf/otf/woff）"
+              isOpen={openAppearanceGroup === 'font'}
+              onToggle={() => toggleAppearanceGroup('font')}
+            >
               <label className="block space-y-1">
                 <span className="text-xs text-stone-600">字體檔網址（ttf / otf / woff / woff2）</span>
                 <input
@@ -1188,10 +1239,14 @@ export function SettingsPage({
                   還原預設
                 </button>
               </div>
-            </div>
+            </SettingSubgroup>
 
-            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <p className="text-sm text-stone-800">背景樣式</p>
+            <SettingSubgroup
+              title="背景樣式"
+              subtitle="漸層或圖片背景"
+              isOpen={openAppearanceGroup === 'background'}
+              onToggle={() => toggleAppearanceGroup('background')}
+            >
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -1288,10 +1343,14 @@ export function SettingsPage({
                   </label>
                 </div>
               )}
-            </div>
+            </SettingSubgroup>
 
-            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <p className="text-sm text-stone-800">月曆立體外觀</p>
+            <SettingSubgroup
+              title="月曆立體外觀"
+              subtitle="圓角、陰影、深度"
+              isOpen={openAppearanceGroup === 'calendar'}
+              onToggle={() => toggleAppearanceGroup('calendar')}
+            >
               <label className="block space-y-1">
                 <span className="flex items-center justify-between">
                   <span>圓角</span>
@@ -1337,10 +1396,14 @@ export function SettingsPage({
                   className="w-full"
                 />
               </label>
-            </div>
+            </SettingSubgroup>
 
-            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <p className="text-sm text-stone-800">透明小人輪換池</p>
+            <SettingSubgroup
+              title="透明小人輪換池"
+              subtitle="池大小與一鍵輪換"
+              isOpen={openAppearanceGroup === 'chibi'}
+              onToggle={() => toggleAppearanceGroup('chibi')}
+            >
               <p className="text-xs text-stone-500">
                 已上傳 {chibiPoolInfo.allCount} 張，啟用池 {chibiPoolInfo.activeCount} 張。
               </p>
@@ -1376,10 +1439,14 @@ export function SettingsPage({
               <p className="text-xs text-stone-500">
                 支援透明 PNG / WebP / AVIF。可以全部上傳，系統會只抽啟用池避免卡頓。
               </p>
-            </div>
+            </SettingSubgroup>
 
-            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <p className="text-sm text-stone-800">美化設定備份</p>
+            <SettingSubgroup
+              title="美化設定備份"
+              subtitle="匯入 / 匯出外觀 JSON"
+              isOpen={openAppearanceGroup === 'preset'}
+              onToggle={() => toggleAppearanceGroup('preset')}
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
@@ -1405,7 +1472,7 @@ export function SettingsPage({
                 </label>
               </div>
               {appearancePresetStatus && <p className="text-xs text-stone-600">{appearancePresetStatus}</p>}
-            </div>
+            </SettingSubgroup>
           </div>
         </SettingPanel>
 
@@ -2221,125 +2288,131 @@ export function SettingsPage({
               <p className="mt-0.5 truncate text-sm text-stone-800">{chatLogCount} 份</p>
             </div>
 
-            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <p className="text-sm text-stone-800">泡泡外觀</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onSettingChange({ chatBubbleStyle: 'jelly' })}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    settings.chatBubbleStyle === 'jelly'
-                      ? 'border-stone-900 bg-stone-900 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  QQ 果凍
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSettingChange({ chatBubbleStyle: 'imessage' })}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    settings.chatBubbleStyle === 'imessage'
-                      ? 'border-stone-900 bg-stone-900 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  iMessage
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSettingChange({ chatBubbleStyle: 'imessageClassic' })}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    settings.chatBubbleStyle === 'imessageClassic'
-                      ? 'border-stone-900 bg-stone-900 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  iMessage+
-                </button>
+            <SettingSubgroup
+              title="泡泡外觀"
+              subtitle="樣式、圓角、顏色"
+              isOpen={openChatBubbleGroup}
+              onToggle={() => setOpenChatBubbleGroup((current) => !current)}
+            >
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onSettingChange({ chatBubbleStyle: 'jelly' })}
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      settings.chatBubbleStyle === 'jelly'
+                        ? 'border-stone-900 bg-stone-900 text-white'
+                        : 'border-stone-300 bg-white text-stone-700'
+                    }`}
+                  >
+                    QQ 果凍
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSettingChange({ chatBubbleStyle: 'imessage' })}
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      settings.chatBubbleStyle === 'imessage'
+                        ? 'border-stone-900 bg-stone-900 text-white'
+                        : 'border-stone-300 bg-white text-stone-700'
+                    }`}
+                  >
+                    iMessage
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSettingChange({ chatBubbleStyle: 'imessageClassic' })}
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      settings.chatBubbleStyle === 'imessageClassic'
+                        ? 'border-stone-900 bg-stone-900 text-white'
+                        : 'border-stone-300 bg-white text-stone-700'
+                    }`}
+                  >
+                    iMessage+
+                  </button>
+                </div>
+
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>泡泡圓角（只影響對話紀錄）</span>
+                    <span>{settings.chatBubbleRadius}px</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={10}
+                    max={36}
+                    step={1}
+                    value={settings.chatBubbleRadius}
+                    onChange={(e) => onSettingChange({ chatBubbleRadius: Number(e.target.value) })}
+                    className="w-full accent-stone-800"
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">我方底色（右側）</span>
+                    <input
+                      type="color"
+                      value={settings.chatUserBubbleColor}
+                      onChange={(e) => onSettingChange({ chatUserBubbleColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">對方底色（左側）</span>
+                    <input
+                      type="color"
+                      value={settings.chatAiBubbleColor}
+                      onChange={(e) => onSettingChange({ chatAiBubbleColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">我方邊框</span>
+                    <input
+                      type="color"
+                      value={settings.chatUserBubbleBorderColor}
+                      onChange={(e) => onSettingChange({ chatUserBubbleBorderColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">對方邊框</span>
+                    <input
+                      type="color"
+                      value={settings.chatAiBubbleBorderColor}
+                      onChange={(e) => onSettingChange({ chatAiBubbleBorderColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">我方文字</span>
+                    <input
+                      type="color"
+                      value={settings.chatUserBubbleTextColor}
+                      onChange={(e) => onSettingChange({ chatUserBubbleTextColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-stone-600">對方文字</span>
+                    <input
+                      type="color"
+                      value={settings.chatAiBubbleTextColor}
+                      onChange={(e) => onSettingChange({ chatAiBubbleTextColor: e.target.value })}
+                      className="h-10 w-full rounded-md border border-stone-300"
+                    />
+                  </label>
+                </div>
+
+                <p className="text-xs text-stone-500">iMessage / iMessage+ 會自動取消果凍亮面與抖動效果。</p>
               </div>
-
-              <label className="block space-y-1">
-                <span className="flex items-center justify-between text-xs text-stone-600">
-                  <span>泡泡圓角（只影響對話紀錄）</span>
-                  <span>{settings.chatBubbleRadius}px</span>
-                </span>
-                <input
-                  type="range"
-                  min={10}
-                  max={36}
-                  step={1}
-                  value={settings.chatBubbleRadius}
-                  onChange={(e) => onSettingChange({ chatBubbleRadius: Number(e.target.value) })}
-                  className="w-full accent-stone-800"
-                />
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">我方底色（右側）</span>
-                  <input
-                    type="color"
-                    value={settings.chatUserBubbleColor}
-                    onChange={(e) => onSettingChange({ chatUserBubbleColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">對方底色（左側）</span>
-                  <input
-                    type="color"
-                    value={settings.chatAiBubbleColor}
-                    onChange={(e) => onSettingChange({ chatAiBubbleColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">我方邊框</span>
-                  <input
-                    type="color"
-                    value={settings.chatUserBubbleBorderColor}
-                    onChange={(e) => onSettingChange({ chatUserBubbleBorderColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">對方邊框</span>
-                  <input
-                    type="color"
-                    value={settings.chatAiBubbleBorderColor}
-                    onChange={(e) => onSettingChange({ chatAiBubbleBorderColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">我方文字</span>
-                  <input
-                    type="color"
-                    value={settings.chatUserBubbleTextColor}
-                    onChange={(e) => onSettingChange({ chatUserBubbleTextColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs text-stone-600">對方文字</span>
-                  <input
-                    type="color"
-                    value={settings.chatAiBubbleTextColor}
-                    onChange={(e) => onSettingChange({ chatAiBubbleTextColor: e.target.value })}
-                    className="h-10 w-full rounded-md border border-stone-300"
-                  />
-                </label>
-              </div>
-
-              <p className="text-xs text-stone-500">iMessage / iMessage+ 會自動取消果凍亮面與抖動效果。</p>
-            </div>
+            </SettingSubgroup>
 
             <div className="space-y-2">
               <p className="text-xs font-medium text-stone-600">匯入對話紀錄</p>
