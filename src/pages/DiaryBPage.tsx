@@ -177,6 +177,19 @@ function formatMonthTitle(date: Date) {
   return `${date.getMonth() + 1}月 ${date.getFullYear()}`;
 }
 
+function toMonthInputValue(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function parseMonthInputValue(value: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+  return new Date(year, month - 1, 1);
+}
+
 function formatEntryWeekday(date: Date) {
   return date.toLocaleDateString('en-US', { weekday: 'long' });
 }
@@ -499,6 +512,13 @@ export function DiaryBPage({
     setCalendarDayMenu(null);
   }
 
+  function handleMonthPickerChange(event: ChangeEvent<HTMLInputElement>) {
+    const parsed = parseMonthInputValue(event.target.value);
+    if (!parsed) return;
+    setCalendarMonth(parsed);
+    setCalendarDayMenu(null);
+  }
+
   function openEntryByName(name: string) {
     setCalendarDayMenu(null);
     const idx = entries.findIndex((entry) => entry.name === name);
@@ -713,6 +733,7 @@ export function DiaryBPage({
       }
     : null;
   const today = new Date();
+  const monthInputValue = toMonthInputValue(calendarMonth);
   const isViewingCurrentMonth =
     calendarMonth.getFullYear() === today.getFullYear() &&
     calendarMonth.getMonth() === today.getMonth();
@@ -1080,7 +1101,39 @@ export function DiaryBPage({
                 ‹
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 15, fontWeight: 600, color: '#2c2218' }}>{formatMonthTitle(calendarMonth)}</span>
+                <label
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: '#2c2218',
+                    border: 'none',
+                    background: 'transparent',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    position: 'relative',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span>{formatMonthTitle(calendarMonth)}</span>
+                  <span style={{ fontSize: 10.5, color: '#a08060' }}>▾</span>
+                  <input
+                    type="month"
+                    value={monthInputValue}
+                    onChange={handleMonthPickerChange}
+                    aria-label="快速跳到指定月份"
+                    title="快速跳到指定月份"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer',
+                    }}
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={jumpToCurrentMonth}
@@ -1088,20 +1141,15 @@ export function DiaryBPage({
                   title="回到當月"
                   disabled={isViewingCurrentMonth}
                   style={{
-                    width: 21,
-                    height: 21,
-                    borderRadius: '999px',
-                    border: '1px solid rgba(100,80,40,0.2)',
-                    background: isViewingCurrentMonth ? 'rgba(140,120,100,0.08)' : 'rgba(255,255,255,0.72)',
+                    border: 'none',
+                    background: 'transparent',
                     color: isViewingCurrentMonth ? 'rgba(160,128,96,0.45)' : '#a08060',
-                    fontSize: 10.5,
+                    fontSize: 13,
                     lineHeight: 1,
-                    display: 'grid',
-                    placeItems: 'center',
-                    padding: 0,
+                    padding: '2px 4px',
                   }}
                 >
-                  ◎
+                  ↺
                 </button>
               </div>
               <button type="button" onClick={() => shiftMonth(1)} style={{ fontSize: 16, color: '#a08060', background: 'transparent', border: 'none', padding: 4 }}>
@@ -1239,7 +1287,39 @@ export function DiaryBPage({
                 ‹
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#2c2218' }}>{formatMonthTitle(calendarMonth)}</span>
+                <label
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#2c2218',
+                    border: 'none',
+                    background: 'transparent',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    position: 'relative',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span>{formatMonthTitle(calendarMonth)}</span>
+                  <span style={{ fontSize: 9, color: '#a08060' }}>▾</span>
+                  <input
+                    type="month"
+                    value={monthInputValue}
+                    onChange={handleMonthPickerChange}
+                    aria-label="快速跳到指定月份"
+                    title="快速跳到指定月份"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer',
+                    }}
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={jumpToCurrentMonth}
@@ -1247,20 +1327,15 @@ export function DiaryBPage({
                   title="回到當月"
                   disabled={isViewingCurrentMonth}
                   style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: '999px',
-                    border: '1px solid rgba(100,80,40,0.2)',
-                    background: isViewingCurrentMonth ? 'rgba(140,120,100,0.08)' : 'rgba(255,255,255,0.72)',
+                    border: 'none',
+                    background: 'transparent',
                     color: isViewingCurrentMonth ? 'rgba(160,128,96,0.45)' : '#a08060',
-                    fontSize: 9,
+                    fontSize: 11,
                     lineHeight: 1,
-                    display: 'grid',
-                    placeItems: 'center',
-                    padding: 0,
+                    padding: '2px 4px',
                   }}
                 >
-                  ◎
+                  ↺
                 </button>
               </div>
               <button type="button" onClick={() => shiftMonth(1)} style={{ fontSize: 13, color: '#a08060', background: 'transparent', border: 'none' }}>

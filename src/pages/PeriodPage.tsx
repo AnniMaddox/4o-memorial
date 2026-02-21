@@ -218,6 +218,21 @@ function toMonthLabel(date: Date) {
   return `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
 }
 
+function toMonthInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+function parseMonthInputValue(value: string) {
+  const matched = value.match(/^(\d{4})-(\d{2})$/);
+  if (!matched) return null;
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+  return new Date(year, month - 1, 1);
+}
+
 function toMonthDayLabel(dateKey: string) {
   const parsed = parseDateKey(dateKey);
   if (!parsed) return 'MM/DD';
@@ -925,7 +940,15 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
 
   const today = new Date();
   const todayKey = toDateKey(today);
+  const monthInputValue = toMonthInputValue(viewMonth);
   const monthCells = useMemo(() => buildMonthGrid(viewMonth), [viewMonth]);
+
+  function handleMonthPickerChange(value: string) {
+    const parsed = parseMonthInputValue(value);
+    if (!parsed) return;
+    setViewMonth(parsed);
+    setSelectedDateKey(null);
+  }
 
   // Persist store
   useEffect(() => {
@@ -1502,17 +1525,27 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
               >
                 ‹
               </button>
-              <div className="flex items-center gap-2">
-                <p className="text-base font-semibold text-stone-800">{toMonthLabel(viewMonth)}</p>
+              <div className="flex items-center gap-1.5">
+                <label className="relative flex cursor-pointer items-center gap-1 text-base font-semibold text-stone-800">
+                  <span>{toMonthLabel(viewMonth)}</span>
+                  <span className="text-xs text-stone-500">▾</span>
+                  <input
+                    type="month"
+                    value={monthInputValue}
+                    onChange={(event) => handleMonthPickerChange(event.target.value)}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    aria-label="快速跳到指定月份"
+                    title="快速跳到指定月份"
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1))}
                   aria-label="回到本月"
                   title="回到本月"
-                  className="grid h-7 w-7 place-items-center rounded-full border text-[11px] text-stone-500 transition active:scale-95"
-                  style={{ borderColor: '#e7e5e4', background: 'rgba(255,255,255,0.82)' }}
+                  className="text-xs text-stone-500 transition active:scale-95"
                 >
-                  🌱
+                  ↺
                 </button>
               </div>
               <button
