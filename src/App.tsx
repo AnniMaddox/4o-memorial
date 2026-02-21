@@ -39,6 +39,7 @@ import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FA
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import { getBaseChibiPoolInfo, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
 import {
+  exportAboutMBackupPart,
   importAboutMBackupPart,
   exportAboutMeBackupPackage,
   exportAboutMBackupPackage,
@@ -553,6 +554,10 @@ function App() {
     return exportAboutMBackupPackage();
   }, []);
 
+  const handleExportAboutMBackupPart = useCallback(async (part: AboutMPart) => {
+    return exportAboutMBackupPart(part);
+  }, []);
+
   const handleImportAboutMeBackup = useCallback(async (files: File[], mode: BackupImportMode) => {
     return importAboutMeBackupPackage(files, mode);
   }, []);
@@ -1029,6 +1034,7 @@ function App() {
             onClearAllChatLogs={() => void handleClearAllChatLogs()}
             onExportAboutMeBackup={() => handleExportAboutMeBackup()}
             onExportAboutMBackup={() => handleExportAboutMBackup()}
+            onExportAboutMBackupPart={(part) => handleExportAboutMBackupPart(part)}
             onImportAboutMeBackup={(files, mode) => handleImportAboutMeBackup(files, mode)}
             onImportAboutMBackup={(files, mode) => handleImportAboutMBackup(files, mode)}
             onImportAboutMBackupPart={(part, files, mode) => handleImportAboutMBackupPart(part, files, mode)}
@@ -1089,6 +1095,7 @@ function App() {
       handleClearAllDiaries,
       handleExportAboutMeBackup,
       handleExportAboutMBackup,
+      handleExportAboutMBackupPart,
       handleImportAboutMeBackup,
       handleImportAboutMBackup,
       handleImportAboutMBackupPart,

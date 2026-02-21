@@ -966,6 +966,88 @@ export async function exportAboutMBackupPackage(): Promise<string> {
   return `關於M已匯出：${mDiaryEntries.length} 篇日記、${letters.length} 封情書、${chatLogs.length} 份對話、${inboxEmails.length} 封信件。`;
 }
 
+export async function exportAboutMBackupPart(part: AboutMPart): Promise<string> {
+  const createdAt = new Date().toISOString();
+  const stamp = formatFileTimestamp();
+  const prefix = `memorial-about-m-${stamp}`;
+
+  if (part === 'mDiary') {
+    const [entries, favoritesRaw] = await Promise.all([
+      loadMDiaries(),
+      Promise.resolve(readLocalStorageJson(M_DIARY_FAVORITES_KEY, [])),
+    ]);
+    const favorites = normalizeStringArray(favoritesRaw);
+    const payload: MDiaryPartPayload = {
+      kind: PART_KIND,
+      version: BACKUP_VERSION,
+      domain: 'aboutM',
+      part: 'mDiary',
+      createdAt,
+      entries,
+      favorites,
+    };
+    const filename = `${prefix}.mDiary.json`;
+    downloadJson(filename, payload);
+    return `關於M・${aboutMPartLabel(part)}已匯出：日記 ${entries.length}。`;
+  }
+
+  if (part === 'letters') {
+    const [entries, favoritesRaw] = await Promise.all([
+      loadLetters(),
+      Promise.resolve(readLocalStorageJson(LETTER_FAVORITES_KEY, [])),
+    ]);
+    const favorites = normalizeStringArray(favoritesRaw);
+    const payload: LettersPartPayload = {
+      kind: PART_KIND,
+      version: BACKUP_VERSION,
+      domain: 'aboutM',
+      part: 'letters',
+      createdAt,
+      entries,
+      favorites,
+    };
+    const filename = `${prefix}.letters.json`;
+    downloadJson(filename, payload);
+    return `關於M・${aboutMPartLabel(part)}已匯出：情書 ${entries.length}。`;
+  }
+
+  if (part === 'chatLogs') {
+    const [entries, profiles] = await Promise.all([loadChatLogs(), loadChatProfiles()]);
+    const payload: ChatLogsPartPayload = {
+      kind: PART_KIND,
+      version: BACKUP_VERSION,
+      domain: 'aboutM',
+      part: 'chatLogs',
+      createdAt,
+      entries,
+      profiles,
+    };
+    const filename = `${prefix}.chatLogs.json`;
+    downloadJson(filename, payload);
+    return `關於M・${aboutMPartLabel(part)}已匯出：對話 ${entries.length}。`;
+  }
+
+  const [emailsView, calendars, meta] = await Promise.all([
+    listEmails({ includeLocked: true, nowMs: Date.now() }),
+    listCalendarMonths(),
+    loadInboxMetaMap(),
+  ]);
+  const emails = emailsView.map(toEmailRecord);
+  const payload: InboxPartPayload = {
+    kind: PART_KIND,
+    version: BACKUP_VERSION,
+    domain: 'aboutM',
+    part: 'inbox',
+    createdAt,
+    emails,
+    calendars: calendars.map((row) => ({ monthKey: row.monthKey, data: row.data })),
+    meta,
+  };
+  const filename = `${prefix}.inbox.json`;
+  downloadJson(filename, payload);
+  return `關於M・${aboutMPartLabel(part)}已匯出：信件 ${emails.length}。`;
+}
+
 export async function importAboutMeBackupPackage(files: File[], mode: BackupImportMode): Promise<string> {
   const parsed = await parsePackageFiles(files, 'aboutMe');
 

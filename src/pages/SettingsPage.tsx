@@ -39,6 +39,7 @@ type SettingsPageProps = {
   onClearAllChatLogs: () => void;
   onExportAboutMeBackup: () => Promise<string> | string;
   onExportAboutMBackup: () => Promise<string> | string;
+  onExportAboutMBackupPart: (part: 'mDiary' | 'letters' | 'chatLogs' | 'inbox') => Promise<string> | string;
   onImportAboutMeBackup: (files: File[], mode: 'merge' | 'overwrite') => Promise<string> | string;
   onImportAboutMBackup: (files: File[], mode: 'merge' | 'overwrite') => Promise<string> | string;
   onImportAboutMBackupPart: (
@@ -237,6 +238,7 @@ export function SettingsPage({
   onClearAllChatLogs,
   onExportAboutMeBackup,
   onExportAboutMBackup,
+  onExportAboutMBackupPart,
   onImportAboutMeBackup,
   onImportAboutMBackup,
   onImportAboutMBackupPart,
@@ -979,7 +981,7 @@ export function SettingsPage({
                   </div>
 
                   <div className="space-y-2 rounded-lg border border-stone-200 bg-white px-2.5 py-2.5">
-                    <p className="text-xs text-stone-500">分包匯入（適合大檔案分批）</p>
+                    <p className="text-xs text-stone-500">分包匯出 / 匯入（適合大檔案分批）</p>
                     <div className="space-y-2">
                       {ABOUT_M_PART_FIELDS.map((field) => (
                         <div key={field.key} className="rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-2">
@@ -987,7 +989,19 @@ export function SettingsPage({
                             <p className="text-xs text-stone-700">{field.label}</p>
                             <p className="text-[11px] text-stone-400">{field.hint}</p>
                           </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div className="mt-2 grid grid-cols-3 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void runBackupAction('aboutM', `關於M・${field.label}匯出中…`, () =>
+                                  onExportAboutMBackupPart(field.key),
+                                );
+                              }}
+                              disabled={backupBusy !== null}
+                              className="rounded-md border border-stone-300 bg-white px-2 py-1.5 text-center text-[11px] text-stone-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              匯出
+                            </button>
                             <label className="cursor-pointer rounded-md border border-stone-300 bg-white px-2 py-1.5 text-center text-[11px] text-stone-700">
                               合併
                               <input
@@ -1037,7 +1051,7 @@ export function SettingsPage({
 
             <div className="space-y-1 text-xs text-stone-500">
               <p>完整匯入請一次選同一包的全部 JSON（包含 manifest 索引檔）。</p>
-              <p>分包匯入可單獨挑 mDiary / letters / chatLogs / inbox 的 JSON。</p>
+              <p>分包匯出/匯入可單獨處理 mDiary / letters / chatLogs / inbox。</p>
             </div>
           </div>
         </SettingPanel>
