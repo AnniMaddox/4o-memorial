@@ -523,19 +523,62 @@
   --wl-bday-top-bg: rgba(160, 130, 60, 0.05);
   --wl-bday-year: #a07830;
   border: 0;
-  background: var(--wl-bday-bg);
+  background: transparent;
   border-radius: 13px;
-  border: 1px solid var(--wl-bday-border);
-  box-shadow: 0 3px 14px rgba(40, 30, 10, 0.08);
-  overflow: hidden;
+  overflow: visible;
   position: relative;
+  perspective: 1200px;
+  min-height: 198px;
   text-align: left;
-  transition: transform 0.14s ease, box-shadow 0.18s ease;
+  transition: transform 0.16s ease;
 }
 
 .wl-bday-card:active {
-  transform: translateY(1px) scale(0.985);
-  box-shadow: 0 2px 8px rgba(40, 30, 10, 0.12);
+  transform: scale(0.988);
+}
+
+.wl-bday-inner {
+  position: relative;
+  width: 100%;
+  min-height: 198px;
+  border-radius: 13px;
+  transform-style: preserve-3d;
+  transition: transform 0.48s ease;
+}
+
+.wl-bday-card.is-open .wl-bday-inner {
+  transform: rotateY(180deg);
+}
+
+.wl-bday-card.is-focus .wl-bday-inner {
+  box-shadow: 0 0 0 2px rgba(160, 130, 60, 0.22);
+}
+
+.wl-bday-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 13px;
+  border: 1px solid var(--wl-bday-border);
+  background: var(--wl-bday-bg);
+  box-shadow: 0 3px 14px rgba(40, 30, 10, 0.08);
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.wl-bday-front {
+  transform: rotateY(0deg);
+}
+
+.wl-bday-back {
+  transform: rotateY(180deg);
+}
+
+.wl-bday-body-back {
+  min-height: 112px;
+  max-height: 126px;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .wl-bday-top {
@@ -561,6 +604,30 @@
 
 .wl-bday-body {
   padding: 9px 11px 12px;
+}
+
+.wl-bday-front-count {
+  margin: 0 0 6px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(160, 130, 60, 0.62);
+}
+
+.wl-bday-front-summary {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #2c2010;
+  font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.wl-bday-front-hint {
+  margin: 8px 0 0;
+  font-size: 9px;
+  color: rgba(160, 130, 60, 0.42);
+  letter-spacing: 0.05em;
 }
 
 .wl-bday-text {
@@ -591,6 +658,68 @@
   right: 9px;
   font-size: 11px;
   color: rgba(160, 80, 80, 0.55);
+}
+
+.wl-bday-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: space-between;
+  border-top: 1px solid rgba(160, 130, 60, 0.1);
+  padding: 8px 10px 9px;
+}
+
+.wl-bday-heart {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(160, 40, 40, 0.2);
+  background: rgba(160, 40, 40, 0.08);
+  color: rgba(160, 40, 40, 0.35);
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.wl-bday-heart.done {
+  color: #a03030;
+  background: rgba(160, 40, 40, 0.12);
+  border-color: rgba(160, 40, 40, 0.3);
+}
+
+.wl-bday-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wl-bday-nav-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(160, 130, 60, 0.2);
+  background: rgba(160, 130, 60, 0.09);
+  color: rgba(120, 90, 30, 0.72);
+  font-size: 14px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.wl-bday-nav-count {
+  min-width: 34px;
+  text-align: center;
+  font-size: 10px;
+  color: rgba(160, 130, 60, 0.58);
+}
+
+.wl-bday-link {
+  border-radius: 999px;
+  border: 1px solid rgba(160, 130, 60, 0.25);
+  background: rgba(160, 130, 60, 0.08);
+  color: #86632a;
+  font-size: 10px;
+  padding: 4px 8px;
 }
 
 .wl-bday-c1 {

@@ -5,6 +5,7 @@ import type { AppLabels, TabIconUrls } from '../types/settings';
 type LauncherAppId =
   | 'tarot'
   | 'letters'
+  | 'lettersAB'
   | 'heart'
   | 'chat'
   | 'list'
@@ -373,6 +374,12 @@ export function HomePage({
       icon: '🏠',
       launch: 'soulmate',
     };
+    const annualLettersSlot: HomeAppSlot = {
+      id: 'letters-ab',
+      label: '年度信件',
+      icon: '📜',
+      launch: 'lettersAB',
+    };
     const placeholder = (id: string): HomeAppSlot => ({
       id,
       label: '',
@@ -427,7 +434,7 @@ export function HomePage({
             periodSlot,
             notesSlot,
             diaryBSlot,
-            placeholder('placeholder-secondary-2'),
+            annualLettersSlot,
             placeholder('placeholder-secondary-3'),
           ],
         },

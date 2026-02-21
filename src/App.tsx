@@ -55,6 +55,7 @@ import SoulmateHousePage from './pages/SoulmateHousePage';
 import { HeartWallPage } from './pages/HeartWallPage';
 import { ListPage } from './pages/ListPage';
 import { WishlistPage } from './pages/WishlistPage';
+import { LettersABPage } from './pages/LettersABPage';
 import { FitnessPage } from './pages/FitnessPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
@@ -72,6 +73,7 @@ type LauncherAppId =
   | 'checkin'
   | 'tarot'
   | 'letters'
+  | 'lettersAB'
   | 'heart'
   | 'chat'
   | 'list'
@@ -215,6 +217,8 @@ function summarizeImport(
 function App() {
   const [activeTab, setActiveTab] = useState(0);
   const [launcherApp, setLauncherApp] = useState<LauncherAppId | null>(null);
+  const [wishlistInitialYear, setWishlistInitialYear] = useState<string | null>(null);
+  const [lettersAbInitialYear, setLettersAbInitialYear] = useState<number | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -947,7 +951,24 @@ function App() {
   );
 
   const onLaunchApp = useCallback((appId: LauncherAppId) => {
+    if (appId !== 'wishlist') {
+      setWishlistInitialYear(null);
+    }
+    if (appId !== 'lettersAB') {
+      setLettersAbInitialYear(null);
+    }
     setLauncherApp(appId);
+  }, []);
+
+  const openWishlistByYear = useCallback((year: string) => {
+    setWishlistInitialYear(year);
+    setLauncherApp('wishlist');
+  }, []);
+
+  const openLettersAbByYear = useCallback((year: string) => {
+    const parsed = Number.parseInt(year, 10);
+    setLettersAbInitialYear(Number.isFinite(parsed) ? parsed : null);
+    setLauncherApp('lettersAB');
   }, []);
 
   const pages = useMemo(
@@ -1319,7 +1340,25 @@ function App() {
           {launcherApp === 'wishlist' && (
             <div className="fixed inset-0 z-30" style={{ background: '#f7f2e2' }}>
               <div className="mx-auto h-full w-full max-w-xl">
-                <WishlistPage onExit={() => setLauncherApp(null)} letterFontFamily={letterFontFamily} />
+                <WishlistPage
+                  onExit={() => setLauncherApp(null)}
+                  letterFontFamily={letterFontFamily}
+                  initialTab={wishlistInitialYear ? 'birthday' : 'cards'}
+                  initialBirthdayYear={wishlistInitialYear}
+                  onOpenLettersYear={openLettersAbByYear}
+                />
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'lettersAB' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#ece5de' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <LettersABPage
+                  onExit={() => setLauncherApp(null)}
+                  initialYear={lettersAbInitialYear}
+                  onOpenBirthdayYear={openWishlistByYear}
+                />
               </div>
             </div>
           )}

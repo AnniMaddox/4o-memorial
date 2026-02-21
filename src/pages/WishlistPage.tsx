@@ -9,6 +9,7 @@ import {
   toggleBirthdayTaskDone,
   toggleWishDone,
   updateWishlistPrefs,
+  type BirthdayTask,
   type BirthdaySeedItem,
   type WishSeedItem,
   type WishlistSnapshot,
@@ -23,6 +24,16 @@ type FilterId = 'all' | 'done';
 type WishlistPageProps = {
   onExit: () => void;
   letterFontFamily?: string;
+  initialTab?: TabId;
+  initialBirthdayYear?: string | null;
+  onOpenLettersYear?: (year: string) => void;
+};
+
+type BirthdayYearGroup = {
+  year: string;
+  tasks: BirthdayTask[];
+  order: number;
+  doneCount: number;
 };
 
 const BASE = import.meta.env.BASE_URL as string;
@@ -80,6 +91,41 @@ function formatDoneDate(timestamp: number | null) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}/${m}/${d}`;
+}
+
+function parseYearValue(raw: string) {
+  const matched = String(raw ?? '').match(/\d{4}/);
+  if (!matched) return Number.NaN;
+  return Number(matched[0]);
+}
+
+function buildBirthdayGroups(tasks: BirthdayTask[]) {
+  const byYear = new Map<string, BirthdayTask[]>();
+  for (const task of tasks) {
+    const key = task.year.trim();
+    if (!key) continue;
+    const current = byYear.get(key) ?? [];
+    current.push(task);
+    byYear.set(key, current);
+  }
+
+  const groups: BirthdayYearGroup[] = [];
+  for (const [year, items] of byYear.entries()) {
+    const sorted = [...items].sort((a, b) => a.order - b.order);
+    groups.push({
+      year,
+      tasks: sorted,
+      order: sorted[0]?.order ?? 0,
+      doneCount: sorted.filter((item) => Boolean(item.doneAt)).length,
+    });
+  }
+
+  groups.sort((a, b) => {
+    const yearDiff = parseYearValue(a.year) - parseYearValue(b.year);
+    if (Number.isFinite(yearDiff) && yearDiff !== 0) return yearDiff;
+    return a.order - b.order;
+  });
+  return groups;
 }
 
 function normalizeLine(line: string) {
@@ -263,8 +309,14 @@ function downloadJson(filename: string, payload: unknown) {
   URL.revokeObjectURL(href);
 }
 
-export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('cards');
+export function WishlistPage({
+  onExit,
+  letterFontFamily = '',
+  initialTab = 'cards',
+  initialBirthdayYear = null,
+  onOpenLettersYear,
+}: WishlistPageProps) {
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [listFilter, setListFilter] = useState<FilterId>('all');
   const [birthdayFilter, setBirthdayFilter] = useState<FilterId>('all');
   const [snapshot, setSnapshot] = useState<WishlistSnapshot | null>(null);
@@ -274,7 +326,11 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [chibiSrc] = useState(pickRandomChibi);
+  const [birthdayOpenedYears, setBirthdayOpenedYears] = useState<Record<string, boolean>>({});
+  const [birthdayTaskCursor, setBirthdayTaskCursor] = useState<Record<string, number>>({});
+  const [birthdayFocusYear, setBirthdayFocusYear] = useState<string | null>(null);
   const tabSwipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
+  const initialYearAppliedRef = useRef<string | null>(null);
 
   const wishes = snapshot?.wishes ?? [];
   const birthdayTasks = snapshot?.birthdayTasks ?? [];
@@ -291,10 +347,13 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
     [wishes, listFilter],
   );
 
-  const filteredBirthdayTasks = useMemo(
-    () => birthdayTasks.filter((item) => (birthdayFilter === 'done' ? Boolean(item.doneAt) : true)),
-    [birthdayTasks, birthdayFilter],
-  );
+  const birthdayGroups = useMemo(() => buildBirthdayGroups(birthdayTasks), [birthdayTasks]);
+  const filteredBirthdayGroups = useMemo(() => {
+    if (birthdayFilter === 'done') {
+      return birthdayGroups.filter((group) => group.doneCount > 0);
+    }
+    return birthdayGroups;
+  }, [birthdayGroups, birthdayFilter]);
 
   useEffect(() => {
     let active = true;
@@ -352,6 +411,42 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
       setCurrentWishId(pickNextWish(wishes, null));
     }
   }, [wishes, currentWishId]);
+
+  useEffect(() => {
+    if (!snapshot) return;
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, snapshot]);
+
+  useEffect(() => {
+    if (!birthdayGroups.length || !initialBirthdayYear) return;
+    if (initialYearAppliedRef.current === initialBirthdayYear) return;
+    const target = birthdayGroups.find((group) => group.year === initialBirthdayYear);
+    if (!target) return;
+    setActiveTab('birthday');
+    setBirthdayFocusYear(target.year);
+    setBirthdayOpenedYears((prev) => ({ ...prev, [target.year]: true }));
+    setBirthdayTaskCursor((prev) => ({ ...prev, [target.year]: 0 }));
+    initialYearAppliedRef.current = initialBirthdayYear;
+  }, [initialBirthdayYear, birthdayGroups]);
+
+  useEffect(() => {
+    if (!birthdayGroups.length) return;
+    setBirthdayTaskCursor((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const group of birthdayGroups) {
+        const current = next[group.year] ?? 0;
+        const safe = Math.min(Math.max(current, 0), Math.max(0, group.tasks.length - 1));
+        if (safe !== current) {
+          next[group.year] = safe;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [birthdayGroups]);
 
   const updateSnapshot = (next: WishlistSnapshot, nextStatus = '') => {
     setSnapshot(next);
@@ -461,6 +556,23 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
     setOverlayWishId(null);
     setShowSettings(false);
   };
+
+  function toggleBirthdayCard(year: string) {
+    setBirthdayOpenedYears((prev) => ({ ...prev, [year]: !prev[year] }));
+    setBirthdayFocusYear(year);
+  }
+
+  function shiftBirthdayTask(year: string, delta: number, total: number) {
+    if (total <= 1) return;
+    setBirthdayTaskCursor((prev) => {
+      const current = prev[year] ?? 0;
+      const next = (current + delta + total) % total;
+      return {
+        ...prev,
+        [year]: next,
+      };
+    });
+  }
 
   function shouldIgnoreTabSwipe(target: EventTarget | null) {
     return target instanceof HTMLElement && Boolean(target.closest('[data-wishlist-no-tab-swipe="true"]'));
@@ -695,30 +807,113 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
           </div>
 
           <div className="wl-bday-grid">
-            {!filteredBirthdayTasks.length ? (
+            {!filteredBirthdayGroups.length ? (
               <div className="wl-empty" style={{ gridColumn: '1 / -1' }}>
                 這個篩選目前沒有內容
               </div>
             ) : (
-              filteredBirthdayTasks.map((task) => {
-                const toneClass = BDAY_TONE_CLASSES[Math.abs(task.order % BDAY_TONE_CLASSES.length)]!;
+              filteredBirthdayGroups.map((group) => {
+                const toneClass = BDAY_TONE_CLASSES[Math.abs(group.order % BDAY_TONE_CLASSES.length)]!;
+                const taskCount = group.tasks.length;
+                const activeTaskIndex = Math.min(birthdayTaskCursor[group.year] ?? 0, Math.max(0, taskCount - 1));
+                const activeTask = group.tasks[activeTaskIndex] ?? group.tasks[0] ?? null;
+                const cardOpened = Boolean(birthdayOpenedYears[group.year]);
+                const cardFocused = birthdayFocusYear === group.year;
+                const summary = normalizeParagraph(activeTask?.text ?? '').split('\n')[0] ?? '';
+                const hasMultiple = taskCount > 1;
                 return (
-                <button
-                  key={task.id}
-                  type="button"
-                  className={`wl-bday-card ${toneClass} ${task.doneAt ? 'done' : ''}`}
-                  onClick={() => handleToggleBirthdayDone(task.id)}
-                >
-                  <div className="wl-bday-top">
-                    <span className="wl-bday-year">{task.year}</span>
-                    <span className="wl-bday-icon">🎂</span>
+                  <div
+                    key={group.year}
+                    className={`wl-bday-card ${toneClass} ${cardOpened ? 'is-open' : ''} ${cardFocused ? 'is-focus' : ''}`}
+                    onClick={() => toggleBirthdayCard(group.year)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleBirthdayCard(group.year);
+                      }
+                    }}
+                  >
+                    <div className="wl-bday-inner">
+                      <div className="wl-bday-face wl-bday-front">
+                        <div className="wl-bday-top">
+                          <span className="wl-bday-year">{group.year}</span>
+                          <span className="wl-bday-icon">🎂</span>
+                        </div>
+                        <div className="wl-bday-body">
+                          <p className="wl-bday-front-count">任務 {taskCount} 張</p>
+                          <p className="wl-bday-front-summary">{summary || '點一下翻到背面'}</p>
+                          <p className="wl-bday-front-hint">點卡片翻面</p>
+                        </div>
+                        {group.doneCount ? <span className="wl-bday-done-mark">♥ {group.doneCount}</span> : null}
+                      </div>
+
+                      <div className="wl-bday-face wl-bday-back">
+                        <div className="wl-bday-top">
+                          <span className="wl-bday-year">{group.year}</span>
+                          <span className="wl-bday-icon">📖</span>
+                        </div>
+                        <div className="wl-bday-body wl-bday-body-back">
+                          <p className="wl-bday-text">{activeTask?.text ?? '（沒有內容）'}</p>
+                          {activeTask?.doneAt ? <p className="wl-bday-date">完成於 {formatDoneDate(activeTask.doneAt)}</p> : null}
+                        </div>
+                        <div className="wl-bday-actions">
+                          <button
+                            type="button"
+                            className={`wl-bday-heart ${activeTask?.doneAt ? 'done' : ''}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (activeTask) handleToggleBirthdayDone(activeTask.id);
+                            }}
+                          >
+                            {activeTask?.doneAt ? '♥' : '♡'}
+                          </button>
+                          {hasMultiple ? (
+                            <div className="wl-bday-nav">
+                              <button
+                                type="button"
+                                className="wl-bday-nav-btn"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  shiftBirthdayTask(group.year, -1, taskCount);
+                                }}
+                              >
+                                ‹
+                              </button>
+                              <span className="wl-bday-nav-count">
+                                {activeTaskIndex + 1}/{taskCount}
+                              </span>
+                              <button
+                                type="button"
+                                className="wl-bday-nav-btn"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  shiftBirthdayTask(group.year, 1, taskCount);
+                                }}
+                              >
+                                ›
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="wl-bday-nav-count">1/1</span>
+                          )}
+                          {onOpenLettersYear ? (
+                            <button
+                              type="button"
+                              className="wl-bday-link"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onOpenLettersYear(group.year);
+                              }}
+                            >
+                              年度信件
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="wl-bday-body">
-                    <p className="wl-bday-text">{task.text}</p>
-                    {task.doneAt ? <p className="wl-bday-date">完成於 {formatDoneDate(task.doneAt)}</p> : null}
-                  </div>
-                  {task.doneAt ? <span className="wl-bday-done-mark">♥</span> : null}
-                </button>
                 );
               })
             )}
