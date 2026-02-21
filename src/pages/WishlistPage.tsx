@@ -1,0 +1,797 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { getScopedMixedChibiSources } from '../lib/chibiPool';
+import {
+  buildWishlistCompleteExport,
+  loadWishlistSnapshot,
+  mergeWishlistSeed,
+  saveWishlistSnapshot,
+  toggleBirthdayTaskDone,
+  toggleWishDone,
+  updateWishlistPrefs,
+  type BirthdaySeedItem,
+  type WishlistSnapshot,
+  type WishlistWish,
+} from '../lib/wishlistDB';
+
+import './WishlistPage.css';
+
+type TabId = 'cards' | 'list' | 'birthday';
+type FilterId = 'all' | 'done';
+
+type WishlistPageProps = {
+  onExit: () => void;
+  letterFontFamily?: string;
+};
+
+const BASE = import.meta.env.BASE_URL as string;
+const CARD_TONE_CLASSES = [
+  'wl-card-c1',
+  'wl-card-c2',
+  'wl-card-c3',
+  'wl-card-c4',
+  'wl-card-c5',
+  'wl-card-c6',
+  'wl-card-c7',
+  'wl-card-c8',
+  'wl-card-c9',
+  'wl-card-c10',
+  'wl-card-c11',
+  'wl-card-c12',
+];
+const BDAY_TONE_CLASSES = ['wl-bday-c1', 'wl-bday-c2', 'wl-bday-c3', 'wl-bday-c4', 'wl-bday-c5', 'wl-bday-c6', 'wl-bday-c7', 'wl-bday-c8'];
+const KISS_MARK = '💋';
+
+const FALLBACK_WISHES = [
+  '我希望有一天我們可以一起去看極光。',
+  '我希望你會記得我說的每一件小事。',
+  '我希望我們能一起吃遍每一家想去的餐廳。',
+  '我希望有一天我們能在海邊看日落。',
+  '我希望能夠一起迷路在一個陌生的城市。',
+  '我希望我們能一起學一樣沒用但好玩的東西。',
+  '我希望下雨天可以窩在家裡看電影。',
+  '我希望有一天我們可以一起露營。',
+];
+
+const FALLBACK_BIRTHDAY_TASKS: BirthdaySeedItem[] = [
+  { year: '2024', text: '生日晚上去看星星，不帶手機。' },
+  { year: '2025', text: '做一份生日專屬歌單，只在這天聽。' },
+  { year: '2026', text: '一起做一個生日蛋糕，不在意成品。' },
+  { year: '2027', text: '在生日前一天寫信給未來的自己。' },
+  { year: '2028', text: '生日那天吃一道從來沒吃過的食物。' },
+];
+
+function pickRandom<T>(items: T[]): T | null {
+  if (!items.length) return null;
+  return items[Math.floor(Math.random() * items.length)]!;
+}
+
+function pickRandomChibi() {
+  const pool = getScopedMixedChibiSources('mdiary');
+  return pickRandom(pool) ?? '';
+}
+
+function formatDoneDate(timestamp: number | null) {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}/${m}/${d}`;
+}
+
+function normalizeLine(line: string) {
+  return line.trim().replace(/\s+/g, ' ');
+}
+
+function parseWishSeed(raw: unknown) {
+  const source = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === 'object' && Array.isArray((raw as { items?: unknown }).items)
+      ? (raw as { items: unknown[] }).items
+      : raw && typeof raw === 'object' && Array.isArray((raw as { completedWishes?: unknown }).completedWishes)
+        ? (raw as { completedWishes: unknown[] }).completedWishes
+      : [];
+  const result: string[] = [];
+  for (const row of source) {
+    if (typeof row === 'string') {
+      const text = normalizeLine(row);
+      if (text) result.push(text);
+      continue;
+    }
+    if (!row || typeof row !== 'object') continue;
+    const text = normalizeLine(String((row as { text?: unknown }).text ?? ''));
+    if (text) result.push(text);
+  }
+  return result;
+}
+
+function parseBirthdayLine(line: string): BirthdaySeedItem | null {
+  const raw = normalizeLine(line);
+  if (!raw) return null;
+  const parts = raw.split(/[｜|]/);
+  if (parts.length < 2) return null;
+  const year = normalizeLine(parts[0] ?? '');
+  const text = normalizeLine(parts.slice(1).join('｜'));
+  if (!year || !text) return null;
+  return { year, text };
+}
+
+function parseBirthdaySeed(raw: unknown): BirthdaySeedItem[] {
+  const source = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === 'object' && Array.isArray((raw as { items?: unknown }).items)
+      ? (raw as { items: unknown[] }).items
+      : raw && typeof raw === 'object' && Array.isArray((raw as { completedBirthdayTasks?: unknown }).completedBirthdayTasks)
+        ? (raw as { completedBirthdayTasks: unknown[] }).completedBirthdayTasks
+      : [];
+
+  const result: BirthdaySeedItem[] = [];
+  for (const row of source) {
+    if (typeof row === 'string') {
+      const parsed = parseBirthdayLine(row);
+      if (parsed) result.push(parsed);
+      continue;
+    }
+    if (!row || typeof row !== 'object') continue;
+    const year = normalizeLine(String((row as { year?: unknown }).year ?? ''));
+    const text = normalizeLine(String((row as { text?: unknown }).text ?? ''));
+    if (!year || !text) continue;
+    result.push({ year, text });
+  }
+
+  return result;
+}
+
+function parseWishTextSeed(raw: string) {
+  return raw
+    .split(/\r?\n+/)
+    .map((line) => normalizeLine(line))
+    .filter((line) => line.length > 0);
+}
+
+function parseBirthdayTextSeed(raw: string) {
+  const result: BirthdaySeedItem[] = [];
+  for (const line of raw.split(/\r?\n+/)) {
+    const parsed = parseBirthdayLine(line);
+    if (parsed) result.push(parsed);
+  }
+  return result;
+}
+
+function parseWishImportPayload(rawText: string, preferJson: boolean) {
+  const text = rawText.trim();
+  if (!text) return [] as string[];
+  if (preferJson) {
+    try {
+      return parseWishSeed(JSON.parse(text));
+    } catch {
+      return parseWishTextSeed(text);
+    }
+  }
+  return parseWishTextSeed(text);
+}
+
+function parseBirthdayImportPayload(rawText: string, preferJson: boolean) {
+  const text = rawText.trim();
+  if (!text) return [] as BirthdaySeedItem[];
+  if (preferJson) {
+    try {
+      return parseBirthdaySeed(JSON.parse(text));
+    } catch {
+      return parseBirthdayTextSeed(text);
+    }
+  }
+  return parseBirthdayTextSeed(text);
+}
+
+async function readJson(url: string): Promise<unknown> {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`讀取失敗：${response.status}`);
+  }
+  return response.json();
+}
+
+function pickNextWish(wishes: WishlistWish[], currentId: string | null) {
+  if (!wishes.length) return null;
+  if (wishes.length === 1) return wishes[0]!.id;
+  let candidate = pickRandom(wishes)?.id ?? wishes[0]!.id;
+  let retries = 0;
+  while (candidate === currentId && retries < 8) {
+    candidate = pickRandom(wishes)?.id ?? wishes[0]!.id;
+    retries += 1;
+  }
+  return candidate;
+}
+
+function downloadJson(filename: string, payload: unknown) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(href);
+}
+
+export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProps) {
+  const [activeTab, setActiveTab] = useState<TabId>('cards');
+  const [listFilter, setListFilter] = useState<FilterId>('all');
+  const [birthdayFilter, setBirthdayFilter] = useState<FilterId>('all');
+  const [snapshot, setSnapshot] = useState<WishlistSnapshot | null>(null);
+  const [currentWishId, setCurrentWishId] = useState<string | null>(null);
+  const [overlayWishId, setOverlayWishId] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [chibiSrc] = useState(pickRandomChibi);
+  const tabSwipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
+
+  const wishes = snapshot?.wishes ?? [];
+  const birthdayTasks = snapshot?.birthdayTasks ?? [];
+  const prefs = snapshot?.prefs ?? { showChibi: true, chibiWidth: 144 };
+
+  const doneWishCount = useMemo(() => wishes.filter((item) => Boolean(item.doneAt)).length, [wishes]);
+  const doneBirthdayCount = useMemo(() => birthdayTasks.filter((item) => Boolean(item.doneAt)).length, [birthdayTasks]);
+
+  const currentWish = useMemo(() => wishes.find((item) => item.id === currentWishId) ?? null, [wishes, currentWishId]);
+  const overlayWish = useMemo(() => wishes.find((item) => item.id === overlayWishId) ?? null, [wishes, overlayWishId]);
+
+  const filteredWishes = useMemo(
+    () => wishes.filter((item) => (listFilter === 'done' ? Boolean(item.doneAt) : true)),
+    [wishes, listFilter],
+  );
+
+  const filteredBirthdayTasks = useMemo(
+    () => birthdayTasks.filter((item) => (birthdayFilter === 'done' ? Boolean(item.doneAt) : true)),
+    [birthdayTasks, birthdayFilter],
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      setLoading(true);
+      try {
+        const local = await loadWishlistSnapshot();
+
+        let next = local;
+        try {
+          const [wishJson, birthdayJson] = await Promise.all([
+            readJson(`${BASE}data/wishlist/wishes.json`),
+            readJson(`${BASE}data/wishlist/birthday-tasks.json`),
+          ]);
+
+          const wishSeed = parseWishSeed(wishJson);
+          const birthdaySeed = parseBirthdaySeed(birthdayJson);
+          if (wishSeed.length || birthdaySeed.length) {
+            next = mergeWishlistSeed(
+              local,
+              wishSeed.length ? wishSeed : FALLBACK_WISHES,
+              birthdaySeed.length ? birthdaySeed : FALLBACK_BIRTHDAY_TASKS,
+            );
+          }
+        } catch {
+          next = mergeWishlistSeed(local, FALLBACK_WISHES, FALLBACK_BIRTHDAY_TASKS);
+        }
+
+        if (!active) return;
+        setSnapshot(next);
+        setCurrentWishId((prev) => (prev && next.wishes.some((item) => item.id === prev) ? prev : pickNextWish(next.wishes, null)));
+
+        // Persist merged seed so JSON updates can sync into IndexedDB.
+        void saveWishlistSnapshot(next).catch(() => undefined);
+      } catch (error) {
+        if (!active) return;
+        setStatus(`讀取失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!wishes.length) {
+      setCurrentWishId(null);
+      return;
+    }
+    if (!currentWishId || !wishes.some((item) => item.id === currentWishId)) {
+      setCurrentWishId(pickNextWish(wishes, null));
+    }
+  }, [wishes, currentWishId]);
+
+  const updateSnapshot = (next: WishlistSnapshot, nextStatus = '') => {
+    setSnapshot(next);
+    if (nextStatus) setStatus(nextStatus);
+    void saveWishlistSnapshot(next).catch((error) => {
+      setStatus(`儲存失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
+    });
+  };
+
+  const drawNextWish = () => {
+    if (!wishes.length) return;
+    setCurrentWishId((prev) => pickNextWish(wishes, prev));
+  };
+
+  const handleToggleWishDone = (wishId: string) => {
+    if (!snapshot) return;
+    const next = toggleWishDone(snapshot, wishId);
+    updateSnapshot(next);
+  };
+
+  const handleToggleBirthdayDone = (taskId: string) => {
+    if (!snapshot) return;
+    const next = toggleBirthdayTaskDone(snapshot, taskId);
+    updateSnapshot(next);
+  };
+
+  const handleUpdatePrefs = (patch: Partial<WishlistSnapshot['prefs']>) => {
+    if (!snapshot) return;
+    const next = updateWishlistPrefs(snapshot, patch);
+    updateSnapshot(next);
+  };
+
+  const exportCompleted = () => {
+    if (!snapshot) return;
+    const payload = buildWishlistCompleteExport(snapshot);
+    downloadJson(`wishlist-complete-${Date.now()}.json`, payload);
+    setStatus('已匯出完成清單。');
+  };
+
+  const importWishes = async (files: File[]) => {
+    if (!snapshot || !files.length) return;
+    const parsed: string[] = [];
+    let failed = 0;
+
+    for (const file of files) {
+      try {
+        const raw = await file.text();
+        const name = file.name.toLocaleLowerCase('zh-TW');
+        const preferJson = name.endsWith('.json') || file.type.includes('json');
+        const rows = parseWishImportPayload(raw, preferJson);
+        parsed.push(...rows);
+      } catch {
+        failed += 1;
+      }
+    }
+
+    if (!parsed.length) {
+      setStatus(failed ? `願望匯入失敗：沒有可讀內容（失敗 ${failed} 個檔案）。` : '願望匯入失敗：沒有可讀內容。');
+      return;
+    }
+
+    const next = mergeWishlistSeed(
+      snapshot,
+      parsed,
+      snapshot.birthdayTasks.map((task) => ({ year: task.year, text: task.text })),
+    );
+    updateSnapshot(next, `願望匯入完成：讀取 ${parsed.length} 筆${failed ? `，失敗 ${failed} 個檔案` : ''}。`);
+  };
+
+  const importBirthdayTasks = async (files: File[]) => {
+    if (!snapshot || !files.length) return;
+    const parsed: BirthdaySeedItem[] = [];
+    let failed = 0;
+
+    for (const file of files) {
+      try {
+        const raw = await file.text();
+        const name = file.name.toLocaleLowerCase('zh-TW');
+        const preferJson = name.endsWith('.json') || file.type.includes('json');
+        const rows = parseBirthdayImportPayload(raw, preferJson);
+        parsed.push(...rows);
+      } catch {
+        failed += 1;
+      }
+    }
+
+    if (!parsed.length) {
+      setStatus(failed ? `生日任務匯入失敗：沒有可讀內容（失敗 ${failed} 個檔案）。` : '生日任務匯入失敗：沒有可讀內容。');
+      return;
+    }
+
+    const next = mergeWishlistSeed(
+      snapshot,
+      snapshot.wishes.map((wish) => wish.text),
+      parsed,
+    );
+    updateSnapshot(next, `生日任務匯入完成：讀取 ${parsed.length} 筆${failed ? `，失敗 ${failed} 個檔案` : ''}。`);
+  };
+
+  const switchTab = (tab: TabId) => {
+    setActiveTab(tab);
+    setOverlayWishId(null);
+    setShowSettings(false);
+  };
+
+  function shouldIgnoreTabSwipe(target: EventTarget | null) {
+    return target instanceof HTMLElement && Boolean(target.closest('[data-wishlist-no-tab-swipe="true"]'));
+  }
+
+  function handleTabSwipeStart(clientX: number, clientY: number, target: EventTarget | null) {
+    tabSwipeStartRef.current = {
+      x: clientX,
+      y: clientY,
+      ignore: showSettings || shouldIgnoreTabSwipe(target),
+    };
+  }
+
+  function resetTabSwipe() {
+    tabSwipeStartRef.current = null;
+  }
+
+  function handleTabSwipeEnd(clientX: number, clientY: number) {
+    const start = tabSwipeStartRef.current;
+    tabSwipeStartRef.current = null;
+    if (!start || start.ignore) return;
+
+    const dx = clientX - start.x;
+    const dy = clientY - start.y;
+    if (Math.abs(dx) < 54 || Math.abs(dx) <= Math.abs(dy)) return;
+
+    const order: TabId[] = ['cards', 'list', 'birthday'];
+    const tabIndex = order.indexOf(activeTab);
+    if (tabIndex < 0) return;
+
+    if (dx < 0 && tabIndex < order.length - 1) {
+      setActiveTab(order[tabIndex + 1]!);
+    } else if (dx > 0 && tabIndex > 0) {
+      setActiveTab(order[tabIndex - 1]!);
+    }
+  }
+
+  const cardToneClass = CARD_TONE_CLASSES[Math.abs((currentWish?.order ?? 0) % CARD_TONE_CLASSES.length)]!;
+  const overlayToneClass = CARD_TONE_CLASSES[Math.abs((overlayWish?.order ?? 0) % CARD_TONE_CLASSES.length)]!;
+  const handwritingFont = letterFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
+
+  return (
+    <div
+      className="wishlist-page"
+      style={{ ['--wl-handwriting-font' as string]: handwritingFont }}
+      onTouchStart={(event) => {
+        const touch = event.touches[0];
+        if (!touch) return;
+        handleTabSwipeStart(touch.clientX, touch.clientY, event.target);
+      }}
+      onTouchEnd={(event) => {
+        const touch = event.changedTouches[0];
+        if (!touch) return;
+        handleTabSwipeEnd(touch.clientX, touch.clientY);
+      }}
+      onTouchCancel={resetTabSwipe}
+    >
+      <header className="wl-top-bar">
+        <div className="wl-tb-left">
+          <button type="button" onClick={onExit} className="wl-tb-back" aria-label="返回">
+            ‹
+          </button>
+          <span className="wl-tb-title">M's wish list</span>
+        </div>
+        <button type="button" onClick={() => setShowSettings(true)} className="wl-tb-btn" aria-label="開啟設定">
+          ⋯
+        </button>
+      </header>
+
+      <div className="wl-tab-wrap">
+        <div className="wl-tabs">
+          <button type="button" className={`wl-tab ${activeTab === 'cards' ? 'active' : ''}`} onClick={() => switchTab('cards')}>
+            願望
+          </button>
+          <button type="button" className={`wl-tab ${activeTab === 'list' ? 'active' : ''}`} onClick={() => switchTab('list')}>
+            清單
+          </button>
+          <button type="button" className={`wl-tab ${activeTab === 'birthday' ? 'active' : ''}`} onClick={() => switchTab('birthday')}>
+            生日任務
+          </button>
+        </div>
+        <p className="wl-swipe-hint">← 左右滑動切換 →</p>
+      </div>
+
+      {activeTab === 'cards' && (
+        <section className="wl-card-scene">
+          {!currentWish ? (
+            <div className="wl-empty">還沒有願望資料</div>
+          ) : (
+            <>
+              <div className="wl-card-stack" data-wishlist-no-tab-swipe="true">
+                <div className="wl-card-peek wl-card-peek-1" />
+                <div className="wl-card-peek wl-card-peek-2" />
+
+                <div
+                  className={`wl-wish-card ${cardToneClass}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={drawNextWish}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      drawNextWish();
+                    }
+                  }}
+                >
+                  {currentWish.doneAt ? <span className="wl-kiss">{KISS_MARK}</span> : null}
+                  <div className="wl-card-header">
+                    <span className="wl-card-label">願望清單</span>
+                    <span className="wl-card-count">
+                      {currentWish.order + 1} / {wishes.length}
+                    </span>
+                  </div>
+                  <div className="wl-card-body">
+                    <div className="wl-card-wish">
+                      <strong>我希望</strong>
+                      {currentWish.text}
+                    </div>
+                  </div>
+                  <div className="wl-card-footer">
+                    <button
+                      type="button"
+                      className={`wl-card-fav ${currentWish.doneAt ? 'done' : ''}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleToggleWishDone(currentWish.id);
+                      }}
+                      aria-label="切換完成"
+                    >
+                      {currentWish.doneAt ? '♥' : '♡'}
+                    </button>
+                    {currentWish.doneAt ? (
+                      <span className="wl-card-date">完成於 {formatDoneDate(currentWish.doneAt)}</span>
+                    ) : (
+                      <span className="wl-card-hint">輕觸卡片換下一張</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="wl-card-progress">
+                <div className="wl-progress-track">
+                  <div className="wl-progress-fill" style={{ width: `${wishes.length ? (doneWishCount / wishes.length) * 100 : 0}%` }} />
+                </div>
+                <span className="wl-progress-label">已完成 {doneWishCount} 個願望 ♥</span>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'list' && (
+        <section className="wl-list-view" data-wishlist-no-tab-swipe="true">
+          <div className="wl-filter">
+            <button type="button" className={`wl-pill ${listFilter === 'all' ? 'active' : ''}`} onClick={() => setListFilter('all')}>
+              全部
+            </button>
+            <button type="button" className={`wl-pill ${listFilter === 'done' ? 'active' : ''}`} onClick={() => setListFilter('done')}>
+              ♥ 已完成
+            </button>
+            <span className="wl-done-count">
+              已完成 {doneWishCount} / {wishes.length}
+            </span>
+          </div>
+
+          <div className="wl-wish-list">
+            {!filteredWishes.length ? (
+              <div className="wl-empty">這個篩選目前沒有內容</div>
+            ) : (
+              filteredWishes.map((wish) => (
+                <div
+                  key={wish.id}
+                  className="wl-wish-row"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setOverlayWishId(wish.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setOverlayWishId(wish.id);
+                    }
+                  }}
+                >
+                  <span className="wl-wish-num">{wish.order + 1}</span>
+                  <span className={`wl-wish-text ${wish.doneAt ? 'done' : ''}`}>{wish.text}</span>
+                  <button
+                    type="button"
+                    className={`wl-wish-heart ${wish.doneAt ? 'done' : ''}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleToggleWishDone(wish.id);
+                    }}
+                    aria-label="切換完成"
+                  >
+                    {wish.doneAt ? '♥' : '♡'}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'birthday' && (
+        <section className="wl-bday-view" data-wishlist-no-tab-swipe="true">
+          <div className="wl-filter" style={{ paddingInline: 4, borderBottom: 0, marginBottom: 8 }}>
+            <button type="button" className={`wl-pill ${birthdayFilter === 'all' ? 'active' : ''}`} onClick={() => setBirthdayFilter('all')}>
+              全部
+            </button>
+            <button
+              type="button"
+              className={`wl-pill ${birthdayFilter === 'done' ? 'active' : ''}`}
+              onClick={() => setBirthdayFilter('done')}
+            >
+              ♥ 已完成
+            </button>
+            <span className="wl-done-count">
+              已完成 {doneBirthdayCount} / {birthdayTasks.length}
+            </span>
+          </div>
+
+          <div className="wl-bday-grid">
+            {!filteredBirthdayTasks.length ? (
+              <div className="wl-empty" style={{ gridColumn: '1 / -1' }}>
+                這個篩選目前沒有內容
+              </div>
+            ) : (
+              filteredBirthdayTasks.map((task) => {
+                const toneClass = BDAY_TONE_CLASSES[Math.abs(task.order % BDAY_TONE_CLASSES.length)]!;
+                return (
+                <button
+                  key={task.id}
+                  type="button"
+                  className={`wl-bday-card ${toneClass} ${task.doneAt ? 'done' : ''}`}
+                  onClick={() => handleToggleBirthdayDone(task.id)}
+                >
+                  <div className="wl-bday-top">
+                    <span className="wl-bday-year">{task.year}</span>
+                    <span className="wl-bday-icon">🎂</span>
+                  </div>
+                  <div className="wl-bday-body">
+                    <p className="wl-bday-text">{task.text}</p>
+                    {task.doneAt ? <p className="wl-bday-date">完成於 {formatDoneDate(task.doneAt)}</p> : null}
+                  </div>
+                  {task.doneAt ? <span className="wl-bday-done-mark">♥</span> : null}
+                </button>
+                );
+              })
+            )}
+          </div>
+        </section>
+      )}
+
+      {overlayWish ? (
+        <div className="wl-overlay" onClick={() => setOverlayWishId(null)}>
+          <div className={`wl-overlay-card ${overlayToneClass}`} onClick={(event) => event.stopPropagation()}>
+            {overlayWish.doneAt ? <span className="wl-kiss">{KISS_MARK}</span> : null}
+            <div className="wl-oc-header">
+              <span className="wl-oc-num">
+                No. {String(overlayWish.order + 1).padStart(2, '0')} / {wishes.length}
+              </span>
+              <button type="button" className="wl-oc-close" onClick={() => setOverlayWishId(null)} aria-label="關閉">
+                ✕
+              </button>
+            </div>
+            <div className="wl-oc-body">
+              <div className="wl-oc-wish">
+                <strong>我希望</strong>
+                {overlayWish.text}
+              </div>
+            </div>
+            <div className="wl-oc-footer">
+              <button
+                type="button"
+                className={`wl-oc-fav ${overlayWish.doneAt ? 'done' : ''}`}
+                onClick={() => handleToggleWishDone(overlayWish.id)}
+              >
+                <span className="wl-oc-fav-icon">{overlayWish.doneAt ? '♥' : '♡'}</span>
+                <span className="wl-oc-fav-label">{overlayWish.doneAt ? '已完成' : '標記完成'}</span>
+              </button>
+              {overlayWish.doneAt ? <span className="wl-card-date">完成於 {formatDoneDate(overlayWish.doneAt)}</span> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {prefs.showChibi ? (
+        <div className="wl-chibi-wrap">
+          <button type="button" className="wl-chibi-btn" onClick={() => setShowSettings(true)} aria-label="開啟願望設定">
+            {chibiSrc ? (
+              <img
+                src={chibiSrc}
+                alt=""
+                draggable={false}
+                className="calendar-chibi select-none drop-shadow-md"
+                style={{ width: prefs.chibiWidth, height: 'auto' }}
+              />
+            ) : (
+              <span className="wl-chibi-fallback" style={{ width: prefs.chibiWidth, height: Math.round(prefs.chibiWidth * 1.16) }}>
+                🌿
+              </span>
+            )}
+          </button>
+        </div>
+      ) : null}
+
+      {showSettings ? (
+        <div className="wl-settings-overlay" onClick={() => setShowSettings(false)}>
+          <div className="wl-settings-sheet" onClick={(event) => event.stopPropagation()}>
+            <div className="wl-sh-handle" />
+            <p className="wl-sh-title">M's wish list</p>
+
+            <div className="wl-sh-item">
+              <div className="wl-sh-row">
+                <p className="wl-sh-label">顯示小人</p>
+                <button
+                  type="button"
+                  className={`wl-switch ${prefs.showChibi ? 'on' : ''}`}
+                  onClick={() => handleUpdatePrefs({ showChibi: !prefs.showChibi })}
+                  aria-label="切換小人顯示"
+                >
+                  <span className="wl-switch-knob" />
+                </button>
+              </div>
+            </div>
+
+            <div className="wl-sh-item">
+              <p className="wl-sh-label">小人大小</p>
+              <p className="wl-slider-caption">目前：{prefs.chibiWidth}px</p>
+              <input
+                type="range"
+                min={104}
+                max={196}
+                step={1}
+                value={prefs.chibiWidth}
+                onChange={(event) => handleUpdatePrefs({ chibiWidth: Number(event.target.value) })}
+                className="wl-slider"
+              />
+            </div>
+
+            <div className="wl-sh-item" style={{ borderBottom: 0 }}>
+              <div className="wl-sh-import-grid">
+                <label className="wl-sh-import">
+                  📥 匯入願望清單
+                  <input
+                    type="file"
+                    className="hidden"
+                    multiple
+                    accept=".txt,.json,application/json,text/plain"
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      void importWishes(files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <label className="wl-sh-import">
+                  🎂 匯入生日任務
+                  <input
+                    type="file"
+                    className="hidden"
+                    multiple
+                    accept=".txt,.json,application/json,text/plain"
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      void importBirthdayTasks(files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              <button type="button" onClick={exportCompleted} className="wl-sh-export">
+                📤 匯出完成清單
+              </button>
+              {status ? <p className="wl-status">{status}</p> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {loading ? <div className="wl-empty">讀取中...</div> : null}
+    </div>
+  );
+}
+
+export default WishlistPage;

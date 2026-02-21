@@ -54,6 +54,7 @@ import { NotesPage } from './pages/NotesPage';
 import SoulmateHousePage from './pages/SoulmateHousePage';
 import { HeartWallPage } from './pages/HeartWallPage';
 import { ListPage } from './pages/ListPage';
+import { WishlistPage } from './pages/WishlistPage';
 import { FitnessPage } from './pages/FitnessPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
@@ -74,6 +75,7 @@ type LauncherAppId =
   | 'heart'
   | 'chat'
   | 'list'
+  | 'wishlist'
   | 'fitness'
   | 'pomodoro'
   | 'period'
@@ -1310,6 +1312,14 @@ function App() {
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
                   <ListPage />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'wishlist' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#f7f2e2' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <WishlistPage onExit={() => setLauncherApp(null)} letterFontFamily={letterFontFamily} />
               </div>
             </div>
           )}
