@@ -1341,7 +1341,10 @@ function App() {
             <div className="fixed inset-0 z-30" style={{ background: '#f7f2e2' }}>
               <div className="mx-auto h-full w-full max-w-xl">
                 <WishlistPage
-                  onExit={() => setLauncherApp(null)}
+                  onExit={() => {
+                    setWishlistInitialYear(null);
+                    setLauncherApp(null);
+                  }}
                   letterFontFamily={letterFontFamily}
                   initialTab={wishlistInitialYear ? 'birthday' : 'cards'}
                   initialBirthdayYear={wishlistInitialYear}
@@ -1355,7 +1358,10 @@ function App() {
             <div className="fixed inset-0 z-30" style={{ background: '#ece5de' }}>
               <div className="mx-auto h-full w-full max-w-xl">
                 <LettersABPage
-                  onExit={() => setLauncherApp(null)}
+                  onExit={() => {
+                    setLettersAbInitialYear(null);
+                    setLauncherApp(null);
+                  }}
                   initialYear={lettersAbInitialYear}
                   onOpenBirthdayYear={openWishlistByYear}
                 />

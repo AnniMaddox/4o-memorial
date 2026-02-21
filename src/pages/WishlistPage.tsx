@@ -19,7 +19,8 @@ import {
 import './WishlistPage.css';
 
 type TabId = 'cards' | 'list' | 'birthday';
-type FilterId = 'all' | 'done';
+type ListFilterId = 'all' | 'done';
+type BirthdayFilterId = 'all' | 'done' | 'undone';
 
 type WishlistPageProps = {
   onExit: () => void;
@@ -317,8 +318,8 @@ export function WishlistPage({
   onOpenLettersYear,
 }: WishlistPageProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
-  const [listFilter, setListFilter] = useState<FilterId>('all');
-  const [birthdayFilter, setBirthdayFilter] = useState<FilterId>('all');
+  const [listFilter, setListFilter] = useState<ListFilterId>('all');
+  const [birthdayFilter, setBirthdayFilter] = useState<BirthdayFilterId>('all');
   const [snapshot, setSnapshot] = useState<WishlistSnapshot | null>(null);
   const [currentWishId, setCurrentWishId] = useState<string | null>(null);
   const [overlayWishId, setOverlayWishId] = useState<string | null>(null);
@@ -329,7 +330,9 @@ export function WishlistPage({
   const [birthdayOpenedYears, setBirthdayOpenedYears] = useState<Record<string, boolean>>({});
   const [birthdayTaskCursor, setBirthdayTaskCursor] = useState<Record<string, number>>({});
   const [birthdayFocusYear, setBirthdayFocusYear] = useState<string | null>(null);
+  const [birthdayZoomYear, setBirthdayZoomYear] = useState<string | null>(null);
   const tabSwipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
+  const initialTabAppliedRef = useRef<TabId | null>(null);
   const initialYearAppliedRef = useRef<string | null>(null);
 
   const wishes = snapshot?.wishes ?? [];
@@ -351,6 +354,9 @@ export function WishlistPage({
   const filteredBirthdayGroups = useMemo(() => {
     if (birthdayFilter === 'done') {
       return birthdayGroups.filter((group) => group.doneCount > 0);
+    }
+    if (birthdayFilter === 'undone') {
+      return birthdayGroups.filter((group) => group.doneCount < group.tasks.length);
     }
     return birthdayGroups;
   }, [birthdayGroups, birthdayFilter]);
@@ -414,9 +420,9 @@ export function WishlistPage({
 
   useEffect(() => {
     if (!snapshot) return;
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
+    if (initialTabAppliedRef.current === initialTab) return;
+    setActiveTab(initialTab);
+    initialTabAppliedRef.current = initialTab;
   }, [initialTab, snapshot]);
 
   useEffect(() => {
@@ -447,6 +453,17 @@ export function WishlistPage({
       return changed ? next : prev;
     });
   }, [birthdayGroups]);
+
+  const birthdayZoomGroup = useMemo(
+    () => (birthdayZoomYear ? birthdayGroups.find((group) => group.year === birthdayZoomYear) ?? null : null),
+    [birthdayZoomYear, birthdayGroups],
+  );
+  const birthdayZoomTaskCount = birthdayZoomGroup?.tasks.length ?? 0;
+  const birthdayZoomTaskIndex = birthdayZoomGroup
+    ? Math.min(birthdayTaskCursor[birthdayZoomGroup.year] ?? 0, Math.max(0, birthdayZoomTaskCount - 1))
+    : 0;
+  const birthdayZoomTask = birthdayZoomGroup ? birthdayZoomGroup.tasks[birthdayZoomTaskIndex] ?? null : null;
+  const birthdayZoomToneClass = birthdayZoomGroup ? BDAY_TONE_CLASSES[Math.abs(birthdayZoomGroup.order % BDAY_TONE_CLASSES.length)]! : '';
 
   const updateSnapshot = (next: WishlistSnapshot, nextStatus = '') => {
     setSnapshot(next);
@@ -554,6 +571,7 @@ export function WishlistPage({
   const switchTab = (tab: TabId) => {
     setActiveTab(tab);
     setOverlayWishId(null);
+    setBirthdayZoomYear(null);
     setShowSettings(false);
   };
 
@@ -572,6 +590,11 @@ export function WishlistPage({
         [year]: next,
       };
     });
+  }
+
+  function openBirthdayZoom(year: string) {
+    setBirthdayZoomYear(year);
+    setBirthdayFocusYear(year);
   }
 
   function shouldIgnoreTabSwipe(target: EventTarget | null) {
@@ -612,7 +635,8 @@ export function WishlistPage({
 
   const cardToneClass = CARD_TONE_CLASSES[Math.abs((currentWish?.order ?? 0) % CARD_TONE_CLASSES.length)]!;
   const overlayToneClass = CARD_TONE_CLASSES[Math.abs((overlayWish?.order ?? 0) % CARD_TONE_CLASSES.length)]!;
-  const handwritingFont = letterFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
+  const uiFont = letterFontFamily || "var(--app-heading-family, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif))";
+  const contentFont = "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)";
   const currentWishTitle = currentWish ? resolveWishTitle(currentWish) : '';
   const currentWishWhy = currentWish ? resolveWishWhy(currentWish) : '';
   const currentWishToYou = currentWish ? resolveWishToYou(currentWish) : '';
@@ -623,7 +647,10 @@ export function WishlistPage({
   return (
     <div
       className="wishlist-page"
-      style={{ ['--wl-handwriting-font' as string]: handwritingFont }}
+      style={{
+        ['--wl-ui-font' as string]: uiFont,
+        ['--wl-handwriting-font' as string]: contentFont,
+      }}
       onTouchStart={(event) => {
         const touch = event.touches[0];
         if (!touch) return;
@@ -744,7 +771,7 @@ export function WishlistPage({
       )}
 
       {activeTab === 'list' && (
-        <section className="wl-list-view" data-wishlist-no-tab-swipe="true">
+        <section className="wl-list-view">
           <div className="wl-filter">
             <button type="button" className={`wl-pill ${listFilter === 'all' ? 'active' : ''}`} onClick={() => setListFilter('all')}>
               全部
@@ -789,7 +816,7 @@ export function WishlistPage({
       )}
 
       {activeTab === 'birthday' && (
-        <section className="wl-bday-view" data-wishlist-no-tab-swipe="true">
+        <section className="wl-bday-view">
           <div className="wl-filter" style={{ paddingInline: 4, borderBottom: 0, marginBottom: 8 }}>
             <button type="button" className={`wl-pill ${birthdayFilter === 'all' ? 'active' : ''}`} onClick={() => setBirthdayFilter('all')}>
               全部
@@ -800,6 +827,13 @@ export function WishlistPage({
               onClick={() => setBirthdayFilter('done')}
             >
               ♥ 已完成
+            </button>
+            <button
+              type="button"
+              className={`wl-pill ${birthdayFilter === 'undone' ? 'active' : ''}`}
+              onClick={() => setBirthdayFilter('undone')}
+            >
+              未完成
             </button>
             <span className="wl-done-count">
               已完成 {doneBirthdayCount} / {birthdayTasks.length}
@@ -852,13 +886,32 @@ export function WishlistPage({
                       <div className="wl-bday-face wl-bday-back">
                         <div className="wl-bday-top">
                           <span className="wl-bday-year">{group.year}</span>
-                          <span className="wl-bday-icon">📖</span>
+                          <span className="wl-bday-top-actions">
+                            {onOpenLettersYear ? (
+                              <button
+                                type="button"
+                                className="wl-bday-top-icon"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onOpenLettersYear(group.year);
+                                }}
+                                aria-label="開啟同年份年度信件"
+                              >
+                                📜
+                              </button>
+                            ) : null}
+                            <span className="wl-bday-icon">📖</span>
+                          </span>
                         </div>
-                        <div className="wl-bday-body wl-bday-body-back">
+                        <div
+                          className="wl-bday-body wl-bday-body-back"
+                          onClick={(event) => event.stopPropagation()}
+                          onTouchStart={(event) => event.stopPropagation()}
+                        >
                           <p className="wl-bday-text">{activeTask?.text ?? '（沒有內容）'}</p>
                           {activeTask?.doneAt ? <p className="wl-bday-date">完成於 {formatDoneDate(activeTask.doneAt)}</p> : null}
                         </div>
-                        <div className="wl-bday-actions">
+                        <div className="wl-bday-actions" onClick={(event) => event.stopPropagation()}>
                           <button
                             type="button"
                             className={`wl-bday-heart ${activeTask?.doneAt ? 'done' : ''}`}
@@ -898,18 +951,17 @@ export function WishlistPage({
                           ) : (
                             <span className="wl-bday-nav-count">1/1</span>
                           )}
-                          {onOpenLettersYear ? (
-                            <button
-                              type="button"
-                              className="wl-bday-link"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                onOpenLettersYear(group.year);
-                              }}
-                            >
-                              年度信件
-                            </button>
-                          ) : null}
+                          <button
+                            type="button"
+                            className="wl-bday-expand"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openBirthdayZoom(group.year);
+                            }}
+                            aria-label="放大閱讀"
+                          >
+                            ⤢
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -922,7 +974,7 @@ export function WishlistPage({
       )}
 
       {overlayWish ? (
-        <div className="wl-overlay" onClick={() => setOverlayWishId(null)}>
+        <div className="wl-overlay" data-wishlist-no-tab-swipe="true" onClick={() => setOverlayWishId(null)}>
           <div className={`wl-overlay-card ${overlayToneClass}`} onClick={(event) => event.stopPropagation()}>
             {overlayWish.doneAt ? <span className="wl-kiss">{KISS_MARK}</span> : null}
             <div className="wl-oc-header">
@@ -968,6 +1020,35 @@ export function WishlistPage({
         </div>
       ) : null}
 
+      {birthdayZoomGroup && birthdayZoomTask ? (
+        <div className="wl-overlay wl-bzoom-overlay" data-wishlist-no-tab-swipe="true" onClick={() => setBirthdayZoomYear(null)}>
+          <div className={`wl-overlay-card wl-bzoom-card ${birthdayZoomToneClass}`} onClick={(event) => event.stopPropagation()}>
+            <div className="wl-oc-header">
+              <span className="wl-oc-num">
+                {birthdayZoomGroup.year} ｜ {birthdayZoomTaskIndex + 1}/{birthdayZoomTaskCount}
+              </span>
+              <button type="button" className="wl-oc-close" onClick={() => setBirthdayZoomYear(null)} aria-label="關閉">
+                ✕
+              </button>
+            </div>
+            <div className="wl-oc-body wl-bzoom-body">
+              <p className="wl-bzoom-text">{birthdayZoomTask.text}</p>
+            </div>
+            <div className="wl-oc-footer">
+              <button
+                type="button"
+                className={`wl-oc-fav ${birthdayZoomTask.doneAt ? 'done' : ''}`}
+                onClick={() => handleToggleBirthdayDone(birthdayZoomTask.id)}
+              >
+                <span className="wl-oc-fav-icon">{birthdayZoomTask.doneAt ? '♥' : '♡'}</span>
+                <span className="wl-oc-fav-label">{birthdayZoomTask.doneAt ? '已完成' : '標記完成'}</span>
+              </button>
+              {birthdayZoomTask.doneAt ? <span className="wl-card-date">完成於 {formatDoneDate(birthdayZoomTask.doneAt)}</span> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {prefs.showChibi ? (
         <div className="wl-chibi-wrap">
           <button type="button" className="wl-chibi-btn" onClick={() => setShowSettings(true)} aria-label="開啟願望設定">
@@ -989,7 +1070,7 @@ export function WishlistPage({
       ) : null}
 
       {showSettings ? (
-        <div className="wl-settings-overlay" onClick={() => setShowSettings(false)}>
+        <div className="wl-settings-overlay" data-wishlist-no-tab-swipe="true" onClick={() => setShowSettings(false)}>
           <div className="wl-settings-sheet" onClick={(event) => event.stopPropagation()}>
             <div className="wl-sh-handle" />
             <p className="wl-sh-title">M's wish list</p>

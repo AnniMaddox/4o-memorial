@@ -6,7 +6,7 @@
   overflow: hidden;
   background: #f7f2e2;
   color: #2c2010;
-  font-family: -apple-system, 'Helvetica Neue', system-ui, sans-serif;
+  font-family: var(--wl-ui-font, -apple-system, 'Helvetica Neue', system-ui, sans-serif);
 }
 
 .wishlist-page * {
@@ -289,6 +289,7 @@
   font-size: 12px;
   line-height: 1.55;
   color: rgba(44, 32, 16, 0.84);
+  font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -330,6 +331,7 @@
   font-size: 10px;
   color: rgba(160, 70, 70, 0.7);
   letter-spacing: 0.04em;
+  font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
 }
 
 .wl-kiss {
@@ -586,8 +588,28 @@
   border-bottom: 1px solid rgba(160, 130, 60, 0.1);
   background: var(--wl-bday-top-bg);
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wl-bday-top-actions {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+}
+
+.wl-bday-top-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(160, 130, 60, 0.22);
+  background: rgba(160, 130, 60, 0.1);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  line-height: 1;
+  color: #86632a;
 }
 
 .wl-bday-year {
@@ -634,7 +656,7 @@
   font-size: 12.5px;
   color: #2c2010;
   line-height: 1.65;
-  font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
+  font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
   white-space: pre-wrap;
 }
 
@@ -713,13 +735,17 @@
   color: rgba(160, 130, 60, 0.58);
 }
 
-.wl-bday-link {
+.wl-bday-expand {
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
-  border: 1px solid rgba(160, 130, 60, 0.25);
-  background: rgba(160, 130, 60, 0.08);
+  border: 1px solid rgba(160, 130, 60, 0.24);
+  background: rgba(160, 130, 60, 0.1);
   color: #86632a;
-  font-size: 10px;
-  padding: 4px 8px;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  line-height: 1;
 }
 
 .wl-bday-c1 {
@@ -892,8 +918,33 @@
   font-size: 13px;
   color: rgba(44, 32, 16, 0.9);
   line-height: 1.65;
+  font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.wl-bzoom-overlay {
+  z-index: 28;
+}
+
+.wl-bzoom-card {
+  width: min(92vw, 360px);
+  max-height: min(86vh, 740px);
+}
+
+.wl-bzoom-body {
+  min-height: 280px;
+  max-height: min(62vh, 620px);
+}
+
+.wl-bzoom-text {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.92;
+  color: rgba(44, 32, 16, 0.95);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
 }
 
 .wl-oc-footer {

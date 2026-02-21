@@ -149,6 +149,22 @@ function findYearIndex(years: AnnualLetterYear[], year: number) {
   return years.findIndex((item) => item.year === year);
 }
 
+function findClosestYearIndex(years: AnnualLetterYear[], targetYear: number) {
+  if (!years.length) return -1;
+  let closestIndex = 0;
+  let closestDistance = Math.abs(years[0]!.year - targetYear);
+  for (let i = 1; i < years.length; i += 1) {
+    const current = years[i];
+    if (!current) continue;
+    const distance = Math.abs(current.year - targetYear);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = i;
+    }
+  }
+  return closestIndex;
+}
+
 function normalizeContent(text: string) {
   return text.replace(/\u00a0/g, ' ').replace(/\r\n?/g, '\n').trim();
 }
@@ -200,6 +216,8 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
     return pickRandom(scoped) ?? FALLBACK_CHIBI;
   });
   const appliedInitialYearRef = useRef<number | null>(null);
+  const homeSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const readingSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const currentYear = years[selectedYearIndex] ?? null;
   const currentEntry = useMemo(() => {
@@ -252,8 +270,18 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
 
         if (!active) return;
         setYears(loadedYears);
-        setSelectedYearIndex(loadedYears.length ? loadedYears.length - 1 : 0);
-        setSelectedEntryId(loadedYears.length ? loadedYears[loadedYears.length - 1]!.entries[0]!.id : null);
+        if (!loadedYears.length) {
+          setSelectedYearIndex(0);
+          setSelectedEntryId(null);
+        } else {
+          const currentYearValue = new Date().getFullYear();
+          const exactIndex = findYearIndex(loadedYears, currentYearValue);
+          const fallbackIndex = exactIndex >= 0 ? exactIndex : findClosestYearIndex(loadedYears, currentYearValue);
+          const safeIndex = fallbackIndex >= 0 ? fallbackIndex : 0;
+          const firstEntry = loadedYears[safeIndex]?.entries[0] ?? null;
+          setSelectedYearIndex(safeIndex);
+          setSelectedEntryId(firstEntry?.id ?? null);
+        }
       } catch (error) {
         if (!active) return;
         setLoadError(error instanceof Error ? error.message : '未知錯誤');
@@ -327,6 +355,35 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
     const nextIndex = selectedYearIndex + delta;
     if (nextIndex < 0 || nextIndex >= years.length) return;
     openYear(nextIndex);
+  }
+
+  function moveReadingEntry(delta: number) {
+    if (!currentYear || !currentYear.entries.length || !currentEntry) return;
+    const currentIndex = currentYear.entries.findIndex((entry) => entry.id === currentEntry.id);
+    if (currentIndex < 0) return;
+    const nextIndex = currentIndex + delta;
+    if (nextIndex < 0 || nextIndex >= currentYear.entries.length) return;
+    setSelectedEntryId(currentYear.entries[nextIndex]?.id ?? null);
+  }
+
+  function handleHorizontalSwipe(
+    startRef: { current: { x: number; y: number } | null },
+    clientX: number,
+    clientY: number,
+    onLeft: () => void,
+    onRight: () => void,
+  ) {
+    const start = startRef.current;
+    startRef.current = null;
+    if (!start) return;
+    const dx = clientX - start.x;
+    const dy = clientY - start.y;
+    if (Math.abs(dx) < 54 || Math.abs(dx) <= Math.abs(dy) * 1.15) return;
+    if (dx < 0) {
+      onLeft();
+    } else {
+      onRight();
+    }
   }
 
   const relatedItems = useMemo<RelatedItem[]>(() => {
@@ -435,7 +492,22 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
             </button>
           </header>
 
-          <section className="la-carousel">
+          <section
+            className="la-carousel"
+            onTouchStart={(event) => {
+              const touch = event.touches[0];
+              if (!touch) return;
+              homeSwipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+            }}
+            onTouchEnd={(event) => {
+              const touch = event.changedTouches[0];
+              if (!touch) return;
+              handleHorizontalSwipe(homeSwipeStartRef, touch.clientX, touch.clientY, () => moveYear(1), () => moveYear(-1));
+            }}
+            onTouchCancel={() => {
+              homeSwipeStartRef.current = null;
+            }}
+          >
             <button
               type="button"
               className="la-arrow left"
@@ -516,7 +588,22 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
             ))}
           </div>
 
-          <section className="la-paper-wrap">
+          <section
+            className="la-paper-wrap"
+            onTouchStart={(event) => {
+              const touch = event.touches[0];
+              if (!touch) return;
+              readingSwipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+            }}
+            onTouchEnd={(event) => {
+              const touch = event.changedTouches[0];
+              if (!touch) return;
+              handleHorizontalSwipe(readingSwipeStartRef, touch.clientX, touch.clientY, () => moveReadingEntry(1), () => moveReadingEntry(-1));
+            }}
+            onTouchCancel={() => {
+              readingSwipeStartRef.current = null;
+            }}
+          >
             <div className="la-paper" style={{ lineHeight: lineHeightValue }}>
               <h3 className="la-paper-title">{currentEntry?.title ?? '未命名信件'}</h3>
               <p className="la-paper-content">{currentContent || '讀取內容中...'}</p>
