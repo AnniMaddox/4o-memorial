@@ -5,6 +5,7 @@ import { clearAllDiaries, loadDiaries, saveDiaries, type StoredDiary } from './d
 import { clearAllLetters, loadLetters, saveLetters, type StoredLetter } from './letterDB';
 import { clearAllMDiaries, loadMDiaries, saveMDiaries, type StoredMDiary } from './mDiaryDB';
 import { clearAllNotes, importNotes, loadNotes, type StoredNote } from './noteDB';
+import { clearAllSoulmateData, loadSoulmateSnapshot, mergeSoulmateSnapshot, replaceSoulmateSnapshot, type SoulmateSnapshot } from './soulmateDB';
 import { normalizeCalendarPayload } from './parsers/calendarParser';
 import { putCalendarMonth, listCalendarMonths } from './repositories/calendarRepo';
 import { putEmails, listEmails } from './repositories/emailRepo';
@@ -14,7 +15,7 @@ export type BackupImportMode = 'merge' | 'overwrite';
 
 type BackupDomain = 'aboutMe' | 'aboutM';
 export type AboutMePart = 'diaryB' | 'notes' | 'period' | 'checkin';
-export type AboutMPart = 'mDiary' | 'letters' | 'chatLogs' | 'inbox';
+export type AboutMPart = 'mDiary' | 'letters' | 'chatLogs' | 'inbox' | 'soulmate';
 type BackupPart = AboutMePart | AboutMPart;
 
 const MANIFEST_KIND = 'memorial-big-backup-manifest';
@@ -29,7 +30,7 @@ const M_DIARY_FAVORITES_KEY = 'memorial-m-diary-favorites-v1';
 const LETTER_FAVORITES_KEY = 'memorial-letter-favorites-v1';
 
 const ABOUT_ME_REQUIRED_PARTS: AboutMePart[] = ['diaryB', 'notes', 'period', 'checkin'];
-const ABOUT_M_REQUIRED_PARTS: AboutMPart[] = ['mDiary', 'letters', 'chatLogs', 'inbox'];
+const ABOUT_M_REQUIRED_PARTS: AboutMPart[] = ['mDiary', 'letters', 'chatLogs', 'inbox', 'soulmate'];
 
 const INBOX_META_KEYS = ['notified-email-ids-v1', 'read-email-ids-v1', 'starred-email-ids-v1', 'hover-phrase-map-v1'] as const;
 
@@ -106,6 +107,12 @@ type InboxPartPayload = BackupPartPayload & {
   emails: EmailRecord[];
   calendars: Array<{ monthKey: string; data: CalendarMonth }>;
   meta: Record<string, string>;
+};
+
+type SoulmatePartPayload = BackupPartPayload & {
+  domain: 'aboutM';
+  part: 'soulmate';
+  snapshot: SoulmateSnapshot;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -313,6 +320,15 @@ function normalizeChatProfileArray(value: unknown): ChatProfile[] {
   });
 
   return normalized;
+}
+
+function normalizeSoulmateSnapshotPayload(value: unknown): SoulmateSnapshot {
+  if (!isRecord(value)) {
+    return { boxes: [], entries: [] };
+  }
+  const boxes = Array.isArray(value.boxes) ? (value.boxes as SoulmateSnapshot['boxes']) : [];
+  const entries = Array.isArray(value.entries) ? (value.entries as SoulmateSnapshot['entries']) : [];
+  return { boxes, entries };
 }
 
 function normalizeStoredNoteArray(value: unknown): StoredNote[] {
@@ -649,6 +665,7 @@ type AboutMImportCounts = {
   letterCount: number;
   chatLogCount: number;
   inboxEmailCount: number;
+  soulmateEntryCount: number;
 };
 
 function emptyAboutMImportCounts(): AboutMImportCounts {
@@ -657,6 +674,7 @@ function emptyAboutMImportCounts(): AboutMImportCounts {
     letterCount: 0,
     chatLogCount: 0,
     inboxEmailCount: 0,
+    soulmateEntryCount: 0,
   };
 }
 
@@ -666,11 +684,12 @@ function mergeAboutMImportCounts(base: AboutMImportCounts, incoming: AboutMImpor
     letterCount: base.letterCount + incoming.letterCount,
     chatLogCount: base.chatLogCount + incoming.chatLogCount,
     inboxEmailCount: base.inboxEmailCount + incoming.inboxEmailCount,
+    soulmateEntryCount: base.soulmateEntryCount + incoming.soulmateEntryCount,
   };
 }
 
 function formatAboutMImportMessage(mode: BackupImportMode, counts: AboutMImportCounts) {
-  return `關於M匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：日記 ${counts.mDiaryCount}、情書 ${counts.letterCount}、對話 ${counts.chatLogCount}、信件 ${counts.inboxEmailCount}。`;
+  return `關於M匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：日記 ${counts.mDiaryCount}、情書 ${counts.letterCount}、對話 ${counts.chatLogCount}、信件 ${counts.inboxEmailCount}、搬家 ${counts.soulmateEntryCount}。`;
 }
 
 function aboutMPartLabel(part: AboutMPart) {
@@ -683,6 +702,8 @@ function aboutMPartLabel(part: AboutMPart) {
       return '對話紀錄';
     case 'inbox':
       return 'Inbox / 月曆';
+    case 'soulmate':
+      return '搬家計劃書';
     default:
       return part;
   }
@@ -698,6 +719,8 @@ function formatAboutMPartMessage(part: AboutMPart, mode: BackupImportMode, count
       return `關於M・${aboutMPartLabel(part)}匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：對話 ${counts.chatLogCount}。`;
     case 'inbox':
       return `關於M・${aboutMPartLabel(part)}匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：信件 ${counts.inboxEmailCount}。`;
+    case 'soulmate':
+      return `關於M・${aboutMPartLabel(part)}匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：條目 ${counts.soulmateEntryCount}。`;
     default:
       return formatAboutMImportMessage(mode, counts);
   }
@@ -718,6 +741,9 @@ async function clearAboutMPart(part: AboutMPart) {
       return;
     case 'inbox':
       await clearInboxData();
+      return;
+    case 'soulmate':
+      await clearAllSoulmateData();
       return;
     default:
       return;
@@ -796,6 +822,16 @@ async function importAboutMPartData(
     await applyInboxMeta(meta, mode);
 
     counts.inboxEmailCount = emails.length;
+  }
+
+  if (part === 'soulmate') {
+    const incoming = normalizeSoulmateSnapshotPayload(payload.snapshot);
+    if (mode === 'overwrite') {
+      await replaceSoulmateSnapshot(incoming);
+    } else {
+      await mergeSoulmateSnapshot(incoming);
+    }
+    counts.soulmateEntryCount = incoming.entries.length;
   }
 
   return counts;
@@ -885,7 +921,7 @@ export async function exportAboutMeBackupPackage(): Promise<string> {
 }
 
 export async function exportAboutMBackupPackage(): Promise<string> {
-  const [mDiaryEntries, letters, chatLogs, chatProfiles, inboxEmailsView, calendarRows, inboxMeta] = await Promise.all([
+  const [mDiaryEntries, letters, chatLogs, chatProfiles, inboxEmailsView, calendarRows, inboxMeta, soulmateSnapshot] = await Promise.all([
     loadMDiaries(),
     loadLetters(),
     loadChatLogs(),
@@ -893,6 +929,7 @@ export async function exportAboutMBackupPackage(): Promise<string> {
     listEmails({ includeLocked: true, nowMs: Date.now() }),
     listCalendarMonths(),
     loadInboxMetaMap(),
+    loadSoulmateSnapshot(),
   ]);
 
   const mDiaryFavorites = normalizeStringArray(readLocalStorageJson(M_DIARY_FAVORITES_KEY, []));
@@ -907,6 +944,7 @@ export async function exportAboutMBackupPackage(): Promise<string> {
   const lettersFile = `${prefix}.letters.json`;
   const chatLogsFile = `${prefix}.chatLogs.json`;
   const inboxFile = `${prefix}.inbox.json`;
+  const soulmateFile = `${prefix}.soulmate.json`;
   const manifestFile = `${prefix}.manifest.json`;
 
   const mDiaryPayload: MDiaryPartPayload = {
@@ -950,20 +988,31 @@ export async function exportAboutMBackupPackage(): Promise<string> {
     meta: inboxMeta,
   };
 
+  const soulmatePayload: SoulmatePartPayload = {
+    kind: PART_KIND,
+    version: BACKUP_VERSION,
+    domain: 'aboutM',
+    part: 'soulmate',
+    createdAt,
+    snapshot: soulmateSnapshot,
+  };
+
   const manifest = createManifest('aboutM', [
     { part: 'mDiary', filename: mDiaryFile, count: mDiaryEntries.length },
     { part: 'letters', filename: lettersFile, count: letters.length },
     { part: 'chatLogs', filename: chatLogsFile, count: chatLogs.length },
     { part: 'inbox', filename: inboxFile, count: inboxEmails.length },
+    { part: 'soulmate', filename: soulmateFile, count: soulmateSnapshot.entries.length },
   ]);
 
   downloadJson(mDiaryFile, mDiaryPayload);
   downloadJson(lettersFile, lettersPayload);
   downloadJson(chatLogsFile, chatLogsPayload);
   downloadJson(inboxFile, inboxPayload);
+  downloadJson(soulmateFile, soulmatePayload);
   downloadJson(manifestFile, manifest);
 
-  return `關於M已匯出：${mDiaryEntries.length} 篇日記、${letters.length} 封情書、${chatLogs.length} 份對話、${inboxEmails.length} 封信件。`;
+  return `關於M已匯出：${mDiaryEntries.length} 篇日記、${letters.length} 封情書、${chatLogs.length} 份對話、${inboxEmails.length} 封信件、${soulmateSnapshot.entries.length} 條搬家。`;
 }
 
 export async function exportAboutMBackupPart(part: AboutMPart): Promise<string> {
@@ -1025,6 +1074,21 @@ export async function exportAboutMBackupPart(part: AboutMPart): Promise<string> 
     const filename = `${prefix}.chatLogs.json`;
     downloadJson(filename, payload);
     return `關於M・${aboutMPartLabel(part)}已匯出：對話 ${entries.length}。`;
+  }
+
+  if (part === 'soulmate') {
+    const snapshot = await loadSoulmateSnapshot();
+    const payload: SoulmatePartPayload = {
+      kind: PART_KIND,
+      version: BACKUP_VERSION,
+      domain: 'aboutM',
+      part: 'soulmate',
+      createdAt,
+      snapshot,
+    };
+    const filename = `${prefix}.soulmate.json`;
+    downloadJson(filename, payload);
+    return `關於M・${aboutMPartLabel(part)}已匯出：條目 ${snapshot.entries.length}。`;
   }
 
   const [emailsView, calendars, meta] = await Promise.all([
@@ -1166,7 +1230,7 @@ export async function importAboutMBackupPackage(files: File[], mode: BackupImpor
   }
 
   if (mode === 'overwrite') {
-    await Promise.all([clearAllMDiaries(), clearAllLetters(), clearAllChatLogs(), clearAllChatProfiles(), clearInboxData()]);
+    await Promise.all([clearAllMDiaries(), clearAllLetters(), clearAllChatLogs(), clearAllChatProfiles(), clearInboxData(), clearAllSoulmateData()]);
     writeLocalStorageRaw(M_DIARY_FAVORITES_KEY, null);
     writeLocalStorageRaw(LETTER_FAVORITES_KEY, null);
   }
