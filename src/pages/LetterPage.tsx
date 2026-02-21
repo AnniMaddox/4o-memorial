@@ -2232,7 +2232,7 @@ function LetterFullscreenView({
           style={{
             minWidth: 64,
             minHeight: 48,
-            transform: 'translateY(-14px)',
+            transform: 'translateY(-4px)',
           }}
         >
           {rerollDisplaySrc ? (

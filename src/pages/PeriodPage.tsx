@@ -16,6 +16,7 @@ type PeriodStore = {
   records: PeriodRecord[];
   accentColor: string;
   panelStyle: PeriodPanelStyle;
+  periodChibiSize: number;
 };
 
 type CalendarCell = {
@@ -148,6 +149,7 @@ const DEFAULT_STORE: PeriodStore = {
   records: [],
   accentColor: C.period,
   panelStyle: 'soft',
+  periodChibiSize: 168,
 };
 
 // ─── Chibi sources ─────────────────────────────────────────────────────────────
@@ -240,6 +242,10 @@ function loadStore(): PeriodStore {
         parsed.panelStyle === 'glass' || parsed.panelStyle === 'minimal' || parsed.panelStyle === 'soft'
           ? parsed.panelStyle
           : DEFAULT_STORE.panelStyle,
+      periodChibiSize:
+        typeof parsed.periodChibiSize === 'number' && Number.isFinite(parsed.periodChibiSize)
+          ? clamp(parsed.periodChibiSize, 120, 220)
+          : DEFAULT_STORE.periodChibiSize,
     };
   } catch {
     return DEFAULT_STORE;
@@ -483,12 +489,16 @@ function SpeechBubble({ phrase }: { phrase: string }) {
 function FloatingChibi({
   chibiSrc,
   phrase,
+  sizePx,
   onClickSettings,
 }: {
   chibiSrc: string;
   phrase: string;
+  sizePx: number;
   onClickSettings: () => void;
 }) {
+  const safeSize = clamp(sizePx, 120, 220);
+  const fallbackHeight = Math.round(safeSize * 0.86);
   return (
     <div
       className="pointer-events-none absolute bottom-[42px] right-2 z-20 flex flex-col items-end gap-2 sm:right-3"
@@ -510,13 +520,15 @@ function FloatingChibi({
             src={chibiSrc}
             alt=""
             draggable={false}
-            className="w-[10.5rem] select-none drop-shadow-md"
+            className="select-none drop-shadow-md"
+            style={{ width: safeSize, height: 'auto' }}
           />
         ) : (
           <div
             className="flex items-center justify-center rounded-2xl text-4xl drop-shadow-md"
             style={{
-              width: '10.5rem', height: '9rem',
+              width: safeSize,
+              height: fallbackHeight,
               background: 'linear-gradient(145deg,#fde9d7,#f0ddd0)',
             }}
           >
@@ -630,11 +642,15 @@ function DateSheet({
 function PeriodSettingsSheet({
   panelStyle,
   onPanelStyleChange,
+  chibiSize,
+  onChibiSizeChange,
   onClearAll,
   onClose,
 }: {
   panelStyle: PeriodPanelStyle;
   onPanelStyleChange: (style: PeriodPanelStyle) => void;
+  chibiSize: number;
+  onChibiSizeChange: (size: number) => void;
   onClearAll: () => void;
   onClose: () => void;
 }) {
@@ -676,6 +692,26 @@ function PeriodSettingsSheet({
             })}
           </div>
           <p className="mt-2 text-[10px] text-stone-400">統計資訊在「總覽」頁查看。</p>
+        </div>
+
+        <div className="mb-4 rounded-2xl bg-stone-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-stone-500">小人大小</p>
+            <span className="text-[11px] text-stone-400">{Math.round(chibiSize)}px</span>
+          </div>
+          <input
+            type="range"
+            min={120}
+            max={220}
+            step={1}
+            value={chibiSize}
+            onChange={(event) => onChibiSizeChange(Number(event.target.value))}
+            className="mt-2 w-full accent-stone-700"
+          />
+          <div className="mt-1 flex justify-between text-[10px] text-stone-400">
+            <span>小一點</span>
+            <span>大一點</span>
+          </div>
         </div>
 
         <button
@@ -1519,6 +1555,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
         <FloatingChibi
           chibiSrc={chibiSrc}
           phrase={chibiPhrase}
+          sizePx={store.periodChibiSize}
           onClickSettings={() => setShowPeriodSettings(true)}
         />
       )}
@@ -1564,6 +1601,8 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
         <PeriodSettingsSheet
           panelStyle={store.panelStyle}
           onPanelStyleChange={(style) => setStore((cur) => ({ ...cur, panelStyle: style }))}
+          chibiSize={store.periodChibiSize}
+          onChibiSizeChange={(size) => setStore((cur) => ({ ...cur, periodChibiSize: clamp(size, 120, 220) }))}
           onClearAll={clearAllRecords}
           onClose={() => setShowPeriodSettings(false)}
         />

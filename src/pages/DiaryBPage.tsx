@@ -260,7 +260,7 @@ export function DiaryBPage({
   const [draftFavorite, setDraftFavorite] = useState(false);
   const [sharedChibi] = useState(randomChibiSrc);
   const [calendarDayMenu, setCalendarDayMenu] = useState<CalendarDayMenuState | null>(null);
-  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
 
   const effectiveFont = diaryFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
 
@@ -659,14 +659,18 @@ export function DiaryBPage({
     }
   }
 
-  function handleSwipeStart(clientX: number, clientY: number) {
-    swipeStartRef.current = { x: clientX, y: clientY };
+  function shouldIgnoreSwipeTarget(target: EventTarget | null) {
+    return target instanceof HTMLElement && Boolean(target.closest('[data-diaryb-no-tab-swipe="true"]'));
+  }
+
+  function handleSwipeStart(clientX: number, clientY: number, target: EventTarget | null) {
+    swipeStartRef.current = { x: clientX, y: clientY, ignore: showSettings || showEditor || shouldIgnoreSwipeTarget(target) };
   }
 
   function handleSwipeEnd(clientX: number, clientY: number) {
     const start = swipeStartRef.current;
     swipeStartRef.current = null;
-    if (!start) return;
+    if (!start || start.ignore) return;
 
     const dx = clientX - start.x;
     const dy = clientY - start.y;
@@ -718,8 +722,11 @@ export function DiaryBPage({
       ref={pageRef}
       className="relative h-full overflow-hidden"
       style={{ background: '#f8f4ed' }}
-      onTouchStart={(event) => handleSwipeStart(event.touches[0].clientX, event.touches[0].clientY)}
+      onTouchStart={(event) => handleSwipeStart(event.touches[0].clientX, event.touches[0].clientY, event.target)}
       onTouchEnd={(event) => handleSwipeEnd(event.changedTouches[0].clientX, event.changedTouches[0].clientY)}
+      onTouchCancel={() => {
+        swipeStartRef.current = null;
+      }}
     >
       <div
         className="pointer-events-none absolute inset-0"
@@ -850,7 +857,7 @@ export function DiaryBPage({
         </div>
 
         {activeTab === 'reading' && (
-          <div className="relative min-h-0 flex-1 overflow-hidden">
+          <div className="relative min-h-0 flex flex-1 flex-col overflow-hidden">
             {currentEntry ? (
               <>
                 <div
@@ -938,7 +945,11 @@ export function DiaryBPage({
                   </div>
                 </div>
 
-                <div className="relative min-h-0 flex-1 overflow-y-auto px-[18px] pb-3 pt-[14px]" style={{ paddingLeft: 60 }}>
+                <div
+                  className="relative min-h-0 flex-1 overflow-y-auto px-[18px] pb-3 pt-[14px]"
+                  data-diaryb-no-tab-swipe="true"
+                  style={{ paddingLeft: 60 }}
+                >
                   {currentEntry.htmlContent ? (
                     <div
                       style={{ fontSize: 14, lineHeight: 2.16, color: '#3a2c1c', fontFamily: effectiveFont }}

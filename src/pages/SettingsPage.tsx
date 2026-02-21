@@ -1624,7 +1624,7 @@ export function SettingsPage({
                       : 'border-stone-300 bg-white text-stone-700'
                   }`}
                 >
-                  Preview（I/II）
+                  手札（I/II）
                 </button>
               </div>
             </div>
