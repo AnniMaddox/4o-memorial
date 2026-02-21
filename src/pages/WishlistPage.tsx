@@ -900,18 +900,26 @@ export function WishlistPage({
                                 📜
                               </button>
                             ) : null}
-                            <span className="wl-bday-icon">📖</span>
                           </span>
                         </div>
                         <div
                           className="wl-bday-body wl-bday-body-back"
-                          onClick={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openBirthdayZoom(group.year);
+                          }}
                           onTouchStart={(event) => event.stopPropagation()}
                         >
                           <p className="wl-bday-text">{activeTask?.text ?? '（沒有內容）'}</p>
                           {activeTask?.doneAt ? <p className="wl-bday-date">完成於 {formatDoneDate(activeTask.doneAt)}</p> : null}
                         </div>
-                        <div className="wl-bday-actions" onClick={(event) => event.stopPropagation()}>
+                        <div
+                          className="wl-bday-actions"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleBirthdayCard(group.year);
+                          }}
+                        >
                           <button
                             type="button"
                             className={`wl-bday-heart ${activeTask?.doneAt ? 'done' : ''}`}
@@ -951,17 +959,6 @@ export function WishlistPage({
                           ) : (
                             <span className="wl-bday-nav-count">1/1</span>
                           )}
-                          <button
-                            type="button"
-                            className="wl-bday-expand"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openBirthdayZoom(group.year);
-                            }}
-                            aria-label="放大閱讀"
-                          >
-                            ⤢
-                          </button>
                         </div>
                       </div>
                     </div>

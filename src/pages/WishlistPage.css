@@ -581,6 +581,7 @@
   max-height: 126px;
   overflow-y: auto;
   scrollbar-width: thin;
+  cursor: zoom-in;
 }
 
 .wl-bday-top {
@@ -600,16 +601,13 @@
 }
 
 .wl-bday-top-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  border: 1px solid rgba(160, 130, 60, 0.22);
-  background: rgba(160, 130, 60, 0.1);
-  display: grid;
-  place-items: center;
-  font-size: 12px;
+  border: 0;
+  background: transparent;
+  display: inline-block;
+  font-size: 14px;
   line-height: 1;
   color: #86632a;
+  padding: 0;
 }
 
 .wl-bday-year {
@@ -733,19 +731,6 @@
   text-align: center;
   font-size: 10px;
   color: rgba(160, 130, 60, 0.58);
-}
-
-.wl-bday-expand {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 1px solid rgba(160, 130, 60, 0.24);
-  background: rgba(160, 130, 60, 0.1);
-  color: #86632a;
-  font-size: 13px;
-  display: grid;
-  place-items: center;
-  line-height: 1;
 }
 
 .wl-bday-c1 {
