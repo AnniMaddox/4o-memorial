@@ -27,6 +27,10 @@ type DiaryMeta = {
 };
 
 type DiaryMetaMap = Record<string, DiaryMeta>;
+type DiaryChibiPrefs = {
+  showChibi: boolean;
+  size: number;
+};
 
 type CalendarCell = {
   key: string;
@@ -50,6 +54,11 @@ type CalendarDayMenuState = {
 const BASE_URL = import.meta.env.BASE_URL as string;
 const CHIBI_COUNT = 35;
 const DIARY_META_STORAGE_KEY = 'memorial-diary-b-meta-v1';
+const DIARY_CHIBI_PREFS_STORAGE_KEY = 'memorial-diary-b-chibi-prefs-v1';
+const DEFAULT_DIARY_CHIBI_PREFS: DiaryChibiPrefs = {
+  showChibi: true,
+  size: 144,
+};
 const MOOD_ORDER: DiaryMood[] = ['love', 'happy', 'calm', 'miss', 'tired'];
 
 const MOOD_THEME: Record<DiaryMood, { label: string; icon: string; chipBg: string; dot: string; bar: string }> = {
@@ -114,6 +123,30 @@ function readDiaryMeta() {
 function persistDiaryMeta(meta: DiaryMetaMap) {
   try {
     window.localStorage.setItem(DIARY_META_STORAGE_KEY, JSON.stringify(meta));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function readDiaryChibiPrefs(): DiaryChibiPrefs {
+  try {
+    const raw = window.localStorage.getItem(DIARY_CHIBI_PREFS_STORAGE_KEY);
+    if (!raw) return DEFAULT_DIARY_CHIBI_PREFS;
+    const parsed = JSON.parse(raw) as Partial<DiaryChibiPrefs>;
+    const showChibi = parsed.showChibi !== false;
+    const size =
+      typeof parsed.size === 'number' && Number.isFinite(parsed.size)
+        ? Math.min(196, Math.max(104, Math.round(parsed.size)))
+        : DEFAULT_DIARY_CHIBI_PREFS.size;
+    return { showChibi, size };
+  } catch {
+    return DEFAULT_DIARY_CHIBI_PREFS;
+  }
+}
+
+function persistDiaryChibiPrefs(prefs: DiaryChibiPrefs) {
+  try {
+    window.localStorage.setItem(DIARY_CHIBI_PREFS_STORAGE_KEY, JSON.stringify(prefs));
   } catch {
     // ignore storage errors
   }
@@ -272,8 +305,10 @@ export function DiaryBPage({
   const [draftMood, setDraftMood] = useState<DiaryMood>('calm');
   const [draftFavorite, setDraftFavorite] = useState(false);
   const [sharedChibi] = useState(randomChibiSrc);
+  const [diaryChibiPrefs, setDiaryChibiPrefs] = useState<DiaryChibiPrefs>(() => readDiaryChibiPrefs());
   const [calendarDayMenu, setCalendarDayMenu] = useState<CalendarDayMenuState | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
+  const hideFloatingChibi = !diaryChibiPrefs.showChibi || !sharedChibi;
 
   const effectiveFont = diaryFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
 
@@ -318,6 +353,11 @@ export function DiaryBPage({
     if (typeof window === 'undefined') return;
     persistDiaryMeta(metaMap);
   }, [metaMap]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    persistDiaryChibiPrefs(diaryChibiPrefs);
+  }, [diaryChibiPrefs]);
 
   useEffect(() => {
     if (activeTab !== 'calendar') {
@@ -1412,7 +1452,7 @@ export function DiaryBPage({
         )}
       </div>
 
-      {activeTab !== 'grid' && (
+      {activeTab !== 'grid' && !hideFloatingChibi && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-end pr-5 pb-4">
           <button
             type="button"
@@ -1421,12 +1461,18 @@ export function DiaryBPage({
             aria-label="設定 / 匯出"
           >
             {sharedChibi ? (
-              <img src={sharedChibi} alt="" draggable={false} className="calendar-chibi w-36 select-none drop-shadow-md" />
+              <img
+                src={sharedChibi}
+                alt=""
+                draggable={false}
+                className="calendar-chibi select-none drop-shadow-md"
+                style={{ width: `${diaryChibiPrefs.size}px`, maxWidth: '44vw', height: 'auto' }}
+              />
             ) : (
               <span
                 style={{
-                  width: 144,
-                  height: 168,
+                  width: diaryChibiPrefs.size,
+                  height: Math.round(diaryChibiPrefs.size * 1.17),
                   borderRadius: 20,
                   background: 'rgba(252,244,228,0.88)',
                   border: '1.5px dashed rgba(180,130,80,0.22)',
@@ -1753,6 +1799,57 @@ export function DiaryBPage({
                 </span>
               )}
               <div style={{ fontSize: 12, color: '#7a6040', marginTop: 6, fontWeight: 500 }}>我的日記 設定</div>
+            </div>
+
+            <div style={{ padding: '10px 18px 10px', borderBottom: '1px solid rgba(100,80,40,0.08)' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  border: '1px solid rgba(170,130,80,0.18)',
+                  background: 'rgba(255,255,255,0.7)',
+                  borderRadius: 12,
+                  padding: '9px 11px',
+                }}
+              >
+                <span style={{ fontSize: 12.5, color: '#6d5237' }}>顯示小人</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDiaryChibiPrefs((prev) => ({ ...prev, showChibi: !prev.showChibi }))
+                  }
+                  className="relative h-6 w-10 rounded-full transition"
+                  style={{ background: diaryChibiPrefs.showChibi ? '#9b7a5b' : '#bdb2a6' }}
+                  aria-label="切換小人顯示"
+                >
+                  <span
+                    className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
+                    style={{ left: diaryChibiPrefs.showChibi ? 18 : 2 }}
+                  />
+                </button>
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 11.5, color: '#8a6e50' }}>小人大小</span>
+                  <span style={{ fontSize: 11, color: '#a08060' }}>{diaryChibiPrefs.size}px</span>
+                </div>
+                <input
+                  type="range"
+                  min={104}
+                  max={196}
+                  step={1}
+                  value={diaryChibiPrefs.size}
+                  onChange={(event) =>
+                    setDiaryChibiPrefs((prev) => ({
+                      ...prev,
+                      size: Math.min(196, Math.max(104, Number(event.target.value))),
+                    }))
+                  }
+                  className="w-full accent-amber-700"
+                />
+              </div>
             </div>
 
             <button

@@ -34,6 +34,16 @@ export const NOTE_COLORS = [
 ] as const;
 
 type NoteView = 'wall' | 'timeline';
+type NotesChibiPrefs = {
+  showChibi: boolean;
+  size: number;
+};
+
+const NOTES_CHIBI_PREFS_KEY = 'memorial-notes-chibi-prefs-v1';
+const DEFAULT_NOTES_CHIBI_PREFS: NotesChibiPrefs = {
+  showChibi: true,
+  size: 148,
+};
 
 // Deterministic rotation -2…+2 degrees from note id
 function noteRotDeg(id: string): number {
@@ -44,6 +54,28 @@ function noteRotDeg(id: string): number {
 
 function todayDateStr() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function normalizeNotesChibiPrefs(input: unknown): NotesChibiPrefs {
+  if (!input || typeof input !== 'object') return DEFAULT_NOTES_CHIBI_PREFS;
+  const source = input as Partial<NotesChibiPrefs>;
+  const showChibi = source.showChibi !== false;
+  const size =
+    typeof source.size === 'number' && Number.isFinite(source.size)
+      ? Math.min(196, Math.max(104, Math.round(source.size)))
+      : DEFAULT_NOTES_CHIBI_PREFS.size;
+  return { showChibi, size };
+}
+
+function loadNotesChibiPrefs(): NotesChibiPrefs {
+  if (typeof window === 'undefined') return DEFAULT_NOTES_CHIBI_PREFS;
+  try {
+    const raw = window.localStorage.getItem(NOTES_CHIBI_PREFS_KEY);
+    if (!raw) return DEFAULT_NOTES_CHIBI_PREFS;
+    return normalizeNotesChibiPrefs(JSON.parse(raw) as unknown);
+  } catch {
+    return DEFAULT_NOTES_CHIBI_PREFS;
+  }
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -73,15 +105,22 @@ export function NotesPage({
   const [view, setView] = useState<NoteView>('wall');
   // Random chibi picked once per page mount, won't reroll until unmount
   const [chibiSrc] = useState(randomChibiSrc);
+  const [chibiPrefs, setChibiPrefs] = useState<NotesChibiPrefs>(loadNotesChibiPrefs);
   const [composing, setComposing] = useState(false);
   const [editingNote, setEditingNote] = useState<StoredNote | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const hideFloatingChibi = !chibiPrefs.showChibi || !chibiSrc;
 
   useEffect(() => {
     loadNotes()
       .then((data) => { setNotes(data); setLoaded(true); })
       .catch(() => setLoaded(true));
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(NOTES_CHIBI_PREFS_KEY, JSON.stringify(chibiPrefs));
+  }, [chibiPrefs]);
 
   const refreshNotes = async () => {
     const updated = await loadNotes();
@@ -138,22 +177,34 @@ export function NotesPage({
           </h1>
         </div>
 
-        {/* View toggle */}
-        <div className="flex overflow-hidden rounded-xl border border-stone-300 bg-white/80 text-xs">
-          <button
-            type="button"
-            onClick={() => setView('wall')}
-            className={`px-3 py-1.5 transition ${view === 'wall' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
-          >
-            牆
-          </button>
-          <button
-            type="button"
-            onClick={() => setView('timeline')}
-            className={`px-3 py-1.5 transition ${view === 'timeline' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
-          >
-            流
-          </button>
+        <div className="flex items-center gap-1.5">
+          {/* View toggle */}
+          <div className="flex overflow-hidden rounded-xl border border-stone-300 bg-white/80 text-xs">
+            <button
+              type="button"
+              onClick={() => setView('wall')}
+              className={`px-3 py-1.5 transition ${view === 'wall' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
+            >
+              牆
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('timeline')}
+              className={`px-3 py-1.5 transition ${view === 'timeline' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
+            >
+              流
+            </button>
+          </div>
+          {hideFloatingChibi && (
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              aria-label="更多設定"
+              className="grid h-7 w-7 place-items-center text-[20px] leading-none text-[#b3a393] transition active:opacity-60"
+            >
+              ⋯
+            </button>
+          )}
         </div>
       </header>
 
@@ -180,20 +231,22 @@ export function NotesPage({
         >
           +
         </button>
-        {/* Chibi → settings */}
-        <button
-          type="button"
-          onClick={() => setShowSettings(true)}
-          className="pointer-events-auto transition active:scale-90"
-          aria-label="設定 / 匯出"
-        >
-          <img
-            src={chibiSrc}
-            alt=""
-            draggable={false}
-            className="calendar-chibi w-36 select-none drop-shadow-md"
-          />
-        </button>
+        {!hideFloatingChibi && (
+          <button
+            type="button"
+            onClick={() => setShowSettings(true)}
+            className="pointer-events-auto transition active:scale-90"
+            aria-label="設定 / 匯出"
+          >
+            <img
+              src={chibiSrc}
+              alt=""
+              draggable={false}
+              className="calendar-chibi select-none drop-shadow-md"
+              style={{ width: `${chibiPrefs.size}px`, maxWidth: '42vw', height: 'auto' }}
+            />
+          </button>
+        )}
       </div>
 
       {/* ── Compose / Edit sheet ─────────────────────────────────── */}
@@ -210,6 +263,10 @@ export function NotesPage({
       {showSettings && (
         <NoteSettingsSheet
           notes={notes}
+          showChibi={chibiPrefs.showChibi}
+          chibiSize={chibiPrefs.size}
+          onToggleChibi={() => setChibiPrefs((prev) => ({ ...prev, showChibi: !prev.showChibi }))}
+          onChibiSizeChange={(size) => setChibiPrefs((prev) => ({ ...prev, size: Math.min(196, Math.max(104, Math.round(size))) }))}
           onImport={(imported) => void handleImport(imported)}
           onClearAll={() => void handleClearAll()}
           onClose={() => setShowSettings(false)}
@@ -428,11 +485,19 @@ function NoteComposeSheet({
 
 function NoteSettingsSheet({
   notes,
+  showChibi,
+  chibiSize,
+  onToggleChibi,
+  onChibiSizeChange,
   onImport,
   onClearAll,
   onClose,
 }: {
   notes: StoredNote[];
+  showChibi: boolean;
+  chibiSize: number;
+  onToggleChibi: () => void;
+  onChibiSizeChange: (size: number) => void;
   onImport: (notes: StoredNote[]) => void;
   onClearAll: () => void;
   onClose: () => void;
@@ -485,6 +550,37 @@ function NoteSettingsSheet({
         <p className="mb-4 text-center text-xs text-stone-400">共 {notes.length} 則便條</p>
 
         <div className="space-y-2">
+          <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-stone-700">顯示小人</span>
+              <button
+                type="button"
+                onClick={onToggleChibi}
+                className="relative h-6 w-10 rounded-full transition"
+                style={{ background: showChibi ? '#7a6858' : '#bab3aa' }}
+                aria-label="切換小人顯示"
+              >
+                <span
+                  className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
+                  style={{ left: showChibi ? 18 : 2 }}
+                />
+              </button>
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-xs text-stone-500">小人大小</span>
+              <span className="text-[11px] text-stone-400">{chibiSize}px</span>
+            </div>
+            <input
+              type="range"
+              min={104}
+              max={196}
+              step={1}
+              value={chibiSize}
+              onChange={(event) => onChibiSizeChange(Number(event.target.value))}
+              className="mt-1.5 w-full accent-stone-700"
+            />
+          </div>
+
           <button
             type="button"
             onClick={exportJSON}

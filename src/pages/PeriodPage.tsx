@@ -16,6 +16,7 @@ type PeriodStore = {
   records: PeriodRecord[];
   accentColor: string;
   panelStyle: PeriodPanelStyle;
+  showChibi: boolean;
   periodChibiSize: number;
 };
 
@@ -159,6 +160,7 @@ const DEFAULT_STORE: PeriodStore = {
   records: [],
   accentColor: C.period,
   panelStyle: 'soft',
+  showChibi: true,
   periodChibiSize: 168,
 };
 
@@ -293,6 +295,7 @@ function normalizePeriodStore(input: unknown): PeriodStore {
     input.panelStyle === 'glass' || input.panelStyle === 'minimal' || input.panelStyle === 'soft'
       ? input.panelStyle
       : DEFAULT_STORE.panelStyle;
+  const showChibi = input.showChibi !== false;
 
   const periodChibiSize =
     typeof input.periodChibiSize === 'number' && Number.isFinite(input.periodChibiSize)
@@ -303,6 +306,7 @@ function normalizePeriodStore(input: unknown): PeriodStore {
     records: normalizePeriodRecords(input.records),
     accentColor,
     panelStyle,
+    showChibi,
     periodChibiSize,
   };
 }
@@ -730,6 +734,8 @@ function DateSheet({
 function PeriodSettingsSheet({
   panelStyle,
   onPanelStyleChange,
+  showChibi,
+  onToggleChibi,
   chibiSize,
   onChibiSizeChange,
   backupBusy,
@@ -741,6 +747,8 @@ function PeriodSettingsSheet({
 }: {
   panelStyle: PeriodPanelStyle;
   onPanelStyleChange: (style: PeriodPanelStyle) => void;
+  showChibi: boolean;
+  onToggleChibi: () => void;
   chibiSize: number;
   onChibiSizeChange: (size: number) => void;
   backupBusy: boolean;
@@ -791,6 +799,22 @@ function PeriodSettingsSheet({
         </div>
 
         <div className="mb-4 rounded-2xl bg-stone-50 p-4">
+          <div className="mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
+            <p className="text-xs text-stone-600">顯示小人</p>
+            <button
+              type="button"
+              onClick={onToggleChibi}
+              className="relative h-6 w-10 rounded-full transition"
+              style={{ background: showChibi ? '#8a6a4e' : '#bcb7b0' }}
+              aria-label="切換小人顯示"
+            >
+              <span
+                className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
+                style={{ left: showChibi ? 18 : 2 }}
+              />
+            </button>
+          </div>
+
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-stone-500">小人大小</p>
             <span className="text-[11px] text-stone-400">{Math.round(chibiSize)}px</span>
@@ -912,6 +936,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [postEndPopup, setPostEndPopup] = useState<PostEndPopupState | null>(null);
   const chibiSources = PERIOD_CHIBI_SOURCES;
   const [chibiSrc, setChibiSrc] = useState('');
+  const hidePeriodChibi = !store.showChibi || !chibiSrc;
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const panelTheme = PANEL_STYLE_THEME[store.panelStyle];
   const panelFilterFx =
@@ -1346,8 +1371,18 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
             <p className="text-[9px] uppercase tracking-[0.28em] text-stone-400">PERIOD</p>
             <h1 className="mt-0.5 text-base leading-tight text-stone-800">經期追蹤</h1>
           </div>
-          {/* Spacer */}
-          <div className="w-10" />
+          {hidePeriodChibi ? (
+            <button
+              type="button"
+              onClick={() => setShowPeriodSettings(true)}
+              className="grid h-8 w-8 place-items-center text-[22px] leading-none text-stone-400 transition active:opacity-60"
+              aria-label="更多設定"
+            >
+              ⋯
+            </button>
+          ) : (
+            <div className="w-10" />
+          )}
         </div>
 
         {/* Tab bar */}
@@ -1809,7 +1844,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
       </div>
 
       {/* ── Floating chibi ───────────────────────────────────────── */}
-      {activeTab !== 'records' && (
+      {activeTab !== 'records' && !hidePeriodChibi && (
         <FloatingChibi
           chibiSrc={chibiSrc}
           phrase={chibiPhrase}
@@ -1859,6 +1894,8 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
         <PeriodSettingsSheet
           panelStyle={store.panelStyle}
           onPanelStyleChange={(style) => setStore((cur) => ({ ...cur, panelStyle: style }))}
+          showChibi={store.showChibi}
+          onToggleChibi={() => setStore((cur) => ({ ...cur, showChibi: !cur.showChibi }))}
           chibiSize={store.periodChibiSize}
           onChibiSizeChange={(size) => setStore((cur) => ({ ...cur, periodChibiSize: clamp(size, 120, 220) }))}
           backupBusy={periodBackupBusy}
