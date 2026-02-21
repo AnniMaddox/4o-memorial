@@ -909,12 +909,15 @@
 }
 
 .wl-bzoom-overlay {
-  z-index: 28;
+  z-index: 32;
 }
 
 .wl-bzoom-card {
   width: min(92vw, 360px);
   max-height: min(86vh, 740px);
+  background: var(--wl-bday-bg, #fdf9ee);
+  border: 1px solid var(--wl-bday-border, rgba(160, 130, 60, 0.2));
+  box-shadow: 0 30px 66px rgba(30, 22, 9, 0.42), 0 10px 26px rgba(30, 22, 9, 0.2);
 }
 
 .wl-bzoom-body {
