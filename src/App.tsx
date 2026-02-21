@@ -39,10 +39,12 @@ import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FA
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import { getBaseChibiPoolInfo, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
 import {
+  importAboutMBackupPart,
   exportAboutMeBackupPackage,
   exportAboutMBackupPackage,
   importAboutMeBackupPackage,
   importAboutMBackupPackage,
+  type AboutMPart,
   type BackupImportMode,
 } from './lib/bigBackup';
 import type { ChatProfile } from './lib/chatDB';
@@ -246,7 +248,7 @@ function App() {
       period: fallbackLabel(settings.appLabels.period, '經期日記'),
       diary: fallbackLabel(settings.appLabels.diary, '日記'),
       album: fallbackLabel(settings.appLabels.album, '相冊'),
-      notes: fallbackLabel(settings.appLabels.notes, '心情日記'),
+      notes: fallbackLabel(settings.appLabels.notes, '便利貼'),
     }),
     [settings.appLabels],
   );
@@ -558,6 +560,27 @@ function App() {
   const handleImportAboutMBackup = useCallback(
     async (files: File[], mode: BackupImportMode) => {
       const message = await importAboutMBackupPackage(files, mode);
+      const [updatedLetters, updatedDiaries, updatedChatLogs, updatedProfiles] = await Promise.all([
+        loadLetters(),
+        loadMDiaries(),
+        loadChatLogs(),
+        loadChatProfiles(),
+      ]);
+
+      setLetters(updatedLetters);
+      setDiaries(updatedDiaries);
+      setChatLogs(updatedChatLogs);
+      setChatProfiles(updatedProfiles);
+      await refreshData();
+
+      return message;
+    },
+    [refreshData],
+  );
+
+  const handleImportAboutMBackupPart = useCallback(
+    async (part: AboutMPart, files: File[], mode: BackupImportMode) => {
+      const message = await importAboutMBackupPart(part, files, mode);
       const [updatedLetters, updatedDiaries, updatedChatLogs, updatedProfiles] = await Promise.all([
         loadLetters(),
         loadMDiaries(),
@@ -1008,6 +1031,7 @@ function App() {
             onExportAboutMBackup={() => handleExportAboutMBackup()}
             onImportAboutMeBackup={(files, mode) => handleImportAboutMeBackup(files, mode)}
             onImportAboutMBackup={(files, mode) => handleImportAboutMBackup(files, mode)}
+            onImportAboutMBackupPart={(part, files, mode) => handleImportAboutMBackupPart(part, files, mode)}
             onSaveChatProfile={(profile) => void handleSaveChatProfile(profile)}
             onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
             onHoverToneWeightChange={onHoverToneWeightChange}
@@ -1067,6 +1091,7 @@ function App() {
       handleExportAboutMBackup,
       handleImportAboutMeBackup,
       handleImportAboutMBackup,
+      handleImportAboutMBackupPart,
       handleImportChatLogFiles,
       handleImportChatLogFolderFiles,
       handleClearAllChatLogs,

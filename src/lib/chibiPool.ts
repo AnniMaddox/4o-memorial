@@ -4,14 +4,49 @@ const MIN_POOL_SIZE = 20;
 
 export const CHIBI_POOL_UPDATED_EVENT = 'memorial:chibi-pool-updated';
 
+function toSortedSources(modules: Record<string, string>) {
+  return Object.entries(modules)
+    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+    .map(([, src]) => src);
+}
+
 const BASE_CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
   eager: true,
   import: 'default',
 }) as Record<string, string>;
 
-const BASE_CHIBI_SOURCES = Object.entries(BASE_CHIBI_MODULES)
-  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-  .map(([, src]) => src);
+const BASE_CHIBI_SOURCES = toSortedSources(BASE_CHIBI_MODULES);
+
+const MDIARY_CHIBI_MODULES = import.meta.glob('../../public/mdiary-chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+const FITNESS_CHIBI_MODULES = import.meta.glob('../../public/fitness-chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+const POMODORO_CHIBI_MODULES = import.meta.glob('../../public/pomodoro-chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+const NOTES_CHIBI_MODULES = import.meta.glob('../../public/notes-chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+const CALENDAR_CHIBI_MODULES = import.meta.glob('../../public/calendar-chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+
+export type ScopedChibiPoolKey = 'mdiary' | 'fitness' | 'pomodoro' | 'notes' | 'calendar';
+
+const SCOPED_CHIBI_SOURCES: Record<ScopedChibiPoolKey, string[]> = {
+  mdiary: toSortedSources(MDIARY_CHIBI_MODULES),
+  fitness: toSortedSources(FITNESS_CHIBI_MODULES),
+  pomodoro: toSortedSources(POMODORO_CHIBI_MODULES),
+  notes: toSortedSources(NOTES_CHIBI_MODULES),
+  calendar: toSortedSources(CALENDAR_CHIBI_MODULES),
+};
 
 type ChibiPoolInfo = {
   allCount: number;
@@ -134,6 +169,27 @@ function syncPoolLength(pool: string[], targetCount: number) {
 
 export function getAllBaseChibiSources() {
   return [...BASE_CHIBI_SOURCES];
+}
+
+export function getScopedChibiSources(scope: ScopedChibiPoolKey) {
+  return [...(SCOPED_CHIBI_SOURCES[scope] ?? [])];
+}
+
+export function getScopedMixedChibiSources(scope: ScopedChibiPoolKey, poolSize = DEFAULT_POOL_SIZE) {
+  const scoped = getScopedChibiSources(scope);
+  const activeBase = getActiveBaseChibiSources(poolSize);
+
+  if (!scoped.length) {
+    return activeBase;
+  }
+
+  if (!activeBase.length) {
+    return scoped;
+  }
+
+  const baseMixTarget = Math.max(4, Math.round(Math.max(activeBase.length, 20) * 0.2));
+  const mixedBase = activeBase.slice(0, Math.min(baseMixTarget, activeBase.length));
+  return uniqueStrings([...scoped, ...mixedBase]);
 }
 
 export function getActiveBaseChibiSources(poolSize = DEFAULT_POOL_SIZE) {

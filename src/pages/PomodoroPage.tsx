@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { CHIBI_POOL_UPDATED_EVENT, getActiveBaseChibiSources } from '../lib/chibiPool';
+import { CHIBI_POOL_UPDATED_EVENT, getScopedMixedChibiSources } from '../lib/chibiPool';
 
 type PomodoroMode = 'focus' | 'shortBreak' | 'longBreak';
 
@@ -58,7 +58,7 @@ export function PomodoroPage() {
   const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
   const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
   const chibiSources = useMemo(() => {
-    const active = getActiveBaseChibiSources();
+    const active = getScopedMixedChibiSources('pomodoro');
     return active.length ? active : [fallbackChibiSrc];
   }, [chibiPoolVersion, fallbackChibiSrc]);
   const [chibiIndex, setChibiIndex] = useState(0);

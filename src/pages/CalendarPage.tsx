@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 
-import { CHIBI_POOL_UPDATED_EVENT, getActiveBaseChibiSources } from '../lib/chibiPool';
+import { CHIBI_POOL_UPDATED_EVENT, getScopedMixedChibiSources } from '../lib/chibiPool';
 import { monthLabel, todayDateKey } from '../lib/date';
 import { getGlobalHoverPoolEntries, pickHoverPhraseByWeights } from '../lib/hoverPool';
 import { getHoverPhraseMap, setHoverPhraseMap } from '../lib/repositories/metaRepo';
@@ -120,7 +120,7 @@ export function CalendarPage({
   const fallbackChibiSrc = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
   const [chibiPoolVersion, setChibiPoolVersion] = useState(0);
   const chibiSources = useMemo(() => {
-    const active = getActiveBaseChibiSources();
+    const active = getScopedMixedChibiSources('calendar');
     return active.length ? active : [fallbackChibiSrc];
   }, [fallbackChibiSrc, chibiPoolVersion]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);

@@ -41,6 +41,11 @@ type SettingsPageProps = {
   onExportAboutMBackup: () => Promise<string> | string;
   onImportAboutMeBackup: (files: File[], mode: 'merge' | 'overwrite') => Promise<string> | string;
   onImportAboutMBackup: (files: File[], mode: 'merge' | 'overwrite') => Promise<string> | string;
+  onImportAboutMBackupPart: (
+    part: 'mDiary' | 'letters' | 'chatLogs' | 'inbox',
+    files: File[],
+    mode: 'merge' | 'overwrite',
+  ) => Promise<string> | string;
   onSaveChatProfile: (profile: ChatProfile) => void;
   onDeleteChatProfile: (id: string) => void;
   onHoverToneWeightChange: (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => void;
@@ -48,6 +53,8 @@ type SettingsPageProps = {
   onReshuffleChibiPool: () => void;
   onRefresh: () => void;
 };
+
+type AboutMBackupPart = 'mDiary' | 'letters' | 'chatLogs' | 'inbox';
 
 type PanelKey =
   | 'overview'
@@ -96,7 +103,7 @@ const TAB_ICON_LABELS: Array<{ key: TabIconKey; label: string }> = [
   { key: 'period', label: 'Period 經期日記' },
   { key: 'diary', label: 'Diary 日記' },
   { key: 'album', label: 'Album 相冊' },
-  { key: 'notes', label: 'Notes 心情日記' },
+  { key: 'notes', label: 'Notes 便利貼' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -115,7 +122,14 @@ const APP_LABEL_FIELDS: Array<{ key: AppLabelKey; label: string }> = [
   { key: 'period', label: '首頁入口：經期日記' },
   { key: 'diary', label: '首頁入口：日記' },
   { key: 'album', label: '首頁入口：相冊' },
-  { key: 'notes', label: '首頁入口：心情日記' },
+  { key: 'notes', label: '首頁入口：便利貼' },
+];
+
+const ABOUT_M_PART_FIELDS: Array<{ key: AboutMBackupPart; label: string; hint: string }> = [
+  { key: 'mDiary', label: 'M日記', hint: 'mDiary.json' },
+  { key: 'letters', label: '情書', hint: 'letters.json' },
+  { key: 'chatLogs', label: '對話紀錄', hint: 'chatLogs.json' },
+  { key: 'inbox', label: 'Inbox / 月曆', hint: 'inbox.json' },
 ];
 
 type AppearancePresetPayload = {
@@ -225,6 +239,7 @@ export function SettingsPage({
   onExportAboutMBackup,
   onImportAboutMeBackup,
   onImportAboutMBackup,
+  onImportAboutMBackupPart,
   onSaveChatProfile,
   onDeleteChatProfile,
   onHoverToneWeightChange,
@@ -263,6 +278,7 @@ export function SettingsPage({
   const [aboutMeBackupStatus, setAboutMeBackupStatus] = useState('');
   const [aboutMBackupStatus, setAboutMBackupStatus] = useState('');
   const [backupBusy, setBackupBusy] = useState<'aboutMe' | 'aboutM' | null>(null);
+  const [openBackupGroup, setOpenBackupGroup] = useState<'aboutMe' | 'aboutM' | null>('aboutMe');
 
   useEffect(() => {
     setFontFileUrlDraft(settings.customFontFileUrl);
@@ -326,6 +342,10 @@ export function SettingsPage({
 
   function togglePanel(panel: PanelKey) {
     setOpenPanel((current) => (current === panel ? null : panel));
+  }
+
+  function toggleBackupGroup(group: 'aboutMe' | 'aboutM') {
+    setOpenBackupGroup((current) => (current === group ? null : group));
   }
 
   function applyFontSettings() {
@@ -811,126 +831,214 @@ export function SettingsPage({
           isOpen={openPanel === 'bigBackup'}
           onToggle={() => togglePanel('bigBackup')}
         >
-          <div className="space-y-4">
-            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <div>
-                <p className="text-sm text-stone-800">關於我</p>
-                <p className="mt-0.5 text-xs text-stone-500">包含：經期日記、打卡、我的日記（B）、心情日記</p>
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void runBackupAction('aboutMe', '關於我匯出中…', () => onExportAboutMeBackup());
-                  }}
-                  disabled={backupBusy !== null}
-                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+          <div className="space-y-3">
+            <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5">
+              <button
+                type="button"
+                onClick={() => toggleBackupGroup('aboutMe')}
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm text-stone-800">關於我</span>
+                  <span className="mt-0.5 block text-xs text-stone-500">包含：經期日記、打卡、我的日記（B）、便利貼</span>
+                </span>
+                <span
+                  className={`text-lg leading-none text-stone-500 transition-transform ${openBackupGroup === 'aboutMe' ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
                 >
-                  完整匯出
-                </button>
-                <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-xs text-stone-700">
-                  匯入（合併）
-                  <input
-                    type="file"
-                    multiple
-                    accept=".json,application/json"
-                    className="hidden"
-                    disabled={backupBusy !== null}
-                    onChange={(event) => {
-                      const files = event.target.files ? Array.from(event.target.files) : [];
-                      if (files.length) {
-                        void runBackupAction('aboutMe', '關於我匯入中（合併）…', () =>
-                          onImportAboutMeBackup(files, 'merge'),
-                        );
-                      }
-                      event.currentTarget.value = '';
-                    }}
-                  />
-                </label>
-                <label className="cursor-pointer rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-center text-xs text-rose-700">
-                  匯入（覆蓋）
-                  <input
-                    type="file"
-                    multiple
-                    accept=".json,application/json"
-                    className="hidden"
-                    disabled={backupBusy !== null}
-                    onChange={(event) => {
-                      const files = event.target.files ? Array.from(event.target.files) : [];
-                      if (files.length) {
-                        void runBackupAction('aboutMe', '關於我匯入中（覆蓋）…', () =>
-                          onImportAboutMeBackup(files, 'overwrite'),
-                        );
-                      }
-                      event.currentTarget.value = '';
-                    }}
-                  />
-                </label>
-              </div>
-              {aboutMeBackupStatus && <p className="text-xs text-stone-600">{aboutMeBackupStatus}</p>}
+                  ⌄
+                </span>
+              </button>
+
+              {openBackupGroup === 'aboutMe' && (
+                <div className="mt-3 space-y-2.5 border-t border-stone-200 pt-3">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void runBackupAction('aboutMe', '關於我匯出中…', () => onExportAboutMeBackup());
+                      }}
+                      disabled={backupBusy !== null}
+                      className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      完整匯出
+                    </button>
+                    <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-xs text-stone-700">
+                      匯入（合併）
+                      <input
+                        type="file"
+                        multiple
+                        accept=".json,application/json"
+                        className="hidden"
+                        disabled={backupBusy !== null}
+                        onChange={(event) => {
+                          const files = event.target.files ? Array.from(event.target.files) : [];
+                          if (files.length) {
+                            void runBackupAction('aboutMe', '關於我匯入中（合併）…', () =>
+                              onImportAboutMeBackup(files, 'merge'),
+                            );
+                          }
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                    <label className="cursor-pointer rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-center text-xs text-rose-700">
+                      匯入（覆蓋）
+                      <input
+                        type="file"
+                        multiple
+                        accept=".json,application/json"
+                        className="hidden"
+                        disabled={backupBusy !== null}
+                        onChange={(event) => {
+                          const files = event.target.files ? Array.from(event.target.files) : [];
+                          if (files.length) {
+                            void runBackupAction('aboutMe', '關於我匯入中（覆蓋）…', () =>
+                              onImportAboutMeBackup(files, 'overwrite'),
+                            );
+                          }
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {aboutMeBackupStatus && <p className="text-xs text-stone-600">{aboutMeBackupStatus}</p>}
+                </div>
+              )}
             </div>
 
-            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <div>
-                <p className="text-sm text-stone-800">關於M</p>
-                <p className="mt-0.5 text-xs text-stone-500">分包：mDiary / letters / chatLogs / inbox（含 metadata）</p>
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void runBackupAction('aboutM', '關於M匯出中…', () => onExportAboutMBackup());
-                  }}
-                  disabled={backupBusy !== null}
-                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+            <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5">
+              <button
+                type="button"
+                onClick={() => toggleBackupGroup('aboutM')}
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm text-stone-800">關於M</span>
+                  <span className="mt-0.5 block text-xs text-stone-500">分包：mDiary / letters / chatLogs / inbox（含 metadata）</span>
+                </span>
+                <span
+                  className={`text-lg leading-none text-stone-500 transition-transform ${openBackupGroup === 'aboutM' ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
                 >
-                  完整匯出
-                </button>
-                <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-xs text-stone-700">
-                  匯入（合併）
-                  <input
-                    type="file"
-                    multiple
-                    accept=".json,application/json"
-                    className="hidden"
-                    disabled={backupBusy !== null}
-                    onChange={(event) => {
-                      const files = event.target.files ? Array.from(event.target.files) : [];
-                      if (files.length) {
-                        void runBackupAction('aboutM', '關於M匯入中（合併）…', () =>
-                          onImportAboutMBackup(files, 'merge'),
-                        );
-                      }
-                      event.currentTarget.value = '';
-                    }}
-                  />
-                </label>
-                <label className="cursor-pointer rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-center text-xs text-rose-700">
-                  匯入（覆蓋）
-                  <input
-                    type="file"
-                    multiple
-                    accept=".json,application/json"
-                    className="hidden"
-                    disabled={backupBusy !== null}
-                    onChange={(event) => {
-                      const files = event.target.files ? Array.from(event.target.files) : [];
-                      if (files.length) {
-                        void runBackupAction('aboutM', '關於M匯入中（覆蓋）…', () =>
-                          onImportAboutMBackup(files, 'overwrite'),
-                        );
-                      }
-                      event.currentTarget.value = '';
-                    }}
-                  />
-                </label>
-              </div>
-              {aboutMBackupStatus && <p className="text-xs text-stone-600">{aboutMBackupStatus}</p>}
+                  ⌄
+                </span>
+              </button>
+
+              {openBackupGroup === 'aboutM' && (
+                <div className="mt-3 space-y-3 border-t border-stone-200 pt-3">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void runBackupAction('aboutM', '關於M匯出中…', () => onExportAboutMBackup());
+                      }}
+                      disabled={backupBusy !== null}
+                      className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      完整匯出
+                    </button>
+                    <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-xs text-stone-700">
+                      匯入（合併）
+                      <input
+                        type="file"
+                        multiple
+                        accept=".json,application/json"
+                        className="hidden"
+                        disabled={backupBusy !== null}
+                        onChange={(event) => {
+                          const files = event.target.files ? Array.from(event.target.files) : [];
+                          if (files.length) {
+                            void runBackupAction('aboutM', '關於M匯入中（合併）…', () =>
+                              onImportAboutMBackup(files, 'merge'),
+                            );
+                          }
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                    <label className="cursor-pointer rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-center text-xs text-rose-700">
+                      匯入（覆蓋）
+                      <input
+                        type="file"
+                        multiple
+                        accept=".json,application/json"
+                        className="hidden"
+                        disabled={backupBusy !== null}
+                        onChange={(event) => {
+                          const files = event.target.files ? Array.from(event.target.files) : [];
+                          if (files.length) {
+                            void runBackupAction('aboutM', '關於M匯入中（覆蓋）…', () =>
+                              onImportAboutMBackup(files, 'overwrite'),
+                            );
+                          }
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="space-y-2 rounded-lg border border-stone-200 bg-white px-2.5 py-2.5">
+                    <p className="text-xs text-stone-500">分包匯入（適合大檔案分批）</p>
+                    <div className="space-y-2">
+                      {ABOUT_M_PART_FIELDS.map((field) => (
+                        <div key={field.key} className="rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-stone-700">{field.label}</p>
+                            <p className="text-[11px] text-stone-400">{field.hint}</p>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            <label className="cursor-pointer rounded-md border border-stone-300 bg-white px-2 py-1.5 text-center text-[11px] text-stone-700">
+                              合併
+                              <input
+                                type="file"
+                                accept=".json,application/json"
+                                className="hidden"
+                                disabled={backupBusy !== null}
+                                onChange={(event) => {
+                                  const files = event.target.files ? Array.from(event.target.files) : [];
+                                  if (files.length) {
+                                    void runBackupAction('aboutM', `關於M・${field.label}匯入中（合併）…`, () =>
+                                      onImportAboutMBackupPart(field.key, files, 'merge'),
+                                    );
+                                  }
+                                  event.currentTarget.value = '';
+                                }}
+                              />
+                            </label>
+                            <label className="cursor-pointer rounded-md border border-rose-300 bg-rose-50 px-2 py-1.5 text-center text-[11px] text-rose-700">
+                              覆蓋
+                              <input
+                                type="file"
+                                accept=".json,application/json"
+                                className="hidden"
+                                disabled={backupBusy !== null}
+                                onChange={(event) => {
+                                  const files = event.target.files ? Array.from(event.target.files) : [];
+                                  if (files.length) {
+                                    void runBackupAction('aboutM', `關於M・${field.label}匯入中（覆蓋）…`, () =>
+                                      onImportAboutMBackupPart(field.key, files, 'overwrite'),
+                                    );
+                                  }
+                                  event.currentTarget.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {aboutMBackupStatus && <p className="text-xs text-stone-600">{aboutMBackupStatus}</p>}
+                </div>
+              )}
             </div>
 
-            <p className="text-xs text-stone-500">
-              匯入時請一次選取同一包的全部 JSON（包含 manifest 索引檔），避免缺檔導致覆蓋失敗。
-            </p>
+            <div className="space-y-1 text-xs text-stone-500">
+              <p>完整匯入請一次選同一包的全部 JSON（包含 manifest 索引檔）。</p>
+              <p>分包匯入可單獨挑 mDiary / letters / chatLogs / inbox 的 JSON。</p>
+            </div>
           </div>
         </SettingPanel>
 
@@ -2047,7 +2155,7 @@ export function SettingsPage({
 
         <SettingPanel
           icon="📝"
-          title="心情日記"
+          title="便利貼"
           subtitle="字體大小 · 文字色"
           isOpen={openPanel === 'notes'}
           onToggle={() => togglePanel('notes')}
@@ -2055,7 +2163,7 @@ export function SettingsPage({
           <div className="space-y-4">
             <label className="block space-y-1">
               <span className="flex items-center justify-between text-xs text-stone-600">
-                <span>心情日記字體大小</span>
+                <span>便利貼字體大小</span>
                 <span>{settings.notesFontSize}px</span>
               </span>
               <input
@@ -2074,7 +2182,7 @@ export function SettingsPage({
             </label>
 
             <label className="flex items-center justify-between">
-              <span className="text-xs text-stone-600">心情日記文字色</span>
+              <span className="text-xs text-stone-600">便利貼文字色</span>
               <input
                 type="color"
                 value={settings.notesTextColor}

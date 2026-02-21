@@ -78,7 +78,7 @@ export const DEFAULT_APP_LABELS: AppLabels = {
   period: '經期日記',
   diary: '日記',
   album: '相冊',
-  notes: '心情日記',
+  notes: '便利貼',
 };
 
 export type AppSettings = {

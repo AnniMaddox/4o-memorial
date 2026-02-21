@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getActiveBaseChibiSources } from '../lib/chibiPool';
+import { getScopedMixedChibiSources } from '../lib/chibiPool';
 import {
   clearAllNotes,
   deleteNote,
@@ -14,7 +14,7 @@ import type { StoredNote } from '../lib/noteDB';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 function randomChibiSrc(): string {
-  const sources = getActiveBaseChibiSources();
+  const sources = getScopedMixedChibiSources('notes');
   if (sources.length === 0) return '';
   return sources[Math.floor(Math.random() * sources.length)]!;
 }
@@ -134,7 +134,7 @@ export function NotesPage({
             className="text-lg leading-tight text-stone-800"
             style={{ fontFamily: 'var(--app-heading-family)' }}
           >
-            心情日記
+            便利貼
           </h1>
         </div>
 
@@ -225,7 +225,7 @@ function NoteEmptyState() {
   return (
     <div className="flex flex-col items-center justify-center pt-20 text-center">
       <p className="mb-3 text-5xl">📝</p>
-      <p className="text-base text-stone-500">還沒有心情日記</p>
+      <p className="text-base text-stone-500">還沒有便利貼</p>
       <p className="mt-1 text-sm text-stone-400">點左下角 + 寫下第一個想法</p>
     </div>
   );

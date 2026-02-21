@@ -91,8 +91,11 @@ function normalizeAppLabels(value: unknown, fallback: AppLabels): AppLabels {
     period: normalizeString(input.period, fallback.period),
     diary: normalizeString(input.diary, fallback.diary),
     album: normalizeString(input.album, fallback.album),
-    // Migrate legacy default label to the new one unless user set a custom value.
-    notes: normalizedNotes === '便條' ? fallback.notes : normalizedNotes,
+    // Migrate legacy/default label variants to the new one unless user set a custom value.
+    notes:
+      normalizedNotes === '便條' || normalizedNotes === '心情日記'
+        ? fallback.notes
+        : normalizedNotes,
   };
 }
 

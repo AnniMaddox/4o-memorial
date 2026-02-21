@@ -13,8 +13,8 @@ import type { CalendarMonth, EmailRecord, EmailViewRecord } from '../types/conte
 export type BackupImportMode = 'merge' | 'overwrite';
 
 type BackupDomain = 'aboutMe' | 'aboutM';
-type AboutMePart = 'diaryB' | 'notes' | 'period' | 'checkin';
-type AboutMPart = 'mDiary' | 'letters' | 'chatLogs' | 'inbox';
+export type AboutMePart = 'diaryB' | 'notes' | 'period' | 'checkin';
+export type AboutMPart = 'mDiary' | 'letters' | 'chatLogs' | 'inbox';
 type BackupPart = AboutMePart | AboutMPart;
 
 const MANIFEST_KIND = 'memorial-big-backup-manifest';
@@ -614,6 +614,193 @@ async function parsePackageFiles(files: File[], expectedDomain: BackupDomain) {
   };
 }
 
+async function parsePartFiles(files: File[], expectedDomain: BackupDomain) {
+  if (!files.length) {
+    throw new Error('沒有選到備份檔案。');
+  }
+
+  const parts = new Map<BackupPart, Record<string, unknown>>();
+
+  for (const file of files) {
+    const text = await file.text();
+    let payload: unknown;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(`JSON 解析失敗：${file.name}`);
+    }
+
+    if (!isPartPayload(payload)) {
+      continue;
+    }
+
+    if (payload.domain !== expectedDomain) {
+      continue;
+    }
+
+    parts.set(payload.part as BackupPart, payload);
+  }
+
+  return parts;
+}
+
+type AboutMImportCounts = {
+  mDiaryCount: number;
+  letterCount: number;
+  chatLogCount: number;
+  inboxEmailCount: number;
+};
+
+function emptyAboutMImportCounts(): AboutMImportCounts {
+  return {
+    mDiaryCount: 0,
+    letterCount: 0,
+    chatLogCount: 0,
+    inboxEmailCount: 0,
+  };
+}
+
+function mergeAboutMImportCounts(base: AboutMImportCounts, incoming: AboutMImportCounts): AboutMImportCounts {
+  return {
+    mDiaryCount: base.mDiaryCount + incoming.mDiaryCount,
+    letterCount: base.letterCount + incoming.letterCount,
+    chatLogCount: base.chatLogCount + incoming.chatLogCount,
+    inboxEmailCount: base.inboxEmailCount + incoming.inboxEmailCount,
+  };
+}
+
+function formatAboutMImportMessage(mode: BackupImportMode, counts: AboutMImportCounts) {
+  return `關於M匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：日記 ${counts.mDiaryCount}、情書 ${counts.letterCount}、對話 ${counts.chatLogCount}、信件 ${counts.inboxEmailCount}。`;
+}
+
+function aboutMPartLabel(part: AboutMPart) {
+  switch (part) {
+    case 'mDiary':
+      return 'M日記';
+    case 'letters':
+      return '情書';
+    case 'chatLogs':
+      return '對話紀錄';
+    case 'inbox':
+      return 'Inbox / 月曆';
+    default:
+      return part;
+  }
+}
+
+function formatAboutMPartMessage(part: AboutMPart, mode: BackupImportMode, counts: AboutMImportCounts) {
+  switch (part) {
+    case 'mDiary':
+      return `關於M・${aboutMPartLabel(part)}匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：日記 ${counts.mDiaryCount}。`;
+    case 'letters':
+      return `關於M・${aboutMPartLabel(part)}匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：情書 ${counts.letterCount}。`;
+    case 'chatLogs':
+      return `關於M・${aboutMPartLabel(part)}匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：對話 ${counts.chatLogCount}。`;
+    case 'inbox':
+      return `關於M・${aboutMPartLabel(part)}匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：信件 ${counts.inboxEmailCount}。`;
+    default:
+      return formatAboutMImportMessage(mode, counts);
+  }
+}
+
+async function clearAboutMPart(part: AboutMPart) {
+  switch (part) {
+    case 'mDiary':
+      await clearAllMDiaries();
+      writeLocalStorageRaw(M_DIARY_FAVORITES_KEY, null);
+      return;
+    case 'letters':
+      await clearAllLetters();
+      writeLocalStorageRaw(LETTER_FAVORITES_KEY, null);
+      return;
+    case 'chatLogs':
+      await Promise.all([clearAllChatLogs(), clearAllChatProfiles()]);
+      return;
+    case 'inbox':
+      await clearInboxData();
+      return;
+    default:
+      return;
+  }
+}
+
+async function importAboutMPartData(
+  part: AboutMPart,
+  payload: Record<string, unknown>,
+  mode: BackupImportMode,
+): Promise<AboutMImportCounts> {
+  const counts = emptyAboutMImportCounts();
+
+  if (part === 'mDiary') {
+    const entries = normalizeStoredMDiaryArray(payload.entries);
+    const favorites = normalizeStringArray(payload.favorites);
+    if (entries.length) {
+      await saveMDiaries(entries);
+    }
+    counts.mDiaryCount = entries.length;
+
+    if (mode === 'overwrite') {
+      writeLocalStorageJson(M_DIARY_FAVORITES_KEY, favorites);
+    } else {
+      const existingFavorites = normalizeStringArray(readLocalStorageJson(M_DIARY_FAVORITES_KEY, []));
+      writeLocalStorageJson(M_DIARY_FAVORITES_KEY, mergeUniqueStrings(existingFavorites, favorites));
+    }
+
+    return counts;
+  }
+
+  if (part === 'letters') {
+    const entries = normalizeStoredLetterArray(payload.entries);
+    const favorites = normalizeStringArray(payload.favorites);
+    if (entries.length) {
+      await saveLetters(entries);
+    }
+    counts.letterCount = entries.length;
+
+    if (mode === 'overwrite') {
+      writeLocalStorageJson(LETTER_FAVORITES_KEY, favorites);
+    } else {
+      const existingFavorites = normalizeStringArray(readLocalStorageJson(LETTER_FAVORITES_KEY, []));
+      writeLocalStorageJson(LETTER_FAVORITES_KEY, mergeUniqueStrings(existingFavorites, favorites));
+    }
+
+    return counts;
+  }
+
+  if (part === 'chatLogs') {
+    const entries = normalizeStoredChatLogArray(payload.entries);
+    const profiles = normalizeChatProfileArray(payload.profiles);
+
+    if (entries.length) {
+      await saveChatLogs(entries);
+    }
+    if (profiles.length) {
+      await Promise.all(profiles.map((profile) => saveChatProfile(profile)));
+    }
+
+    counts.chatLogCount = entries.length;
+    return counts;
+  }
+
+  if (part === 'inbox') {
+    const emails = normalizeEmailArray(payload.emails);
+    const calendars = normalizeCalendarRows(payload.calendars);
+    const meta = normalizeMetaMap(payload.meta);
+
+    if (emails.length) {
+      await putEmails(emails);
+    }
+    if (calendars.length) {
+      await Promise.all(calendars.map((row) => putCalendarMonth(row.monthKey, row.data)));
+    }
+    await applyInboxMeta(meta, mode);
+
+    counts.inboxEmailCount = emails.length;
+  }
+
+  return counts;
+}
+
 function countCheckinSignIns(store: Record<string, unknown> | null) {
   if (!store || !isRecord(store.signIns)) return 0;
   return Object.keys(store.signIns).length;
@@ -694,7 +881,7 @@ export async function exportAboutMeBackupPackage(): Promise<string> {
   downloadJson(checkinFile, checkinPayload);
   downloadJson(manifestFile, manifest);
 
-  return `關於我已匯出：${diaryBEntries.length} 篇日記B、${notes.length} 則心情日記。`;
+  return `關於我已匯出：${diaryBEntries.length} 篇日記B、${notes.length} 則便利貼。`;
 }
 
 export async function exportAboutMBackupPackage(): Promise<string> {
@@ -877,7 +1064,7 @@ export async function importAboutMeBackupPackage(files: File[], mode: BackupImpo
     }
   }
 
-  return `關於我匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：日記B ${diaryBCount}、心情日記 ${notesCount}。`;
+  return `關於我匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：日記B ${diaryBCount}、便利貼 ${notesCount}。`;
 }
 
 export async function importAboutMBackupPackage(files: File[], mode: BackupImportMode): Promise<string> {
@@ -902,79 +1089,34 @@ export async function importAboutMBackupPackage(files: File[], mode: BackupImpor
     writeLocalStorageRaw(LETTER_FAVORITES_KEY, null);
   }
 
-  let mDiaryCount = 0;
-  let letterCount = 0;
-  let chatLogCount = 0;
-  let inboxEmailCount = 0;
-
-  const mDiaryPartRaw = parsed.parts.get('mDiary');
-  if (mDiaryPartRaw) {
-    const entries = normalizeStoredMDiaryArray(mDiaryPartRaw.entries);
-    const favorites = normalizeStringArray(mDiaryPartRaw.favorites);
-    if (entries.length) {
-      await saveMDiaries(entries);
+  let counts = emptyAboutMImportCounts();
+  for (const part of importableParts) {
+    const payload = parsed.parts.get(part);
+    if (!payload) {
+      continue;
     }
-    mDiaryCount = entries.length;
-
-    if (mode === 'overwrite') {
-      writeLocalStorageJson(M_DIARY_FAVORITES_KEY, favorites);
-    } else {
-      const existingFavorites = normalizeStringArray(readLocalStorageJson(M_DIARY_FAVORITES_KEY, []));
-      writeLocalStorageJson(M_DIARY_FAVORITES_KEY, mergeUniqueStrings(existingFavorites, favorites));
-    }
+    const importedCounts = await importAboutMPartData(part, payload, mode);
+    counts = mergeAboutMImportCounts(counts, importedCounts);
   }
 
-  const lettersPartRaw = parsed.parts.get('letters');
-  if (lettersPartRaw) {
-    const entries = normalizeStoredLetterArray(lettersPartRaw.entries);
-    const favorites = normalizeStringArray(lettersPartRaw.favorites);
-    if (entries.length) {
-      await saveLetters(entries);
-    }
-    letterCount = entries.length;
+  return formatAboutMImportMessage(mode, counts);
+}
 
-    if (mode === 'overwrite') {
-      writeLocalStorageJson(LETTER_FAVORITES_KEY, favorites);
-    } else {
-      const existingFavorites = normalizeStringArray(readLocalStorageJson(LETTER_FAVORITES_KEY, []));
-      writeLocalStorageJson(LETTER_FAVORITES_KEY, mergeUniqueStrings(existingFavorites, favorites));
-    }
+export async function importAboutMBackupPart(
+  part: AboutMPart,
+  files: File[],
+  mode: BackupImportMode,
+): Promise<string> {
+  const parts = await parsePartFiles(files, 'aboutM');
+  const payload = parts.get(part);
+  if (!payload) {
+    throw new Error(`沒有找到「${aboutMPartLabel(part)}」分包 JSON。`);
   }
 
-  const chatLogsPartRaw = parsed.parts.get('chatLogs');
-  if (chatLogsPartRaw) {
-    const entries = normalizeStoredChatLogArray(chatLogsPartRaw.entries);
-    const profiles = normalizeChatProfileArray(chatLogsPartRaw.profiles);
-
-    if (entries.length) {
-      await saveChatLogs(entries);
-    }
-
-    if (profiles.length) {
-      await Promise.all(profiles.map((profile) => saveChatProfile(profile)));
-    }
-
-    chatLogCount = entries.length;
+  if (mode === 'overwrite') {
+    await clearAboutMPart(part);
   }
 
-  const inboxPartRaw = parsed.parts.get('inbox');
-  if (inboxPartRaw) {
-    const emails = normalizeEmailArray(inboxPartRaw.emails);
-    const calendars = normalizeCalendarRows(inboxPartRaw.calendars);
-    const meta = normalizeMetaMap(inboxPartRaw.meta);
-
-    if (emails.length) {
-      await putEmails(emails);
-    }
-
-    if (calendars.length) {
-      await Promise.all(calendars.map((row) => putCalendarMonth(row.monthKey, row.data)));
-    }
-
-    await applyInboxMeta(meta, mode);
-
-    inboxEmailCount = emails.length;
-  }
-
-  return `關於M匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：日記 ${mDiaryCount}、情書 ${letterCount}、對話 ${chatLogCount}、信件 ${inboxEmailCount}。`;
+  const counts = await importAboutMPartData(part, payload, mode);
+  return formatAboutMPartMessage(part, mode, counts);
 }

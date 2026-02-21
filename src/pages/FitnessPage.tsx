@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { CHIBI_POOL_UPDATED_EVENT, getActiveBaseChibiSources } from '../lib/chibiPool';
+import { CHIBI_POOL_UPDATED_EVENT, getScopedMixedChibiSources } from '../lib/chibiPool';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ export function FitnessPage() {
   const fallbackChibiSrc = `${BASE}chibi/chibi-00.webp`;
   const chibiSources = useMemo(
     () => {
-      const active = getActiveBaseChibiSources();
+      const active = getScopedMixedChibiSources('fitness');
       return active.length ? active : [fallbackChibiSrc];
     },
     [fallbackChibiSrc, chibiPoolVersion],

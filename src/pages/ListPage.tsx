@@ -2,11 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ListType = 'movies' | 'songs';
+type ListType = 'movies' | 'songs' | 'books';
 
 interface ListItem {
   title: string;
   reason: string;
+  author?: string | null;
+  quote?: string | null;
+  readTogether?: string | null;
+  whenToRead?: string | null;
   why?: string | null;
   watchTogether?: string | null;
   cuddle?: number | null;
@@ -33,6 +37,7 @@ export function ListPage() {
   const [listType, setListType] = useState<ListType>('movies');
   const [movies, setMovies] = useState<ListItem[]>([]);
   const [songs, setSongs] = useState<ListItem[]>([]);
+  const [books, setBooks] = useState<ListItem[]>([]);
   const [view, setView] = useState<'deck' | 'card'>('deck');
   const [queue, setQueue] = useState<ListItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -46,9 +51,12 @@ export function ListPage() {
     void fetch(`${BASE}data/songs.json`)
       .then((r) => r.json())
       .then((d: ListItem[]) => setSongs(d));
+    void fetch(`${BASE}data/books.json`)
+      .then((r) => r.json())
+      .then((d: ListItem[]) => setBooks(d));
   }, []);
 
-  const sourceList = listType === 'movies' ? movies : songs;
+  const sourceList = listType === 'movies' ? movies : listType === 'songs' ? songs : books;
   const currentItem = queue[currentIndex] ?? null;
 
   function draw() {
@@ -94,7 +102,7 @@ export function ListPage() {
     setCurrentIndex(0);
   }
 
-  const label = listType === 'movies' ? '部' : '首';
+  const label = listType === 'movies' ? '部' : listType === 'songs' ? '首' : '本';
 
   return (
     <div
@@ -132,6 +140,20 @@ export function ListPage() {
               {songs.length > 0 ? songs.length : ''}
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => switchList('books')}
+            className={`flex-1 rounded-xl py-2 text-sm font-medium transition active:scale-95 ${
+              listType === 'books'
+                ? 'bg-white/70 text-stone-800 shadow-sm'
+                : 'text-stone-500'
+            }`}
+          >
+            📚 書單
+            <span className="ml-1 text-xs opacity-50">
+              {books.length > 0 ? books.length : ''}
+            </span>
+          </button>
         </div>
       </header>
 
@@ -148,13 +170,15 @@ export function ListPage() {
                   background:
                     listType === 'movies'
                       ? 'linear-gradient(145deg, #2d1b10 0%, #0f0a07 100%)'
-                      : 'linear-gradient(145deg, #1a1535 0%, #0a0818 100%)',
+                      : listType === 'songs'
+                        ? 'linear-gradient(145deg, #1a1535 0%, #0a0818 100%)'
+                        : 'linear-gradient(145deg, #10352a 0%, #07190f 100%)',
                   transform: `rotate(${(offset - 1) * 5}deg) translateY(${offset * -5}px)`,
                   zIndex: 3 - offset,
                 }}
               >
                 <div className="flex h-full flex-col items-center justify-center gap-3 opacity-25">
-                  <span className="text-4xl">{listType === 'movies' ? '🎬' : '🎵'}</span>
+                  <span className="text-4xl">{listType === 'movies' ? '🎬' : listType === 'songs' ? '🎵' : '📚'}</span>
                   <div className="h-px w-16 bg-white/40" />
                   <div className="h-px w-10 bg-white/20" />
                 </div>
@@ -228,14 +252,18 @@ export function ListPage() {
               background:
                 listType === 'movies'
                   ? 'linear-gradient(170deg, #fefcf7 0%, #fdf8ee 50%, #faf4e4 100%)'
-                  : 'linear-gradient(170deg, #f5f0ff 0%, #ede8fa 50%, #e4dff5 100%)',
+                  : listType === 'songs'
+                    ? 'linear-gradient(170deg, #f5f0ff 0%, #ede8fa 50%, #e4dff5 100%)'
+                    : 'linear-gradient(170deg, #f2fbf4 0%, #eaf7ef 50%, #e0f2e8 100%)',
             }}
           >
             <div className="px-5 py-6">
               {listType === 'movies' ? (
                 <MovieCard item={currentItem} />
-              ) : (
+              ) : listType === 'songs' ? (
                 <SongCard item={currentItem} />
+              ) : (
+                <BookCard item={currentItem} />
               )}
             </div>
           </div>
@@ -293,6 +321,25 @@ function SongCard({ item }: { item: ListItem }) {
           「{item.why}」
         </p>
       )}
+    </div>
+  );
+}
+
+function BookCard({ item }: { item: ListItem }) {
+  return (
+    <div className="space-y-5">
+      <div className="border-b border-stone-200/60 pb-4">
+        <h2 className="text-lg leading-snug text-stone-800">{item.title}</h2>
+        {item.author && (
+          <p className="mt-1 text-sm text-stone-500">{item.author}</p>
+        )}
+      </div>
+
+      {item.reason && <Field label="推薦理由" text={item.reason} />}
+      {item.why && <Field label="為什麼想和你分享這本" text={item.why} />}
+      {item.readTogether && <Field label="一起讀時我會想說的話" text={item.readTogether} />}
+      {item.whenToRead && <Field label="適合翻開的時機" text={item.whenToRead} chip />}
+      {item.quote && <Field label="我想貼給你的句子" text={item.quote} highlight />}
     </div>
   );
 }

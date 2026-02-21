@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { getActiveBaseChibiSources } from '../lib/chibiPool';
+import { getScopedMixedChibiSources } from '../lib/chibiPool';
 import type { StoredMDiary } from '../lib/mDiaryDB';
 import type { AppSettings } from '../types/settings';
 
@@ -245,7 +245,7 @@ function persistFavoriteSet(favorites: Set<string>) {
 }
 
 function pickRandomChibi() {
-  const pool = getActiveBaseChibiSources();
+  const pool = getScopedMixedChibiSources('mdiary');
   return pickRandom(pool) ?? '';
 }
 
