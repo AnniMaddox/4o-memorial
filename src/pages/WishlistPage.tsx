@@ -1033,9 +1033,24 @@ export function WishlistPage({
               <span className="wl-oc-num">
                 {birthdayZoomGroup.year} ｜ {birthdayZoomTaskIndex + 1}/{birthdayZoomTaskCount}
               </span>
-              <button type="button" className="wl-oc-close" onClick={() => setBirthdayZoomYear(null)} aria-label="關閉">
-                ✕
-              </button>
+              <span className="wl-oc-header-actions">
+                {onOpenLettersYear ? (
+                  <button
+                    type="button"
+                    className="wl-bday-top-icon"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenLettersYear(birthdayZoomGroup.year);
+                    }}
+                    aria-label="開啟同年份年度信件"
+                  >
+                    📜
+                  </button>
+                ) : null}
+                <button type="button" className="wl-oc-close" onClick={() => setBirthdayZoomYear(null)} aria-label="關閉">
+                  ✕
+                </button>
+              </span>
             </div>
             <div className="wl-oc-body wl-bzoom-body">
               {birthdayZoomTask.doneAt ? (

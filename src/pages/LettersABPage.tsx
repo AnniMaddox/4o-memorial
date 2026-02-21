@@ -6,6 +6,7 @@ import './LettersABPage.css';
 
 type ThemeKey = 'a' | 'd';
 type LineHeightKey = 'tight' | 'normal' | 'wide';
+type ReadingFontKey = 'default' | 'letter';
 type ViewMode = 'home' | 'reading';
 
 type AnnualLetterEntry = {
@@ -36,6 +37,7 @@ type RelatedItem = {
 type LettersABPrefs = {
   theme: ThemeKey;
   lineHeight: LineHeightKey;
+  readingFont: ReadingFontKey;
   showChibi: boolean;
   chibiWidth: number;
 };
@@ -44,6 +46,7 @@ type LettersABPageProps = {
   onExit: () => void;
   initialYear?: number | null;
   onOpenBirthdayYear?: (year: string) => void;
+  letterFontFamily?: string;
 };
 
 const PREFS_STORAGE_KEY = 'memorial-letters-ab-prefs-v1';
@@ -59,6 +62,10 @@ const LINE_HEIGHT_LABELS: Array<{ key: LineHeightKey; label: string }> = [
   { key: 'tight', label: '緊' },
   { key: 'normal', label: '標準' },
   { key: 'wide', label: '寬' },
+];
+const READING_FONT_OPTIONS: Array<{ key: ReadingFontKey; label: string }> = [
+  { key: 'default', label: '目前字體' },
+  { key: 'letter', label: '情書字體' },
 ];
 const THEME_OPTIONS: Array<{ key: ThemeKey; label: string }> = [
   { key: 'a', label: '🌌 星夜藍' },
@@ -89,11 +96,16 @@ function normalizeLineHeightKey(value: unknown): LineHeightKey {
   return 'normal';
 }
 
+function normalizeReadingFontKey(value: unknown): ReadingFontKey {
+  return value === 'letter' ? 'letter' : 'default';
+}
+
 function readPrefs(): LettersABPrefs {
   if (typeof window === 'undefined') {
     return {
       theme: 'a',
       lineHeight: 'normal',
+      readingFont: 'default',
       showChibi: true,
       chibiWidth: 136,
     };
@@ -104,6 +116,7 @@ function readPrefs(): LettersABPrefs {
       return {
         theme: 'a',
         lineHeight: 'normal',
+        readingFont: 'default',
         showChibi: true,
         chibiWidth: 136,
       };
@@ -112,6 +125,7 @@ function readPrefs(): LettersABPrefs {
     return {
       theme: normalizeTheme(parsed.theme),
       lineHeight: normalizeLineHeightKey(parsed.lineHeight),
+      readingFont: normalizeReadingFontKey(parsed.readingFont),
       showChibi: parsed.showChibi !== false,
       chibiWidth: clampChibiWidth(parsed.chibiWidth, 136),
     };
@@ -119,6 +133,7 @@ function readPrefs(): LettersABPrefs {
     return {
       theme: 'a',
       lineHeight: 'normal',
+      readingFont: 'default',
       showChibi: true,
       chibiWidth: 136,
     };
@@ -201,7 +216,7 @@ function pickSeriesNeighborByRank(targetYear: AnnualLetterYear, series: string, 
   return list[Math.min(rank, list.length - 1)] ?? null;
 }
 
-export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }: LettersABPageProps) {
+export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, letterFontFamily = '' }: LettersABPageProps) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [years, setYears] = useState<AnnualLetterYear[]>([]);
@@ -231,6 +246,10 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
   const entryTabs = useMemo(() => (currentYear ? buildEntryTabLabels(currentYear.entries) : []), [currentYear]);
   const currentContent = currentEntry ? contentById[currentEntry.id] ?? '' : '';
   const lineHeightValue = LINE_HEIGHT_BY_KEY[prefs.lineHeight];
+  const readingFontFamily =
+    prefs.readingFont === 'letter' && letterFontFamily
+      ? letterFontFamily
+      : "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)";
 
   useEffect(() => {
     let active = true;
@@ -604,7 +623,7 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
               readingSwipeStartRef.current = null;
             }}
           >
-            <div className="la-paper" style={{ lineHeight: lineHeightValue }}>
+            <div className="la-paper" style={{ lineHeight: lineHeightValue, fontFamily: readingFontFamily }}>
               <h3 className="la-paper-title">{currentEntry?.title ?? '未命名信件'}</h3>
               <p className="la-paper-content">{currentContent || '讀取內容中...'}</p>
             </div>
@@ -656,6 +675,24 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
                     type="button"
                     className={`la-pill ${prefs.lineHeight === option.key ? 'active' : ''}`}
                     onClick={() => setPrefs((prev) => ({ ...prev, lineHeight: option.key }))}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="la-sheet-section">
+              <p className="la-sheet-label">字體</p>
+              <div className="la-pill-group">
+                {READING_FONT_OPTIONS.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className={`la-pill ${prefs.readingFont === option.key ? 'active' : ''}`}
+                    onClick={() => setPrefs((prev) => ({ ...prev, readingFont: option.key }))}
+                    disabled={option.key === 'letter' && !letterFontFamily}
+                    title={option.key === 'letter' && !letterFontFamily ? '尚未設定情書字體' : undefined}
                   >
                     {option.label}
                   </button>

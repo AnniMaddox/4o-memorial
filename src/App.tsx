@@ -1405,6 +1405,7 @@ function App() {
                   }}
                   initialYear={lettersAbInitialYear}
                   onOpenBirthdayYear={openWishlistByYear}
+                  letterFontFamily={letterFontFamily}
                 />
               </div>
             </div>

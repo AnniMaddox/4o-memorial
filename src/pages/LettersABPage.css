@@ -86,7 +86,8 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 6px 10px 8px;
+  padding: 0 10px 8px;
+  transform: translateY(-50px);
 }
 
 .la-arrow {
@@ -449,6 +450,10 @@
   border-color: #3a4f7a;
   color: #f4f7fd;
   font-weight: 700;
+}
+
+.la-pill:disabled {
+  opacity: 0.45;
 }
 
 .theme-d .la-pill {

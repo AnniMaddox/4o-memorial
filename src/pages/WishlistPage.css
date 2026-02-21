@@ -820,6 +820,12 @@
   border-bottom: 1px solid rgba(160, 130, 60, 0.1);
 }
 
+.wl-oc-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .wl-oc-num {
   font-size: 10px;
   color: rgba(160, 130, 60, 0.45);
