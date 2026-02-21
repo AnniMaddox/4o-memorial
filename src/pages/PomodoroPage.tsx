@@ -135,7 +135,7 @@ export function PomodoroPage({ onExit }: PomodoroPageProps) {
   }
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-xl flex-col gap-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <div className="relative mx-auto flex h-full w-full max-w-xl flex-col gap-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
         <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Pomodoro</p>
         <h1 className="mt-1 text-2xl text-stone-900">番茄鐘</h1>
@@ -206,36 +206,37 @@ export function PomodoroPage({ onExit }: PomodoroPageProps) {
           </button>
         </div>
 
-        {chibiSources.length > 0 && (
-          <div className="mt-5 flex justify-center">
-            {onExit ? (
-              <button
-                type="button"
-                onClick={onExit}
-                className="transition active:scale-95"
-                aria-label="返回首頁"
-                title="點小人返回首頁"
-              >
-                <img
-                  src={chibiSources[chibiIndex]}
-                  alt=""
-                  draggable={false}
-                  className="calendar-chibi h-36 w-auto select-none object-contain opacity-95 drop-shadow-[0_14px_22px_rgba(0,0,0,0.24)]"
-                  loading="lazy"
-                />
-              </button>
-            ) : (
-              <img
-                src={chibiSources[chibiIndex]}
-                alt=""
-                draggable={false}
-                className="calendar-chibi h-36 w-auto select-none object-contain opacity-95 drop-shadow-[0_14px_22px_rgba(0,0,0,0.24)]"
-                loading="lazy"
-              />
-            )}
-          </div>
-        )}
       </section>
+
+      {chibiSources.length > 0 && onExit && (
+        <button
+          type="button"
+          onClick={onExit}
+          className="absolute bottom-1 right-1 z-20 transition active:scale-95"
+          aria-label="返回首頁"
+          title="點小人返回首頁"
+        >
+          <img
+            src={chibiSources[chibiIndex]}
+            alt=""
+            draggable={false}
+            className="calendar-chibi w-[8rem] select-none"
+            loading="lazy"
+          />
+        </button>
+      )}
+
+      {chibiSources.length > 0 && !onExit && (
+        <div className="mt-5 flex justify-center">
+          <img
+            src={chibiSources[chibiIndex]}
+            alt=""
+            draggable={false}
+            className="calendar-chibi h-36 w-auto select-none object-contain opacity-95 drop-shadow-[0_14px_22px_rgba(0,0,0,0.24)]"
+            loading="lazy"
+          />
+        </div>
+      )}
     </div>
   );
 }
