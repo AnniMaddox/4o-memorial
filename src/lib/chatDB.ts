@@ -36,3 +36,8 @@ export async function deleteChatProfile(id: string): Promise<void> {
   const db = await getDB();
   await db.delete(STORE, id);
 }
+
+export async function clearAllChatProfiles(): Promise<void> {
+  const db = await getDB();
+  await db.clear(STORE);
+}

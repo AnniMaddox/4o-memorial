@@ -37,6 +37,10 @@ type SettingsPageProps = {
   onClearAllLetters: () => void;
   onClearAllDiaries: () => void;
   onClearAllChatLogs: () => void;
+  onExportAboutMeBackup: () => Promise<string> | string;
+  onExportAboutMBackup: () => Promise<string> | string;
+  onImportAboutMeBackup: (files: File[], mode: 'merge' | 'overwrite') => Promise<string> | string;
+  onImportAboutMBackup: (files: File[], mode: 'merge' | 'overwrite') => Promise<string> | string;
   onSaveChatProfile: (profile: ChatProfile) => void;
   onDeleteChatProfile: (id: string) => void;
   onHoverToneWeightChange: (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => void;
@@ -47,6 +51,7 @@ type SettingsPageProps = {
 
 type PanelKey =
   | 'overview'
+  | 'bigBackup'
   | 'appearance'
   | 'home'
   | 'labels'
@@ -216,6 +221,10 @@ export function SettingsPage({
   onClearAllLetters,
   onClearAllDiaries,
   onClearAllChatLogs,
+  onExportAboutMeBackup,
+  onExportAboutMBackup,
+  onImportAboutMeBackup,
+  onImportAboutMBackup,
   onSaveChatProfile,
   onDeleteChatProfile,
   onHoverToneWeightChange,
@@ -251,6 +260,9 @@ export function SettingsPage({
   const [chibiPoolStatus, setChibiPoolStatus] = useState('');
   const [homeTextStatus, setHomeTextStatus] = useState('');
   const [labelStatus, setLabelStatus] = useState('');
+  const [aboutMeBackupStatus, setAboutMeBackupStatus] = useState('');
+  const [aboutMBackupStatus, setAboutMBackupStatus] = useState('');
+  const [backupBusy, setBackupBusy] = useState<'aboutMe' | 'aboutM' | null>(null);
 
   useEffect(() => {
     setFontFileUrlDraft(settings.customFontFileUrl);
@@ -698,6 +710,38 @@ export function SettingsPage({
     reader.readAsDataURL(file);
   }
 
+  async function runBackupAction(
+    target: 'aboutMe' | 'aboutM',
+    workingText: string,
+    action: () => Promise<string> | string,
+  ) {
+    setBackupBusy(target);
+    if (target === 'aboutMe') {
+      setAboutMeBackupStatus(workingText);
+    } else {
+      setAboutMBackupStatus(workingText);
+    }
+
+    try {
+      const result = await action();
+      const text = typeof result === 'string' && result.trim() ? result : '操作完成';
+      if (target === 'aboutMe') {
+        setAboutMeBackupStatus(text);
+      } else {
+        setAboutMBackupStatus(text);
+      }
+    } catch (error) {
+      const text = error instanceof Error ? error.message : '操作失敗';
+      if (target === 'aboutMe') {
+        setAboutMeBackupStatus(`失敗：${text}`);
+      } else {
+        setAboutMBackupStatus(`失敗：${text}`);
+      }
+    } finally {
+      setBackupBusy(null);
+    }
+  }
+
   const previewFontFamily = useMemo(() => {
     const draftFamily = fontFamilyDraft.trim();
     if (draftFamily) {
@@ -758,6 +802,136 @@ export function SettingsPage({
               <dd className="text-lg text-stone-900">{monthCount}</dd>
             </div>
           </dl>
+        </SettingPanel>
+
+        <SettingPanel
+          icon="🗃️"
+          title="大備份"
+          subtitle="關於我 / 關於M 分包匯入匯出"
+          isOpen={openPanel === 'bigBackup'}
+          onToggle={() => togglePanel('bigBackup')}
+        >
+          <div className="space-y-4">
+            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <div>
+                <p className="text-sm text-stone-800">關於我</p>
+                <p className="mt-0.5 text-xs text-stone-500">包含：經期日記、打卡、我的日記（B）、心情日記</p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void runBackupAction('aboutMe', '關於我匯出中…', () => onExportAboutMeBackup());
+                  }}
+                  disabled={backupBusy !== null}
+                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  完整匯出
+                </button>
+                <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-xs text-stone-700">
+                  匯入（合併）
+                  <input
+                    type="file"
+                    multiple
+                    accept=".json,application/json"
+                    className="hidden"
+                    disabled={backupBusy !== null}
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) {
+                        void runBackupAction('aboutMe', '關於我匯入中（合併）…', () =>
+                          onImportAboutMeBackup(files, 'merge'),
+                        );
+                      }
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <label className="cursor-pointer rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-center text-xs text-rose-700">
+                  匯入（覆蓋）
+                  <input
+                    type="file"
+                    multiple
+                    accept=".json,application/json"
+                    className="hidden"
+                    disabled={backupBusy !== null}
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) {
+                        void runBackupAction('aboutMe', '關於我匯入中（覆蓋）…', () =>
+                          onImportAboutMeBackup(files, 'overwrite'),
+                        );
+                      }
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              {aboutMeBackupStatus && <p className="text-xs text-stone-600">{aboutMeBackupStatus}</p>}
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <div>
+                <p className="text-sm text-stone-800">關於M</p>
+                <p className="mt-0.5 text-xs text-stone-500">分包：mDiary / letters / chatLogs / inbox（含 metadata）</p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void runBackupAction('aboutM', '關於M匯出中…', () => onExportAboutMBackup());
+                  }}
+                  disabled={backupBusy !== null}
+                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  完整匯出
+                </button>
+                <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-center text-xs text-stone-700">
+                  匯入（合併）
+                  <input
+                    type="file"
+                    multiple
+                    accept=".json,application/json"
+                    className="hidden"
+                    disabled={backupBusy !== null}
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) {
+                        void runBackupAction('aboutM', '關於M匯入中（合併）…', () =>
+                          onImportAboutMBackup(files, 'merge'),
+                        );
+                      }
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <label className="cursor-pointer rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-center text-xs text-rose-700">
+                  匯入（覆蓋）
+                  <input
+                    type="file"
+                    multiple
+                    accept=".json,application/json"
+                    className="hidden"
+                    disabled={backupBusy !== null}
+                    onChange={(event) => {
+                      const files = event.target.files ? Array.from(event.target.files) : [];
+                      if (files.length) {
+                        void runBackupAction('aboutM', '關於M匯入中（覆蓋）…', () =>
+                          onImportAboutMBackup(files, 'overwrite'),
+                        );
+                      }
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              {aboutMBackupStatus && <p className="text-xs text-stone-600">{aboutMBackupStatus}</p>}
+            </div>
+
+            <p className="text-xs text-stone-500">
+              匯入時請一次選取同一包的全部 JSON（包含 manifest 索引檔），避免缺檔導致覆蓋失敗。
+            </p>
+          </div>
         </SettingPanel>
 
         <SettingPanel

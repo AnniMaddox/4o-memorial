@@ -38,6 +38,13 @@ import { detectBestChatProfileId } from './lib/chatProfileMatcher';
 import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
 import { getBaseChibiPoolInfo, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
+import {
+  exportAboutMeBackupPackage,
+  exportAboutMBackupPackage,
+  importAboutMeBackupPackage,
+  importAboutMBackupPackage,
+  type BackupImportMode,
+} from './lib/bigBackup';
 import type { ChatProfile } from './lib/chatDB';
 import { AlbumPage } from './pages/AlbumPage';
 import { NotesPage } from './pages/NotesPage';
@@ -536,6 +543,39 @@ function App() {
     setDiaries([]);
   }, []);
 
+  const handleExportAboutMeBackup = useCallback(async () => {
+    return exportAboutMeBackupPackage();
+  }, []);
+
+  const handleExportAboutMBackup = useCallback(async () => {
+    return exportAboutMBackupPackage();
+  }, []);
+
+  const handleImportAboutMeBackup = useCallback(async (files: File[], mode: BackupImportMode) => {
+    return importAboutMeBackupPackage(files, mode);
+  }, []);
+
+  const handleImportAboutMBackup = useCallback(
+    async (files: File[], mode: BackupImportMode) => {
+      const message = await importAboutMBackupPackage(files, mode);
+      const [updatedLetters, updatedDiaries, updatedChatLogs, updatedProfiles] = await Promise.all([
+        loadLetters(),
+        loadMDiaries(),
+        loadChatLogs(),
+        loadChatProfiles(),
+      ]);
+
+      setLetters(updatedLetters);
+      setDiaries(updatedDiaries);
+      setChatLogs(updatedChatLogs);
+      setChatProfiles(updatedProfiles);
+      await refreshData();
+
+      return message;
+    },
+    [refreshData],
+  );
+
   const handleSaveChatProfile = useCallback(async (profile: ChatProfile) => {
     await saveChatProfile(profile);
     const updated = await loadChatProfiles();
@@ -964,6 +1004,10 @@ function App() {
             onImportChatLogFiles={(files) => void handleImportChatLogFiles(files)}
             onImportChatLogFolderFiles={(files) => void handleImportChatLogFolderFiles(files)}
             onClearAllChatLogs={() => void handleClearAllChatLogs()}
+            onExportAboutMeBackup={() => handleExportAboutMeBackup()}
+            onExportAboutMBackup={() => handleExportAboutMBackup()}
+            onImportAboutMeBackup={(files, mode) => handleImportAboutMeBackup(files, mode)}
+            onImportAboutMBackup={(files, mode) => handleImportAboutMBackup(files, mode)}
             onSaveChatProfile={(profile) => void handleSaveChatProfile(profile)}
             onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
             onHoverToneWeightChange={onHoverToneWeightChange}
@@ -1019,6 +1063,10 @@ function App() {
       handleImportDiaryFiles,
       handleImportDiaryFolderFiles,
       handleClearAllDiaries,
+      handleExportAboutMeBackup,
+      handleExportAboutMBackup,
+      handleImportAboutMeBackup,
+      handleImportAboutMBackup,
       handleImportChatLogFiles,
       handleImportChatLogFolderFiles,
       handleClearAllChatLogs,
