@@ -12,7 +12,7 @@ export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type DiaryCoverFitMode = 'cover' | 'contain';
 export type TabIconDisplayMode = 'framed' | 'full';
 export type LetterUiMode = 'classic' | 'preview';
-export type ChibiPoolMode = 'a' | 'b' | 'all';
+export type ChibiPoolMode = 'i' | 'ii' | 'all';
 export type TabIconKey =
   | 'home'
   | 'inbox'
@@ -233,5 +233,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notesFontSize: 13,
   notesTextColor: '#44403c',
   chibiPoolSize: 60,
-  chibiPoolMode: 'a',
+  chibiPoolMode: 'i',
 };

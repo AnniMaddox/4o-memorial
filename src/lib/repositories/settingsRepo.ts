@@ -64,7 +64,13 @@ function normalizeLetterUiMode(value: unknown, fallback: LetterUiMode): LetterUi
 }
 
 function normalizeChibiPoolMode(value: unknown, fallback: ChibiPoolMode): ChibiPoolMode {
-  return value === 'a' || value === 'b' || value === 'all' ? value : fallback;
+  if (value === 'a' || value === 'i') {
+    return 'i';
+  }
+  if (value === 'b' || value === 'ii') {
+    return 'ii';
+  }
+  return value === 'all' ? 'all' : fallback;
 }
 
 function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrls {

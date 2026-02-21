@@ -88,6 +88,7 @@ type LauncherAppId =
   | 'lettersAB'
   | 'heart'
   | 'chat'
+  | 'settingsShortcut'
   | 'list'
   | 'wishlist'
   | 'fitness'
@@ -991,8 +992,8 @@ function App() {
     (modeOverride?: BaseChibiPoolMode) => {
       const targetMode = modeOverride ?? settings.chibiPoolMode;
       const active = refreshActiveBaseChibiPool(settings.chibiPoolSize, targetMode);
-      const info = getBaseChibiPoolInfo(settings.chibiPoolSize, settings.chibiPoolMode);
-      const modeLabel = targetMode === 'a' ? 'A池' : targetMode === 'b' ? 'B池' : '全部';
+      const info = getBaseChibiPoolInfo(settings.chibiPoolSize, targetMode);
+      const modeLabel = targetMode === 'i' ? 'I池' : targetMode === 'ii' ? 'II池' : '全部';
       setChibiPoolInfo({
         allCount: info.allCount,
         activeCount: info.activeCount,
@@ -1024,6 +1025,11 @@ function App() {
   );
 
   const onLaunchApp = useCallback((appId: LauncherAppId) => {
+    if (appId === 'settingsShortcut') {
+      setLauncherApp(null);
+      setActiveTab(3);
+      return;
+    }
     if (appId !== 'wishlist') {
       setWishlistInitialYear(null);
     }
@@ -1062,6 +1068,7 @@ function App() {
             memorialStartDate={settings.memorialStartDate}
             onLaunchApp={onLaunchApp}
             onOpenCheckin={() => onLaunchApp('checkin')}
+            onOpenSettings={() => onLaunchApp('settingsShortcut')}
             onWidgetIconChange={(dataUrl) => {
               void onSettingChange({ homeWidgetIconDataUrl: dataUrl });
             }}
@@ -1203,6 +1210,73 @@ function App() {
     ],
   );
 
+  const bottomTabs = useMemo(
+    () => [
+      {
+        id: 'chat',
+        label: appLabels.chat,
+        icon: '💬',
+      },
+      {
+        id: 'inbox',
+        label: appLabels.inbox,
+        icon: DEFAULT_TAB_ICONS.inbox,
+        iconUrl: settings.tabIconUrls.inbox || undefined,
+      },
+      {
+        id: 'calendar',
+        label: appLabels.calendar,
+        icon: DEFAULT_TAB_ICONS.calendar,
+        iconUrl: settings.tabIconUrls.calendar || undefined,
+      },
+      {
+        id: 'home',
+        label: appLabels.home,
+        icon: DEFAULT_TAB_ICONS.home,
+        iconUrl: settings.tabIconUrls.home || undefined,
+      },
+    ],
+    [
+      appLabels.calendar,
+      appLabels.chat,
+      appLabels.home,
+      appLabels.inbox,
+      settings.tabIconUrls.calendar,
+      settings.tabIconUrls.home,
+      settings.tabIconUrls.inbox,
+    ],
+  );
+
+  const activeBottomTab = useMemo(() => {
+    if (activeTab === 1) return 1;
+    if (activeTab === 2) return 2;
+    if (activeTab === 0) return 3;
+    return -1;
+  }, [activeTab]);
+
+  const onSelectBottomTab = useCallback((index: number) => {
+    if (index === 0) {
+      setActiveTab(0);
+      setLauncherApp('chat');
+      return;
+    }
+
+    if (index === 1) {
+      setActiveTab(1);
+      setLauncherApp(null);
+      return;
+    }
+
+    if (index === 2) {
+      setActiveTab(2);
+      setLauncherApp(null);
+      return;
+    }
+
+    setActiveTab(0);
+    setLauncherApp(null);
+  }, []);
+
   return (
     <div
       className="app-shell relative h-dvh w-full overflow-hidden"
@@ -1274,18 +1348,10 @@ function App() {
           />
           {!launcherApp && (
             <BottomTabs
-              activeIndex={activeTab}
-              onSelect={setActiveTab}
+              activeIndex={activeBottomTab}
+              onSelect={onSelectBottomTab}
               iconDisplayMode={settings.tabIconDisplayMode}
-              tabs={pages.map((page) => {
-                const tabId = page.id as TabIconKey;
-                return {
-                  id: page.id,
-                  label: page.label,
-                  icon: DEFAULT_TAB_ICONS[tabId] ?? '•',
-                  iconUrl: settings.tabIconUrls[tabId] || undefined,
-                };
-              })}
+              tabs={bottomTabs}
             />
           )}
 
@@ -1367,7 +1433,10 @@ function App() {
                   onSaveChatProfile={(profile) => void handleSaveChatProfile(profile)}
                   onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
                   onBindLogProfile={(logName, profileId) => void handleBindChatLogProfile(logName, profileId)}
-                  onExit={() => setLauncherApp(null)}
+                  onExit={() => {
+                    setActiveTab(0);
+                    setLauncherApp(null);
+                  }}
                 />
               </div>
             </div>

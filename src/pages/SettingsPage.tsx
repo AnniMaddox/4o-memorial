@@ -948,8 +948,16 @@ export function SettingsPage({
       if (typeof source.chibiPoolSize === 'number' && Number.isFinite(source.chibiPoolSize)) {
         next.chibiPoolSize = Math.max(20, Math.min(200, Math.round(source.chibiPoolSize)));
       }
-      if (source.chibiPoolMode === 'a' || source.chibiPoolMode === 'b' || source.chibiPoolMode === 'all') {
-        next.chibiPoolMode = source.chibiPoolMode;
+      const rawChibiPoolMode = (source as Record<string, unknown>).chibiPoolMode;
+      if (
+        rawChibiPoolMode === 'i' ||
+        rawChibiPoolMode === 'ii' ||
+        rawChibiPoolMode === 'all' ||
+        rawChibiPoolMode === 'a' ||
+        rawChibiPoolMode === 'b'
+      ) {
+        next.chibiPoolMode =
+          rawChibiPoolMode === 'a' ? 'i' : rawChibiPoolMode === 'b' ? 'ii' : rawChibiPoolMode;
       }
       if (source.appLabels && typeof source.appLabels === 'object') {
         const input = source.appLabels as Partial<AppLabels>;
@@ -1676,43 +1684,43 @@ export function SettingsPage({
 
             <SettingSubgroup
               title="透明小人輪換池"
-              subtitle="A池/B池/全部 + 一鍵輪換"
+              subtitle="I池/II池/全部 + 一鍵輪換"
               isOpen={openAppearanceGroup === 'chibi'}
               onToggle={() => toggleAppearanceGroup('chibi')}
             >
               <p className="text-xs text-stone-500">
                 已上傳 {chibiPoolInfo.allCount} 張，目前模式「
-                {settings.chibiPoolMode === 'a' ? 'A池' : settings.chibiPoolMode === 'b' ? 'B池' : '全部'}
+                {settings.chibiPoolMode === 'i' ? 'I池' : settings.chibiPoolMode === 'ii' ? 'II池' : '全部'}
                 」，啟用池 {chibiPoolInfo.activeCount} 張。
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    onSettingChange({ chibiPoolMode: 'a' });
-                    setChibiPoolStatus('已切換到 A池');
+                    onSettingChange({ chibiPoolMode: 'i' });
+                    setChibiPoolStatus('已切換到 I池');
                   }}
                   className={`rounded-lg border px-2 py-1.5 text-xs ${
-                    settings.chibiPoolMode === 'a'
+                    settings.chibiPoolMode === 'i'
                       ? 'border-stone-900 bg-stone-900 text-white'
                       : 'border-stone-300 bg-white text-stone-700'
                   }`}
                 >
-                  A池
+                  I池
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    onSettingChange({ chibiPoolMode: 'b' });
-                    setChibiPoolStatus('已切換到 B池');
+                    onSettingChange({ chibiPoolMode: 'ii' });
+                    setChibiPoolStatus('已切換到 II池');
                   }}
                   className={`rounded-lg border px-2 py-1.5 text-xs ${
-                    settings.chibiPoolMode === 'b'
+                    settings.chibiPoolMode === 'ii'
                       ? 'border-stone-900 bg-stone-900 text-white'
                       : 'border-stone-300 bg-white text-stone-700'
                   }`}
                 >
-                  B池
+                  II池
                 </button>
                 <button
                   type="button"
@@ -1755,7 +1763,7 @@ export function SettingsPage({
                   onClick={() => {
                     onReshuffleChibiPool(settings.chibiPoolMode);
                     setChibiPoolStatus(
-                      settings.chibiPoolMode === 'a' ? '已重新抽換 A池' : '已重新抽換 B池',
+                      settings.chibiPoolMode === 'i' ? '已重新抽換 I池' : '已重新抽換 II池',
                     );
                   }}
                   className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-40"
@@ -1765,27 +1773,28 @@ export function SettingsPage({
                 <button
                   type="button"
                   onClick={() => {
-                    onReshuffleChibiPool('a');
-                    setChibiPoolStatus('已重新抽換 A池');
+                    onReshuffleChibiPool('i');
+                    setChibiPoolStatus('已重新抽換 I池');
                   }}
                   className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
                 >
-                  輪換 A池
+                  輪換 I池
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    onReshuffleChibiPool('b');
-                    setChibiPoolStatus('已重新抽換 B池');
+                    onReshuffleChibiPool('ii');
+                    setChibiPoolStatus('已重新抽換 II池');
                   }}
                   className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
                 >
-                  輪換 B池
+                  輪換 II池
                 </button>
               </div>
               {chibiPoolStatus && <p className="text-xs text-stone-600">{chibiPoolStatus}</p>}
               <p className="text-xs text-stone-500">
-                支援透明 PNG / WebP / AVIF。A/B 會各自記住池內容；「全部」模式會直接啟用所有圖。
+                I/II 會各自從 `public/chibi-pool-i`、`public/chibi-pool-ii` 抽取；若該池資料夾是空的，會回退到
+                `public/chibi`。支援透明 PNG / WebP / AVIF。
               </p>
             </SettingSubgroup>
 
@@ -3149,15 +3158,6 @@ export function SettingsPage({
               </section>
             </div>
 
-            <div className="border-t border-stone-200 bg-[#f3eee5] px-4 py-3 text-right">
-              <button
-                type="button"
-                onClick={() => setShowGuideModal(false)}
-                className="rounded-lg bg-stone-900 px-4 py-2 text-sm text-white"
-              >
-                關閉
-              </button>
-            </div>
           </div>
         </div>
       )}

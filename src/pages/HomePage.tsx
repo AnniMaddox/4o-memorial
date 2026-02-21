@@ -8,6 +8,7 @@ type LauncherAppId =
   | 'lettersAB'
   | 'heart'
   | 'chat'
+  | 'settingsShortcut'
   | 'list'
   | 'wishlist'
   | 'fitness'
@@ -31,6 +32,7 @@ type HomePageProps = {
   memorialStartDate: string;
   onLaunchApp: (appId: LauncherAppId) => void;
   onOpenCheckin: () => void;
+  onOpenSettings: () => void;
   onWidgetIconChange: (dataUrl: string) => void;
 };
 
@@ -187,6 +189,7 @@ export function HomePage({
   memorialStartDate,
   onLaunchApp,
   onOpenCheckin,
+  onOpenSettings,
   onWidgetIconChange,
 }: HomePageProps) {
   const [now, setNow] = useState(() => new Date());
@@ -195,7 +198,14 @@ export function HomePage({
   const widgetIconInputRef = useRef<HTMLInputElement | null>(null);
   const homeRootRef = useRef<HTMLDivElement | null>(null);
   const cornerChibiRef = useRef<HTMLButtonElement | null>(null);
-  const dragStateRef = useRef<{ pointerId: number; deltaX: number; deltaY: number } | null>(null);
+  const dragStateRef = useRef<{
+    pointerId: number;
+    deltaX: number;
+    deltaY: number;
+    startX: number;
+    startY: number;
+    moved: boolean;
+  } | null>(null);
   const [isDraggingChibi, setIsDraggingChibi] = useState(false);
   const [chibiAnchor, setChibiAnchor] = useState<AnchorPosition>({ x: 0.9, y: 0.86 });
   const chibiAnchorRef = useRef(chibiAnchor);
@@ -356,12 +366,6 @@ export function HomePage({
       iconUrl: tabIconUrls.notes.trim() || undefined,
       launch: 'notes',
     };
-    const bookcasePlaceholder: HomeAppSlot = {
-      id: 'bookcase-placeholder',
-      label: '書架',
-      icon: '📚',
-      disabled: true,
-    };
     const dailyTaskPlaceholder: HomeAppSlot = {
       id: 'wishlist',
       label: '願望',
@@ -374,20 +378,33 @@ export function HomePage({
       icon: '🏠',
       launch: 'soulmate',
     };
+    const reminderPlaceholder: HomeAppSlot = {
+      id: 'reminder-placeholder',
+      label: '提醒事項',
+      icon: '☑️',
+      disabled: true,
+    };
     const annualLettersSlot: HomeAppSlot = {
       id: 'letters-ab',
       label: '年度信件',
       icon: '📜',
       launch: 'lettersAB',
     };
+    const settingsShortcutSlot: HomeAppSlot = {
+      id: 'settings-shortcut',
+      label: launcherLabels.settings,
+      icon: '⚙️',
+      iconUrl: tabIconUrls.settings.trim() || undefined,
+      launch: 'settingsShortcut',
+    };
     // Screen 1 order
     const screen1: HomeAppSlot[] = homeSwipeEnabled
       ? [
-          chatSlot,
+          soulmateSlot,
           lettersSlot,
           diarySlot,
           dailyTaskPlaceholder,
-          soulmateSlot,
+          reminderPlaceholder,
           notesSlot,
           diaryBSlot,
           periodSlot,
@@ -427,7 +444,7 @@ export function HomePage({
             listSlot,
             albumSlot,
             annualLettersSlot,
-            bookcasePlaceholder,
+            settingsShortcutSlot,
           ],
         },
         {
@@ -452,6 +469,7 @@ export function HomePage({
     launcherLabels.fitness,
     launcherLabels.pomodoro,
     launcherLabels.period,
+    launcherLabels.settings,
     launcherLabels.tarot,
     launcherLabels.album,
     launcherLabels.notes,
@@ -459,6 +477,7 @@ export function HomePage({
     tabIconUrls.pomodoro,
     tabIconUrls.period,
     tabIconUrls.diary,
+    tabIconUrls.settings,
     tabIconUrls.heart,
     tabIconUrls.letters,
     tabIconUrls.list,
@@ -536,6 +555,9 @@ export function HomePage({
       pointerId: event.pointerId,
       deltaX: event.clientX - (hostRect.left + centerX),
       deltaY: event.clientY - (hostRect.top + centerY),
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
     };
 
     setIsDraggingChibi(true);
@@ -550,6 +572,13 @@ export function HomePage({
       const ball = cornerChibiRef.current;
       if (!dragState || !host || !ball) return;
       if (dragState.pointerId !== event.pointerId) return;
+
+      if (
+        !dragState.moved &&
+        (Math.abs(event.clientX - dragState.startX) > 6 || Math.abs(event.clientY - dragState.startY) > 6)
+      ) {
+        dragState.moved = true;
+      }
 
       const hostRect = host.getBoundingClientRect();
       const hostWidth = host.clientWidth;
@@ -587,6 +616,13 @@ export function HomePage({
         event.currentTarget.releasePointerCapture(event.pointerId);
       }
 
+      const wasMoved = dragState.moved;
+      if (!wasMoved) {
+        event.preventDefault();
+        onOpenSettings();
+        return;
+      }
+
       const hostWidth = host.clientWidth;
       const halfWidth = ball.offsetWidth / 2;
       const minX = hostWidth ? halfWidth / hostWidth : 0;
@@ -601,7 +637,7 @@ export function HomePage({
       persistChibiAnchor(snapped);
       event.preventDefault();
     },
-    [clampChibiAnchor, persistChibiAnchor],
+    [clampChibiAnchor, onOpenSettings, persistChibiAnchor],
   );
 
   return (
@@ -755,7 +791,8 @@ export function HomePage({
       <button
         ref={cornerChibiRef}
         type="button"
-        aria-label="可拖曳小人"
+        aria-label="點一下開大設定，可拖曳小人"
+        title="點一下開大設定，可拖曳移動"
         onPointerDown={handleChibiPointerDown}
         onPointerMove={handleChibiPointerMove}
         onPointerUp={handleChibiPointerUp}

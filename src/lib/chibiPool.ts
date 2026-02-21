@@ -1,6 +1,8 @@
 const LEGACY_ACTIVE_BASE_CHIBI_POOL_STORAGE_KEY = 'memorial-active-base-chibi-pool-v1';
-const ACTIVE_BASE_CHIBI_POOL_A_STORAGE_KEY = 'memorial-active-base-chibi-pool-a-v1';
-const ACTIVE_BASE_CHIBI_POOL_B_STORAGE_KEY = 'memorial-active-base-chibi-pool-b-v1';
+const LEGACY_ACTIVE_BASE_CHIBI_POOL_A_STORAGE_KEY = 'memorial-active-base-chibi-pool-a-v1';
+const LEGACY_ACTIVE_BASE_CHIBI_POOL_B_STORAGE_KEY = 'memorial-active-base-chibi-pool-b-v1';
+const ACTIVE_BASE_CHIBI_POOL_I_STORAGE_KEY = 'memorial-active-base-chibi-pool-i-v1';
+const ACTIVE_BASE_CHIBI_POOL_II_STORAGE_KEY = 'memorial-active-base-chibi-pool-ii-v1';
 const ACTIVE_BASE_CHIBI_MODE_STORAGE_KEY = 'memorial-active-base-chibi-mode-v1';
 const ACTIVE_BASE_CHIBI_SIZE_STORAGE_KEY = 'memorial-active-base-chibi-size-v1';
 const DEFAULT_POOL_SIZE = 60;
@@ -8,7 +10,7 @@ const MIN_POOL_SIZE = 20;
 
 export const CHIBI_POOL_UPDATED_EVENT = 'memorial:chibi-pool-updated';
 
-export type BaseChibiPoolMode = 'a' | 'b' | 'all';
+export type BaseChibiPoolMode = 'i' | 'ii' | 'all';
 
 function toSortedSources(modules: Record<string, string>) {
   return Object.entries(modules)
@@ -16,12 +18,24 @@ function toSortedSources(modules: Record<string, string>) {
     .map(([, src]) => src);
 }
 
-const BASE_CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+const LEGACY_BASE_CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
   eager: true,
   import: 'default',
 }) as Record<string, string>;
 
-const BASE_CHIBI_SOURCES = toSortedSources(BASE_CHIBI_MODULES);
+const I_POOL_CHIBI_MODULES = import.meta.glob('../../public/chibi-pool-i/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+
+const II_POOL_CHIBI_MODULES = import.meta.glob('../../public/chibi-pool-ii/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+
+const LEGACY_BASE_CHIBI_SOURCES = toSortedSources(LEGACY_BASE_CHIBI_MODULES);
+const I_POOL_CHIBI_SOURCES = toSortedSources(I_POOL_CHIBI_MODULES);
+const II_POOL_CHIBI_SOURCES = toSortedSources(II_POOL_CHIBI_MODULES);
 
 const MDIARY_CHIBI_MODULES = import.meta.glob('../../public/mdiary-chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
   eager: true,
@@ -65,16 +79,6 @@ type ChibiPoolInfo = {
   targetCount: number;
 };
 
-function clampPoolSize(size: number) {
-  if (!BASE_CHIBI_SOURCES.length) {
-    return 0;
-  }
-  if (!Number.isFinite(size)) {
-    return Math.min(DEFAULT_POOL_SIZE, BASE_CHIBI_SOURCES.length);
-  }
-  return Math.max(MIN_POOL_SIZE, Math.min(Math.floor(size), BASE_CHIBI_SOURCES.length));
-}
-
 function uniqueStrings(values: string[]) {
   const seen = new Set<string>();
   const unique: string[] = [];
@@ -88,6 +92,44 @@ function uniqueStrings(values: string[]) {
   return unique;
 }
 
+function getModeBaseSources(mode: 'i' | 'ii') {
+  const primary = mode === 'i' ? I_POOL_CHIBI_SOURCES : II_POOL_CHIBI_SOURCES;
+  if (primary.length) {
+    return [...primary];
+  }
+
+  return [...LEGACY_BASE_CHIBI_SOURCES];
+}
+
+function getAllBaseSources() {
+  if (I_POOL_CHIBI_SOURCES.length || II_POOL_CHIBI_SOURCES.length) {
+    return uniqueStrings([...I_POOL_CHIBI_SOURCES, ...II_POOL_CHIBI_SOURCES]);
+  }
+
+  return [...LEGACY_BASE_CHIBI_SOURCES];
+}
+
+function getAvailableBaseSources(mode: BaseChibiPoolMode) {
+  if (mode === 'all') {
+    return getAllBaseSources();
+  }
+  return getModeBaseSources(mode);
+}
+
+function clampPoolSize(size: number, availableCount: number) {
+  if (!availableCount) {
+    return 0;
+  }
+
+  if (!Number.isFinite(size)) {
+    return Math.min(DEFAULT_POOL_SIZE, availableCount);
+  }
+
+  const floorSize = Math.floor(size);
+  const minSize = Math.min(MIN_POOL_SIZE, availableCount);
+  return Math.max(minSize, Math.min(floorSize, availableCount));
+}
+
 function shuffleCopy<T>(items: T[]) {
   const next = [...items];
   for (let index = next.length - 1; index > 0; index -= 1) {
@@ -99,17 +141,39 @@ function shuffleCopy<T>(items: T[]) {
   return next;
 }
 
-function getPoolStorageKey(mode: 'a' | 'b') {
-  return mode === 'a' ? ACTIVE_BASE_CHIBI_POOL_A_STORAGE_KEY : ACTIVE_BASE_CHIBI_POOL_B_STORAGE_KEY;
+function getPoolStorageKey(mode: 'i' | 'ii') {
+  return mode === 'i' ? ACTIVE_BASE_CHIBI_POOL_I_STORAGE_KEY : ACTIVE_BASE_CHIBI_POOL_II_STORAGE_KEY;
+}
+
+function parseStoredPool(raw: string | null) {
+  if (!raw) {
+    return [] as string[];
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((value): value is string => typeof value === 'string');
+  } catch {
+    return [];
+  }
 }
 
 function readStoredMode(): BaseChibiPoolMode {
-  if (typeof window === 'undefined') return 'a';
+  if (typeof window === 'undefined') return 'i';
   try {
     const raw = window.localStorage.getItem(ACTIVE_BASE_CHIBI_MODE_STORAGE_KEY);
-    return raw === 'a' || raw === 'b' || raw === 'all' ? raw : 'a';
+    if (raw === 'a') {
+      return 'i';
+    }
+    if (raw === 'b') {
+      return 'ii';
+    }
+    return raw === 'i' || raw === 'ii' || raw === 'all' ? raw : 'i';
   } catch {
-    return 'a';
+    return 'i';
   }
 }
 
@@ -142,57 +206,69 @@ function writeStoredPoolSize(size: number) {
 }
 
 function resolvePoolMode(mode?: BaseChibiPoolMode) {
-  if (mode === 'a' || mode === 'b' || mode === 'all') return mode;
+  if (mode === 'i' || mode === 'ii' || mode === 'all') {
+    return mode;
+  }
   return readStoredMode();
 }
 
 function resolvePoolSize(size?: number) {
-  if (typeof size === 'number' && Number.isFinite(size)) return clampPoolSize(size);
-  return clampPoolSize(readStoredPoolSize());
+  if (typeof size === 'number' && Number.isFinite(size)) {
+    return Math.floor(size);
+  }
+  return Math.floor(readStoredPoolSize());
 }
 
-function readStoredPool(mode: 'a' | 'b') {
+function readStoredPool(mode: 'i' | 'ii') {
   if (typeof window === 'undefined') {
     return [] as string[];
   }
 
-  const key = getPoolStorageKey(mode);
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw && mode === 'a') {
-      // Keep old users' active pool as the initial A pool.
-      const legacyRaw = window.localStorage.getItem(LEGACY_ACTIVE_BASE_CHIBI_POOL_STORAGE_KEY);
-      if (legacyRaw) {
-        const legacyParsed = JSON.parse(legacyRaw) as unknown;
-        if (Array.isArray(legacyParsed)) {
-          return legacyParsed.filter((value): value is string => typeof value === 'string');
-        }
-      }
-      return [];
-    }
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.filter((value): value is string => typeof value === 'string');
-  } catch {
-    return [];
+  const currentKey = getPoolStorageKey(mode);
+  const current = parseStoredPool(window.localStorage.getItem(currentKey));
+  if (current.length) {
+    return current;
   }
+
+  // Backward-compat: migrate old A/B pool keys.
+  if (mode === 'i') {
+    const legacyA = parseStoredPool(window.localStorage.getItem(LEGACY_ACTIVE_BASE_CHIBI_POOL_A_STORAGE_KEY));
+    if (legacyA.length) {
+      return legacyA;
+    }
+
+    // Old single-pool key maps to the new I pool.
+    const legacySingle = parseStoredPool(window.localStorage.getItem(LEGACY_ACTIVE_BASE_CHIBI_POOL_STORAGE_KEY));
+    if (legacySingle.length) {
+      return legacySingle;
+    }
+  }
+
+  if (mode === 'ii') {
+    const legacyB = parseStoredPool(window.localStorage.getItem(LEGACY_ACTIVE_BASE_CHIBI_POOL_B_STORAGE_KEY));
+    if (legacyB.length) {
+      return legacyB;
+    }
+  }
+
+  return [];
 }
 
-function writeStoredPool(mode: 'a' | 'b', pool: string[]) {
+function writeStoredPool(mode: 'i' | 'ii', pool: string[]) {
   if (typeof window === 'undefined') {
     return;
   }
+
   try {
     const key = getPoolStorageKey(mode);
     window.localStorage.setItem(key, JSON.stringify(pool));
-    if (mode === 'a') {
-      // Maintain backward compatibility with previous single-pool key.
+
+    // Keep old keys updated for compatibility with past builds.
+    if (mode === 'i') {
+      window.localStorage.setItem(LEGACY_ACTIVE_BASE_CHIBI_POOL_A_STORAGE_KEY, JSON.stringify(pool));
       window.localStorage.setItem(LEGACY_ACTIVE_BASE_CHIBI_POOL_STORAGE_KEY, JSON.stringify(pool));
+    } else {
+      window.localStorage.setItem(LEGACY_ACTIVE_BASE_CHIBI_POOL_B_STORAGE_KEY, JSON.stringify(pool));
     }
   } catch {
     // Ignore storage write failures to avoid crashing app render paths.
@@ -214,28 +290,28 @@ function dispatchPoolUpdated(info: ChibiPoolInfo, mode: BaseChibiPoolMode) {
   );
 }
 
-function normalizeStoredPool(mode: 'a' | 'b') {
-  if (!BASE_CHIBI_SOURCES.length) {
+function normalizeStoredPool(mode: 'i' | 'ii', baseSources: string[]) {
+  if (!baseSources.length) {
     return [];
   }
 
-  const allowed = new Set(BASE_CHIBI_SOURCES);
+  const allowed = new Set(baseSources);
   return uniqueStrings(readStoredPool(mode).filter((item) => allowed.has(item)));
 }
 
-function samplePool(targetCount: number) {
-  if (!BASE_CHIBI_SOURCES.length || targetCount <= 0) {
+function samplePool(baseSources: string[], targetCount: number) {
+  if (!baseSources.length || targetCount <= 0) {
     return [];
   }
 
-  if (BASE_CHIBI_SOURCES.length <= targetCount) {
-    return [...BASE_CHIBI_SOURCES];
+  if (baseSources.length <= targetCount) {
+    return [...baseSources];
   }
 
-  return shuffleCopy(BASE_CHIBI_SOURCES).slice(0, targetCount);
+  return shuffleCopy(baseSources).slice(0, targetCount);
 }
 
-function syncPoolLength(pool: string[], targetCount: number) {
+function syncPoolLength(pool: string[], targetCount: number, baseSources: string[]) {
   if (targetCount <= 0) {
     return [];
   }
@@ -249,12 +325,21 @@ function syncPoolLength(pool: string[], targetCount: number) {
   }
 
   const poolSet = new Set(pool);
-  const remaining = BASE_CHIBI_SOURCES.filter((item) => !poolSet.has(item));
+  const remaining = baseSources.filter((item) => !poolSet.has(item));
   return [...pool, ...shuffleCopy(remaining).slice(0, targetCount - pool.length)];
 }
 
+function buildPoolInfo(mode: BaseChibiPoolMode, activeCount: number, targetCount?: number): ChibiPoolInfo {
+  const allCount = getAvailableBaseSources(mode).length;
+  return {
+    allCount,
+    activeCount,
+    targetCount: typeof targetCount === 'number' ? targetCount : allCount,
+  };
+}
+
 export function getAllBaseChibiSources() {
-  return [...BASE_CHIBI_SOURCES];
+  return getAllBaseSources();
 }
 
 export function getScopedChibiSources(scope: ScopedChibiPoolKey) {
@@ -285,19 +370,21 @@ export function getScopedMixedChibiSources(
 export function getActiveBaseChibiSources(poolSize?: number, mode?: BaseChibiPoolMode) {
   const resolvedMode = resolvePoolMode(mode);
   writeStoredMode(resolvedMode);
+
   const resolvedSize = resolvePoolSize(poolSize);
   writeStoredPoolSize(resolvedSize);
 
+  const baseSources = getAvailableBaseSources(resolvedMode);
   if (resolvedMode === 'all') {
-    return [...BASE_CHIBI_SOURCES];
+    return baseSources;
   }
 
-  const targetCount = clampPoolSize(resolvedSize);
+  const targetCount = clampPoolSize(resolvedSize, baseSources.length);
   if (targetCount <= 0) {
     return [];
   }
 
-  const normalized = syncPoolLength(normalizeStoredPool(resolvedMode), targetCount);
+  const normalized = syncPoolLength(normalizeStoredPool(resolvedMode, baseSources), targetCount, baseSources);
   if (normalized.length) {
     const rawLength = readStoredPool(resolvedMode).length;
     if (normalized.length !== rawLength) {
@@ -306,7 +393,7 @@ export function getActiveBaseChibiSources(poolSize?: number, mode?: BaseChibiPoo
     return normalized;
   }
 
-  const next = samplePool(targetCount);
+  const next = samplePool(baseSources, targetCount);
   writeStoredPool(resolvedMode, next);
   return next;
 }
@@ -314,25 +401,24 @@ export function getActiveBaseChibiSources(poolSize?: number, mode?: BaseChibiPoo
 export function refreshActiveBaseChibiPool(poolSize?: number, mode?: BaseChibiPoolMode) {
   const resolvedMode = resolvePoolMode(mode);
   writeStoredMode(resolvedMode);
+
   const resolvedSize = resolvePoolSize(poolSize);
   writeStoredPoolSize(resolvedSize);
 
+  const baseSources = getAvailableBaseSources(resolvedMode);
   let next: string[];
   let targetCount: number;
+
   if (resolvedMode === 'all') {
-    next = [...BASE_CHIBI_SOURCES];
-    targetCount = BASE_CHIBI_SOURCES.length;
+    next = baseSources;
+    targetCount = baseSources.length;
   } else {
-    targetCount = clampPoolSize(resolvedSize);
-    next = samplePool(targetCount);
+    targetCount = clampPoolSize(resolvedSize, baseSources.length);
+    next = samplePool(baseSources, targetCount);
     writeStoredPool(resolvedMode, next);
   }
 
-  const info = {
-    allCount: BASE_CHIBI_SOURCES.length,
-    activeCount: next.length,
-    targetCount,
-  };
+  const info = buildPoolInfo(resolvedMode, next.length, targetCount);
   dispatchPoolUpdated(info, resolvedMode);
   return next;
 }
@@ -340,25 +426,24 @@ export function refreshActiveBaseChibiPool(poolSize?: number, mode?: BaseChibiPo
 export function syncActiveBaseChibiPool(poolSize?: number, mode?: BaseChibiPoolMode) {
   const resolvedMode = resolvePoolMode(mode);
   writeStoredMode(resolvedMode);
+
   const resolvedSize = resolvePoolSize(poolSize);
   writeStoredPoolSize(resolvedSize);
 
+  const baseSources = getAvailableBaseSources(resolvedMode);
   let next: string[];
   let targetCount: number;
+
   if (resolvedMode === 'all') {
-    next = [...BASE_CHIBI_SOURCES];
-    targetCount = BASE_CHIBI_SOURCES.length;
+    next = baseSources;
+    targetCount = baseSources.length;
   } else {
-    targetCount = clampPoolSize(resolvedSize);
-    next = syncPoolLength(normalizeStoredPool(resolvedMode), targetCount);
+    targetCount = clampPoolSize(resolvedSize, baseSources.length);
+    next = syncPoolLength(normalizeStoredPool(resolvedMode, baseSources), targetCount, baseSources);
     writeStoredPool(resolvedMode, next);
   }
 
-  const info = {
-    allCount: BASE_CHIBI_SOURCES.length,
-    activeCount: next.length,
-    targetCount,
-  };
+  const info = buildPoolInfo(resolvedMode, next.length, targetCount);
   dispatchPoolUpdated(info, resolvedMode);
   return next;
 }
@@ -366,9 +451,12 @@ export function syncActiveBaseChibiPool(poolSize?: number, mode?: BaseChibiPoolM
 export function getBaseChibiPoolInfo(poolSize?: number, mode?: BaseChibiPoolMode): ChibiPoolInfo {
   const resolvedMode = resolvePoolMode(mode);
   const active = getActiveBaseChibiSources(poolSize, resolvedMode);
-  return {
-    allCount: BASE_CHIBI_SOURCES.length,
-    activeCount: active.length,
-    targetCount: resolvedMode === 'all' ? BASE_CHIBI_SOURCES.length : clampPoolSize(resolvePoolSize(poolSize)),
-  };
+
+  if (resolvedMode === 'all') {
+    return buildPoolInfo(resolvedMode, active.length, active.length);
+  }
+
+  const allCount = getAvailableBaseSources(resolvedMode).length;
+  const targetCount = clampPoolSize(resolvePoolSize(poolSize), allCount);
+  return buildPoolInfo(resolvedMode, active.length, targetCount);
 }
