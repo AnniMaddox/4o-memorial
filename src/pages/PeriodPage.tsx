@@ -1507,10 +1507,12 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
                 <button
                   type="button"
                   onClick={() => setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1))}
-                  className="rounded-lg border px-2 py-0.5 text-[10px] text-stone-500 transition active:scale-95"
-                  style={{ borderColor: '#e7e5e4', background: 'rgba(255,255,255,0.85)' }}
+                  aria-label="回到本月"
+                  title="回到本月"
+                  className="grid h-7 w-7 place-items-center rounded-full border text-[11px] text-stone-500 transition active:scale-95"
+                  style={{ borderColor: '#e7e5e4', background: 'rgba(255,255,255,0.82)' }}
                 >
-                  今天
+                  🌱
                 </button>
               </div>
               <button

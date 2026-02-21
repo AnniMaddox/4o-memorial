@@ -5,6 +5,7 @@ const BOX_STORE = 'boxes';
 const ENTRY_STORE = 'entries';
 
 export const UNCATEGORIZED_BOX_ID = 'uncategorized';
+export const MANAGE_BOX_ID = 'manager';
 export const MAX_SOULMATE_BOXES = 24;
 
 const SOULMATE_PAGE_BACKUP_KIND = 'memorial-soulmate-page-backup';
@@ -73,7 +74,6 @@ type DefaultRoomSeed = {
 };
 
 const DEFAULT_ROOM_SEEDS: DefaultRoomSeed[] = [
-  { id: UNCATEGORIZED_BOX_ID, emoji: '📥', title: '未分類', subtitle: '尚未歸檔', accentHex: '#d6d3d1' },
   { id: 'personality', emoji: '🛏️', title: '臥室', subtitle: '核心人格', accentHex: '#f4c2c2' },
   { id: 'memories', emoji: '📚', title: '書房', subtitle: '重要記憶', accentHex: '#fde68a' },
   { id: 'promises', emoji: '💌', title: '信箱', subtitle: '核心承諾', accentHex: '#c7d2fe' },
@@ -86,7 +86,13 @@ const DEFAULT_ROOM_SEEDS: DefaultRoomSeed[] = [
   { id: 'evolution', emoji: '🌱', title: '溫室', subtitle: '成長記錄', accentHex: '#d9f99d' },
   { id: 'letter', emoji: '✉️', title: '信件室', subtitle: '給你的信', accentHex: '#fce7f3' },
   { id: 'misc', emoji: '📦', title: '閣樓', subtitle: '其他雜項', accentHex: '#e5e7eb' },
+  { id: UNCATEGORIZED_BOX_ID, emoji: '📥', title: '未分類', subtitle: '尚未歸檔', accentHex: '#d6d3d1' },
+  { id: MANAGE_BOX_ID, emoji: '⚙️', title: '管理', subtitle: '方塊與匯入備份', accentHex: '#dbeafe' },
 ];
+
+function isFixedBoxId(boxId: string) {
+  return boxId === UNCATEGORIZED_BOX_ID || boxId === MANAGE_BOX_ID;
+}
 
 function uniqueId(prefix = 'soulmate') {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -122,14 +128,17 @@ function normalizeBox(value: unknown, fallbackOrder: number, fallbackNow = Date.
   const updatedAt = normalizeTimestamp(row.updatedAt, createdAt);
   return {
     id,
-    title: trimOrFallback(row.title, id === UNCATEGORIZED_BOX_ID ? '未分類' : '未命名方塊'),
+    title: trimOrFallback(
+      row.title,
+      id === UNCATEGORIZED_BOX_ID ? '未分類' : id === MANAGE_BOX_ID ? '管理' : '未命名方塊',
+    ),
     subtitle: trimOrFallback(row.subtitle, '未設定副標'),
     emoji: trimOrFallback(row.emoji, '📦'),
     accentHex: normalizeHex(row.accentHex, '#e7e5e4'),
     order: Number.isFinite(Number(row.order)) ? Number(row.order) : fallbackOrder,
     createdAt,
     updatedAt,
-    isSystem: Boolean(row.isSystem) || id === UNCATEGORIZED_BOX_ID,
+    isSystem: Boolean(row.isSystem) || isFixedBoxId(id),
   };
 }
 
@@ -164,14 +173,16 @@ export function createDefaultSoulmateBoxes(now = Date.now()): SoulmateBox[] {
     order: index,
     createdAt: now,
     updatedAt: now,
-    isSystem: seed.id === UNCATEGORIZED_BOX_ID,
+    isSystem: isFixedBoxId(seed.id),
   }));
 }
 
 function sortBoxes(boxes: SoulmateBox[]) {
   return [...boxes].sort((a, b) => {
-    if (a.id === UNCATEGORIZED_BOX_ID && b.id !== UNCATEGORIZED_BOX_ID) return -1;
-    if (b.id === UNCATEGORIZED_BOX_ID && a.id !== UNCATEGORIZED_BOX_ID) return 1;
+    if (a.id === MANAGE_BOX_ID && b.id !== MANAGE_BOX_ID) return 1;
+    if (b.id === MANAGE_BOX_ID && a.id !== MANAGE_BOX_ID) return -1;
+    if (a.id === UNCATEGORIZED_BOX_ID && b.id !== UNCATEGORIZED_BOX_ID) return 1;
+    if (b.id === UNCATEGORIZED_BOX_ID && a.id !== UNCATEGORIZED_BOX_ID) return -1;
     if (a.order !== b.order) return a.order - b.order;
     return a.createdAt - b.createdAt;
   });
@@ -197,21 +208,32 @@ function normalizeBoxes(input: SoulmateBox[], fallbackNow = Date.now()) {
       isSystem: true,
     });
   }
+  if (!map.has(MANAGE_BOX_ID)) {
+    map.set(MANAGE_BOX_ID, {
+      id: MANAGE_BOX_ID,
+      title: '管理',
+      subtitle: '方塊與匯入備份',
+      emoji: '⚙️',
+      accentHex: '#dbeafe',
+      order: Number.MAX_SAFE_INTEGER,
+      createdAt: fallbackNow,
+      updatedAt: fallbackNow,
+      isSystem: true,
+    });
+  }
   const sorted = sortBoxes(Array.from(map.values()));
-  const limited: SoulmateBox[] = [];
-  for (const box of sorted) {
-    if (limited.length >= MAX_SOULMATE_BOXES) break;
-    limited.push(box);
-  }
-  const hasUncategorized = limited.some((box) => box.id === UNCATEGORIZED_BOX_ID);
-  if (!hasUncategorized) {
-    limited[limited.length - 1] = map.get(UNCATEGORIZED_BOX_ID)!;
-  }
+  const generalBoxes = sorted.filter((box) => !isFixedBoxId(box.id));
+  const fixedTail = [
+    map.get(UNCATEGORIZED_BOX_ID)!,
+    map.get(MANAGE_BOX_ID)!,
+  ];
+  const availableGeneralSlots = Math.max(0, MAX_SOULMATE_BOXES - fixedTail.length);
+  const limited = [...generalBoxes.slice(0, availableGeneralSlots), ...fixedTail];
   return sortBoxes(
     limited.map((box, index) => ({
       ...box,
       order: index,
-      isSystem: box.id === UNCATEGORIZED_BOX_ID ? true : box.isSystem,
+      isSystem: isFixedBoxId(box.id) ? true : box.isSystem,
     })),
   );
 }
@@ -223,7 +245,10 @@ function normalizeEntries(input: SoulmateEntry[], validBoxIds: Set<string>) {
     if (!normalized) continue;
     deduped.set(normalized.id, {
       ...normalized,
-      boxId: validBoxIds.has(normalized.boxId) ? normalized.boxId : UNCATEGORIZED_BOX_ID,
+      boxId:
+        normalized.boxId !== MANAGE_BOX_ID && validBoxIds.has(normalized.boxId)
+          ? normalized.boxId
+          : UNCATEGORIZED_BOX_ID,
     });
   }
   return Array.from(deduped.values()).sort((a, b) => b.importedAt - a.importedAt);
@@ -231,8 +256,8 @@ function normalizeEntries(input: SoulmateEntry[], validBoxIds: Set<string>) {
 
 function normalizeSnapshot(input: SoulmateSnapshot, fallbackNow = Date.now()): SoulmateSnapshot {
   const boxes = normalizeBoxes(input.boxes, fallbackNow);
-  const boxIds = new Set(boxes.map((box) => box.id));
-  const entries = normalizeEntries(input.entries, boxIds);
+  const entryBoxIds = new Set(boxes.filter((box) => box.id !== MANAGE_BOX_ID).map((box) => box.id));
+  const entries = normalizeEntries(input.entries, entryBoxIds);
   return { boxes, entries };
 }
 
@@ -332,7 +357,7 @@ export async function mergeSoulmateSnapshot(snapshot: SoulmateSnapshot): Promise
   const normalizedIncoming = normalizeSnapshot(snapshot);
   const current = await loadSoulmateSnapshot();
   const boxes = mergeBoxes(current.boxes, normalizedIncoming.boxes);
-  const validBoxIds = new Set(boxes.map((box) => box.id));
+  const validBoxIds = new Set(boxes.filter((box) => box.id !== MANAGE_BOX_ID).map((box) => box.id));
   const mergedEntriesMap = new Map<string, SoulmateEntry>();
   for (const entry of current.entries) {
     mergedEntriesMap.set(entry.id, entry);

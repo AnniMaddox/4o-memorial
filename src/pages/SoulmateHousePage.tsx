@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
+  MANAGE_BOX_ID,
   MAX_SOULMATE_BOXES,
   UNCATEGORIZED_BOX_ID,
   buildSoulmateBoxBackupPayload,
@@ -15,11 +16,20 @@ import {
 } from '../lib/soulmateDB';
 
 type ViewMode = 'shelf' | 'box' | 'entry' | 'manage';
+type ManagePanelKey = 'boxes' | 'directImport' | 'batchImport' | 'backup';
 
 type BatchImportDraft = {
   id: string;
   file: File;
   targetBoxId: string;
+};
+
+type ManageSectionProps = {
+  title: string;
+  description: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
 };
 
 interface Props {
@@ -31,6 +41,10 @@ function makeTempId(prefix = 'soulmate') {
     return `${prefix}-${crypto.randomUUID()}`;
   }
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isFixedBox(boxId: string) {
+  return boxId === UNCATEGORIZED_BOX_ID || boxId === MANAGE_BOX_ID;
 }
 
 function hexWithAlpha(hex: string, alpha: number): string {
@@ -82,6 +96,25 @@ function downloadJson(filename: string, payload: unknown) {
   URL.revokeObjectURL(href);
 }
 
+function ManageSection({ title, description, isOpen, onToggle, children }: ManageSectionProps) {
+  return (
+    <section className="rounded-2xl border border-stone-200/80 bg-white/78 p-3.5 shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <div className="min-w-0">
+          <p className="text-sm text-stone-800">{title}</p>
+          <p className="mt-0.5 text-xs text-stone-500">{description}</p>
+        </div>
+        <span className={`text-lg text-stone-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}>⌄</span>
+      </button>
+      {isOpen ? <div className="mt-3">{children}</div> : null}
+    </section>
+  );
+}
+
 export default function SoulmateHousePage({ onExit }: Props) {
   const [mode, setMode] = useState<ViewMode>('shelf');
   const [snapshot, setSnapshot] = useState<SoulmateSnapshot>({ boxes: [], entries: [] });
@@ -91,12 +124,20 @@ export default function SoulmateHousePage({ onExit }: Props) {
   const [importTargetBoxId, setImportTargetBoxId] = useState<string>(UNCATEGORIZED_BOX_ID);
   const [backupBoxId, setBackupBoxId] = useState<string>(UNCATEGORIZED_BOX_ID);
   const [batchDrafts, setBatchDrafts] = useState<BatchImportDraft[]>([]);
+  const [openPanels, setOpenPanels] = useState<Record<ManagePanelKey, boolean>>({
+    boxes: true,
+    directImport: true,
+    batchImport: false,
+    backup: false,
+  });
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [status, setStatus] = useState('');
 
   const boxes = snapshot.boxes;
   const entries = snapshot.entries;
+
+  const importableBoxes = useMemo(() => boxes.filter((box) => box.id !== MANAGE_BOX_ID), [boxes]);
 
   const entryCountMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -107,8 +148,8 @@ export default function SoulmateHousePage({ onExit }: Props) {
   }, [entries]);
 
   const selectedBox = useMemo(
-    () => boxes.find((box) => box.id === selectedBoxId) ?? boxes[0] ?? null,
-    [boxes, selectedBoxId],
+    () => importableBoxes.find((box) => box.id === selectedBoxId) ?? importableBoxes[0] ?? null,
+    [importableBoxes, selectedBoxId],
   );
 
   const selectedBoxEntries = useMemo(() => {
@@ -120,6 +161,8 @@ export default function SoulmateHousePage({ onExit }: Props) {
     () => entries.find((entry) => entry.id === selectedEntryId) ?? null,
     [entries, selectedEntryId],
   );
+
+  const getImportFallbackId = (targetBoxes: SoulmateBox[]) => targetBoxes.find((box) => box.id !== MANAGE_BOX_ID)?.id ?? UNCATEGORIZED_BOX_ID;
 
   const refreshSnapshot = async () => {
     const next = await loadSoulmateSnapshot();
@@ -133,11 +176,12 @@ export default function SoulmateHousePage({ onExit }: Props) {
     try {
       await saveSoulmateSnapshot(next);
       const reloaded = await refreshSnapshot();
+      const fallbackId = getImportFallbackId(reloaded.boxes);
       setImportTargetBoxId((current) =>
-        reloaded.boxes.some((box) => box.id === current) ? current : reloaded.boxes[0]?.id ?? UNCATEGORIZED_BOX_ID,
+        reloaded.boxes.some((box) => box.id === current && box.id !== MANAGE_BOX_ID) ? current : fallbackId,
       );
       setBackupBoxId((current) =>
-        reloaded.boxes.some((box) => box.id === current) ? current : reloaded.boxes[0]?.id ?? UNCATEGORIZED_BOX_ID,
+        reloaded.boxes.some((box) => box.id === current && box.id !== MANAGE_BOX_ID) ? current : fallbackId,
       );
       setStatus(successMessage);
     } catch (error) {
@@ -153,11 +197,12 @@ export default function SoulmateHousePage({ onExit }: Props) {
       try {
         const data = await loadSoulmateSnapshot();
         if (!active) return;
+        const fallbackId = getImportFallbackId(data.boxes);
         setSnapshot(data);
         setDraftBoxes(data.boxes);
-        setSelectedBoxId(data.boxes[0]?.id ?? UNCATEGORIZED_BOX_ID);
-        setImportTargetBoxId(data.boxes[0]?.id ?? UNCATEGORIZED_BOX_ID);
-        setBackupBoxId(data.boxes[0]?.id ?? UNCATEGORIZED_BOX_ID);
+        setSelectedBoxId(fallbackId);
+        setImportTargetBoxId(fallbackId);
+        setBackupBoxId(fallbackId);
       } catch (error) {
         if (!active) return;
         setStatus(`讀取失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
@@ -171,17 +216,18 @@ export default function SoulmateHousePage({ onExit }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!boxes.length) return;
-    if (!boxes.some((box) => box.id === selectedBoxId)) {
-      setSelectedBoxId(boxes[0].id);
+    if (!importableBoxes.length) return;
+    const fallbackId = importableBoxes[0].id;
+    if (!importableBoxes.some((box) => box.id === selectedBoxId)) {
+      setSelectedBoxId(fallbackId);
     }
-    if (!boxes.some((box) => box.id === importTargetBoxId)) {
-      setImportTargetBoxId(boxes[0].id);
+    if (!importableBoxes.some((box) => box.id === importTargetBoxId)) {
+      setImportTargetBoxId(fallbackId);
     }
-    if (!boxes.some((box) => box.id === backupBoxId)) {
-      setBackupBoxId(boxes[0].id);
+    if (!importableBoxes.some((box) => box.id === backupBoxId)) {
+      setBackupBoxId(fallbackId);
     }
-  }, [boxes, selectedBoxId, importTargetBoxId, backupBoxId]);
+  }, [importableBoxes, selectedBoxId, importTargetBoxId, backupBoxId]);
 
   useEffect(() => {
     if (mode === 'manage') {
@@ -189,26 +235,36 @@ export default function SoulmateHousePage({ onExit }: Props) {
     }
   }, [mode, snapshot.boxes]);
 
+  useEffect(() => {
+    if (mode === 'box' && !selectedBox) {
+      setMode('shelf');
+    }
+  }, [mode, selectedBox]);
+
+  const toggleManagePanel = (key: ManagePanelKey) => {
+    setOpenPanels((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const addBox = () => {
     if (draftBoxes.length >= MAX_SOULMATE_BOXES) {
       setStatus(`最多 ${MAX_SOULMATE_BOXES} 格，已達上限。`);
       return;
     }
     const now = Date.now();
-    const next = normalizeBoxOrder([
-      ...draftBoxes,
-      {
-        id: makeTempId('box'),
-        title: `新主題 ${draftBoxes.length + 1}`,
-        subtitle: '未設定副標',
-        emoji: '📦',
-        accentHex: '#f3e8d5',
-        order: draftBoxes.length,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]);
-    setDraftBoxes(next);
+    const insertIndex = draftBoxes.findIndex((box) => isFixedBox(box.id));
+    const targetIndex = insertIndex >= 0 ? insertIndex : draftBoxes.length;
+    const next = [...draftBoxes];
+    next.splice(targetIndex, 0, {
+      id: makeTempId('box'),
+      title: `新主題 ${Math.max(1, draftBoxes.length - 1)}`,
+      subtitle: '未設定副標',
+      emoji: '📦',
+      accentHex: '#f3e8d5',
+      order: targetIndex,
+      createdAt: now,
+      updatedAt: now,
+    });
+    setDraftBoxes(normalizeBoxOrder(next));
   };
 
   const updateDraftBox = (boxId: string, patch: Partial<SoulmateBox>) => {
@@ -234,7 +290,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
       if (currentIndex < 0) return prev;
       const targetIndex = currentIndex + offset;
       if (targetIndex < 0 || targetIndex >= prev.length) return prev;
-      if (prev[currentIndex].id === UNCATEGORIZED_BOX_ID || prev[targetIndex].id === UNCATEGORIZED_BOX_ID) {
+      if (isFixedBox(prev[currentIndex].id) || isFixedBox(prev[targetIndex].id)) {
         return prev;
       }
       const next = [...prev];
@@ -245,8 +301,8 @@ export default function SoulmateHousePage({ onExit }: Props) {
   };
 
   const removeDraftBox = (boxId: string) => {
-    if (boxId === UNCATEGORIZED_BOX_ID) {
-      setStatus('未分類方塊是保底格，不能刪除。');
+    if (isFixedBox(boxId)) {
+      setStatus('未分類與管理方塊是保底格，不能刪除。');
       return;
     }
     setDraftBoxes((prev) => normalizeBoxOrder(prev.filter((box) => box.id !== boxId)));
@@ -255,18 +311,28 @@ export default function SoulmateHousePage({ onExit }: Props) {
   const saveBoxSettings = async () => {
     if (!draftBoxes.length) return;
     const normalizedDraft = normalizeBoxOrder(
-      draftBoxes.map((box) => ({
-        ...box,
-        title: box.title.trim() || '未命名方塊',
-        subtitle: box.subtitle.trim() || '未設定副標',
-        emoji: box.emoji.trim() || '📦',
-        accentHex: /^#[0-9a-fA-F]{6}$/.test(box.accentHex) ? box.accentHex : '#e7e5e4',
-      })),
+      draftBoxes.map((box) => {
+        const fallbackTitle =
+          box.id === UNCATEGORIZED_BOX_ID ? '未分類' : box.id === MANAGE_BOX_ID ? '管理' : '未命名方塊';
+        const fallbackSubtitle =
+          box.id === UNCATEGORIZED_BOX_ID
+            ? '尚未歸檔'
+            : box.id === MANAGE_BOX_ID
+              ? '方塊與匯入備份'
+              : '未設定副標';
+        return {
+          ...box,
+          title: box.title.trim() || fallbackTitle,
+          subtitle: box.subtitle.trim() || fallbackSubtitle,
+          emoji: box.emoji.trim() || (box.id === MANAGE_BOX_ID ? '⚙️' : '📦'),
+          accentHex: /^#[0-9a-fA-F]{6}$/.test(box.accentHex) ? box.accentHex : '#e7e5e4',
+        };
+      }),
     );
+
     const nextBoxIds = new Set(normalizedDraft.map((box) => box.id));
-    const removedIds = snapshot.boxes
-      .map((box) => box.id)
-      .filter((id) => !nextBoxIds.has(id));
+    const removedIds = snapshot.boxes.map((box) => box.id).filter((id) => !nextBoxIds.has(id));
+
     const now = Date.now();
     const movedEntries = snapshot.entries.map((entry) =>
       removedIds.includes(entry.boxId)
@@ -277,6 +343,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
           }
         : entry,
     );
+
     await persistSnapshot(
       { boxes: normalizedDraft, entries: movedEntries },
       removedIds.length ? '方塊設定已儲存，刪除方塊內容已移到未分類。' : '方塊設定已儲存。',
@@ -285,7 +352,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
 
   const importFilesToBox = async (files: File[], boxId: string, sourceLabel: string) => {
     if (!files.length) return;
-    const targetExists = boxes.some((box) => box.id === boxId);
+    const targetExists = importableBoxes.some((box) => box.id === boxId);
     const resolvedBoxId = targetExists ? boxId : UNCATEGORIZED_BOX_ID;
     setWorking(true);
     try {
@@ -329,7 +396,9 @@ export default function SoulmateHousePage({ onExit }: Props) {
     try {
       const grouped = new Map<string, File[]>();
       for (const draft of batchDrafts) {
-        const boxId = boxes.some((box) => box.id === draft.targetBoxId) ? draft.targetBoxId : UNCATEGORIZED_BOX_ID;
+        const boxId = importableBoxes.some((box) => box.id === draft.targetBoxId)
+          ? draft.targetBoxId
+          : UNCATEGORIZED_BOX_ID;
         if (!grouped.has(boxId)) {
           grouped.set(boxId, []);
         }
@@ -394,11 +463,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-stone-500">
-        讀取搬家計劃書中...
-      </div>
-    );
+    return <div className="flex h-full items-center justify-center text-sm text-stone-500">讀取搬家計劃書中...</div>;
   }
 
   if (mode === 'entry' && selectedEntry && selectedBox) {
@@ -499,22 +564,14 @@ export default function SoulmateHousePage({ onExit }: Props) {
             </div>
           )}
         </div>
-
-        <div className="shrink-0 border-t border-stone-200/70 bg-white/78 px-4 py-2.5">
-          <button
-            type="button"
-            onClick={() => setMode('manage')}
-            className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 shadow-sm transition active:scale-95"
-          >
-            打開管理頁（匯入 / 備份）
-          </button>
-        </div>
       </div>
     );
   }
 
   if (mode === 'manage') {
-    const removableCount = draftBoxes.filter((box) => box.id !== UNCATEGORIZED_BOX_ID).length;
+    const removableCount = draftBoxes.filter((box) => !isFixedBox(box.id)).length;
+    const importableDraftBoxes = draftBoxes.filter((box) => box.id !== MANAGE_BOX_ID);
+
     return (
       <div className="flex h-full flex-col" style={{ background: '#f8f4ee' }}>
         <header className="shrink-0 border-b border-stone-200/80 bg-white/80 px-4 pb-3 pt-4 backdrop-blur-sm">
@@ -545,28 +602,27 @@ export default function SoulmateHousePage({ onExit }: Props) {
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4">
           <div className="space-y-4">
-            <section className="rounded-2xl border border-stone-200/80 bg-white/78 p-3.5 shadow-sm">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs text-stone-500">方塊配置</p>
-                  <p className="text-sm text-stone-800">可新增 / 刪除 / 重新命名 / 調整樣式</p>
-                </div>
+            <ManageSection
+              title="方塊配置"
+              description={`已用 ${draftBoxes.length}/${MAX_SOULMATE_BOXES} 格（可刪除：${removableCount}）`}
+              isOpen={openPanels.boxes}
+              onToggle={() => toggleManagePanel('boxes')}
+            >
+              <div className="mb-3 flex justify-end">
                 <button
                   type="button"
                   onClick={addBox}
                   disabled={draftBoxes.length >= MAX_SOULMATE_BOXES}
-                  className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-xs text-stone-700 disabled:opacity-40"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-stone-300 bg-white text-base leading-none text-stone-700 disabled:opacity-40"
+                  aria-label="新增方塊"
                 >
-                  ＋ 新增方塊
+                  +
                 </button>
               </div>
-              <p className="mt-1 text-[11px] text-stone-500">
-                已用 {draftBoxes.length}/{MAX_SOULMATE_BOXES} 格（可刪除：{removableCount}）
-              </p>
 
-              <div className="mt-3 space-y-2.5">
+              <div className="space-y-2.5">
                 {draftBoxes.map((box, index) => {
-                  const isSystem = box.id === UNCATEGORIZED_BOX_ID;
+                  const fixed = isFixedBox(box.id);
                   return (
                     <div key={box.id} className="rounded-xl border border-stone-200 bg-stone-50/85 p-2.5">
                       <div className="grid grid-cols-[1fr_1fr] gap-2">
@@ -617,14 +673,12 @@ export default function SoulmateHousePage({ onExit }: Props) {
                       </div>
 
                       <div className="mt-2 flex items-center justify-between">
-                        <p className="text-[11px] text-stone-400">
-                          #{index + 1} {isSystem ? '（保底方塊）' : ''}
-                        </p>
+                        <p className="text-[11px] text-stone-400">#{index + 1} {fixed ? '（固定方塊）' : ''}</p>
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => moveDraftBox(box.id, -1)}
-                            disabled={isSystem || index === 0 || draftBoxes[index - 1]?.id === UNCATEGORIZED_BOX_ID}
+                            disabled={fixed || index === 0 || isFixedBox(draftBoxes[index - 1]?.id ?? '')}
                             className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs text-stone-600 disabled:opacity-35"
                           >
                             ↑
@@ -632,7 +686,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
                           <button
                             type="button"
                             onClick={() => moveDraftBox(box.id, 1)}
-                            disabled={isSystem || index === draftBoxes.length - 1}
+                            disabled={fixed || index === draftBoxes.length - 1 || isFixedBox(draftBoxes[index + 1]?.id ?? '')}
                             className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs text-stone-600 disabled:opacity-35"
                           >
                             ↓
@@ -640,7 +694,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
                           <button
                             type="button"
                             onClick={() => removeDraftBox(box.id)}
-                            disabled={isSystem}
+                            disabled={fixed}
                             className="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-xs text-rose-700 disabled:opacity-35"
                           >
                             刪除
@@ -651,17 +705,21 @@ export default function SoulmateHousePage({ onExit }: Props) {
                   );
                 })}
               </div>
-            </section>
+            </ManageSection>
 
-            <section className="rounded-2xl border border-stone-200/80 bg-white/78 p-3.5 shadow-sm">
-              <p className="text-sm text-stone-800">指定方塊匯入（TXT / DOCX）</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
+            <ManageSection
+              title="指定方塊匯入"
+              description="先選方塊，再匯入檔案或資料夾（TXT / DOCX）"
+              isOpen={openPanels.directImport}
+              onToggle={() => toggleManagePanel('directImport')}
+            >
+              <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={importTargetBoxId}
                   onChange={(event) => setImportTargetBoxId(event.target.value)}
                   className="min-w-44 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
                 >
-                  {boxes.map((box) => (
+                  {importableDraftBoxes.map((box) => (
                     <option key={box.id} value={box.id}>
                       {box.emoji} {box.title}
                     </option>
@@ -698,12 +756,15 @@ export default function SoulmateHousePage({ onExit }: Props) {
                   />
                 </label>
               </div>
-            </section>
+            </ManageSection>
 
-            <section className="rounded-2xl border border-stone-200/80 bg-white/78 p-3.5 shadow-sm">
-              <p className="text-sm text-stone-800">批次分配匯入</p>
-              <p className="mt-0.5 text-xs text-stone-500">先把檔案加入清單，再逐檔指定方塊後一次匯入。</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <ManageSection
+              title="批次分配匯入"
+              description="先加入檔案，再逐檔指定方塊後一次匯入"
+              isOpen={openPanels.batchImport}
+              onToggle={() => toggleManagePanel('batchImport')}
+            >
+              <div className="flex flex-wrap gap-2">
                 <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700">
                   加入檔案
                   <input
@@ -770,7 +831,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
                         }
                         className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700"
                       >
-                        {boxes.map((box) => (
+                        {importableDraftBoxes.map((box) => (
                           <option key={box.id} value={box.id}>
                             {box.title}
                           </option>
@@ -780,11 +841,15 @@ export default function SoulmateHousePage({ onExit }: Props) {
                   ))}
                 </div>
               )}
-            </section>
+            </ManageSection>
 
-            <section className="rounded-2xl border border-stone-200/80 bg-white/78 p-3.5 shadow-sm">
-              <p className="text-sm text-stone-800">本頁備份</p>
-              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <ManageSection
+              title="本頁備份"
+              description="完整匯入匯出，或單方塊匯出"
+              isOpen={openPanels.backup}
+              onToggle={() => toggleManagePanel('backup')}
+            >
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <button
                   type="button"
                   onClick={exportPageBackup}
@@ -828,7 +893,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
                   onChange={(event) => setBackupBoxId(event.target.value)}
                   className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
                 >
-                  {boxes.map((box) => (
+                  {importableDraftBoxes.map((box) => (
                     <option key={box.id} value={box.id}>
                       {box.emoji} {box.title}
                     </option>
@@ -842,7 +907,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
                   匯出單方塊
                 </button>
               </div>
-            </section>
+            </ManageSection>
 
             {status && <p className="text-xs text-stone-600">{status}</p>}
           </div>
@@ -876,11 +941,16 @@ export default function SoulmateHousePage({ onExit }: Props) {
         <div className="grid grid-cols-3 gap-3">
           {boxes.map((box, index) => {
             const count = entryCountMap.get(box.id) ?? 0;
+            const isManager = box.id === MANAGE_BOX_ID;
             return (
               <button
                 key={box.id}
                 type="button"
                 onClick={() => {
+                  if (isManager) {
+                    setMode('manage');
+                    return;
+                  }
                   setSelectedBoxId(box.id);
                   setMode('box');
                 }}
@@ -895,24 +965,13 @@ export default function SoulmateHousePage({ onExit }: Props) {
                 <p className="line-clamp-2 text-[13px] font-semibold leading-tight text-stone-700">{box.title}</p>
                 <p className="line-clamp-2 text-[10px] leading-tight text-stone-400">{box.subtitle}</p>
                 <p className="mt-0.5 rounded-full border border-stone-300/70 bg-white/70 px-2 py-0.5 text-[10px] text-stone-600">
-                  {count} 篇
+                  {isManager ? '設定' : `${count}`}
                 </p>
               </button>
             );
           })}
         </div>
-      </div>
-
-      <div className="shrink-0 border-t border-stone-200/70 bg-white/80 px-4 py-2.5 backdrop-blur-sm">
-        <button
-          type="button"
-          onClick={() => setMode('manage')}
-          disabled={working}
-          className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 shadow-sm transition active:scale-95 disabled:opacity-50"
-        >
-          管理方塊與匯入備份
-        </button>
-        {status && <p className="mt-1 text-center text-[11px] text-stone-500">{status}</p>}
+        {status ? <p className="mt-3 text-center text-[11px] text-stone-500">{status}</p> : null}
       </div>
     </div>
   );
