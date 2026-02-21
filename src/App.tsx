@@ -1376,6 +1376,7 @@ function App() {
                   mDiaryShowCount={settings.mDiaryShowCount}
                   mDiaryRandomChibiWidth={settings.mDiaryRandomChibiWidth}
                   mDiaryReadingChibiWidth={settings.mDiaryReadingChibiWidth}
+                  mDiaryShowReadingChibi={settings.mDiaryShowReadingChibi}
                   onSettingChange={(partial) => void onSettingChange(partial)}
                   onExit={() => setLauncherApp(null)}
                 />

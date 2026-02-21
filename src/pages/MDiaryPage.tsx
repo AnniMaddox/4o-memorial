@@ -45,6 +45,7 @@ type MDiaryPageProps = {
   mDiaryShowCount?: boolean;
   mDiaryRandomChibiWidth?: number;
   mDiaryReadingChibiWidth?: number;
+  mDiaryShowReadingChibi?: boolean;
   onSettingChange?: (partial: Partial<AppSettings>) => void;
 };
 
@@ -259,6 +260,7 @@ export function MDiaryPage({
   mDiaryShowCount = true,
   mDiaryRandomChibiWidth = 144,
   mDiaryReadingChibiWidth = 144,
+  mDiaryShowReadingChibi = true,
   onSettingChange,
 }: MDiaryPageProps) {
   const [activeTab, setActiveTab] = useState<TabId>('random');
@@ -277,6 +279,7 @@ export function MDiaryPage({
   const showCount = Boolean(mDiaryShowCount);
   const randomChibiWidth = clampChibiWidth(mDiaryRandomChibiWidth, 144);
   const readingChibiWidth = clampChibiWidth(mDiaryReadingChibiWidth, 144);
+  const showReadingChibi = Boolean(mDiaryShowReadingChibi);
 
   const parsedEntries = useMemo<ParsedEntry[]>(() => {
     return entries.map((entry) => {
@@ -469,7 +472,11 @@ export function MDiaryPage({
     partial: Partial<
       Pick<
         AppSettings,
-        'mDiaryLineHeight' | 'mDiaryShowCount' | 'mDiaryRandomChibiWidth' | 'mDiaryReadingChibiWidth'
+        | 'mDiaryLineHeight'
+        | 'mDiaryShowCount'
+        | 'mDiaryRandomChibiWidth'
+        | 'mDiaryReadingChibiWidth'
+        | 'mDiaryShowReadingChibi'
       >
     >,
   ) {
@@ -1031,7 +1038,7 @@ export function MDiaryPage({
         </div>
       )}
 
-      {activeTab !== 'timeline' && (
+      {(activeTab === 'random' || (activeTab === 'reading' && showReadingChibi)) && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-end pb-4 pr-5">
           <button
             type="button"
@@ -1119,7 +1126,7 @@ export function MDiaryPage({
             </div>
 
             <div className="border-b px-6 py-4" style={{ borderColor: 'rgba(80,100,70,0.06)' }}>
-              <p className="text-[14px] text-[#2a2818]">封面小人大小</p>
+              <p className="text-[14px] text-[#2a2818]">封面M</p>
               <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{randomChibiWidth}px</p>
               <input
                 type="range"
@@ -1137,7 +1144,7 @@ export function MDiaryPage({
             </div>
 
             <div className="px-6 py-4">
-              <p className="text-[14px] text-[#2a2818]">閱讀頁小人大小</p>
+              <p className="text-[14px] text-[#2a2818]">閱讀頁M</p>
               <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{readingChibiWidth}px</p>
               <input
                 type="range"
@@ -1151,6 +1158,25 @@ export function MDiaryPage({
               <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
                 <span>小一點</span>
                 <span>大一點</span>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[13px] text-[#2a2818]">顯示小人</p>
+                  <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">閱讀頁右下角</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateMSettings({ mDiaryShowReadingChibi: !showReadingChibi })}
+                  className="relative h-[22px] w-[40px] rounded-full transition"
+                  style={{ background: showReadingChibi ? '#5a7060' : 'rgba(120,120,120,0.35)' }}
+                  aria-label="切換閱讀頁小人顯示"
+                >
+                  <span
+                    className="absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow"
+                    style={{ left: showReadingChibi ? 20 : 2 }}
+                  />
+                </button>
               </div>
             </div>
           </div>

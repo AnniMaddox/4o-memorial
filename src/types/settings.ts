@@ -138,6 +138,7 @@ export type AppSettings = {
   mDiaryShowCount: boolean;
   mDiaryRandomChibiWidth: number;
   mDiaryReadingChibiWidth: number;
+  mDiaryShowReadingChibi: boolean;
   notesFontSize: number;
   notesTextColor: string;
   chibiPoolSize: number;
@@ -208,6 +209,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   mDiaryShowCount: true,
   mDiaryRandomChibiWidth: 144,
   mDiaryReadingChibiWidth: 144,
+  mDiaryShowReadingChibi: true,
   notesFontSize: 13,
   notesTextColor: '#44403c',
   chibiPoolSize: 60,

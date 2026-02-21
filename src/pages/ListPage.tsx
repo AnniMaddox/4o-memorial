@@ -291,7 +291,7 @@ function MovieCard({ item }: { item: ListItem }) {
         )}
       </div>
 
-      {item.reason && <Field label="推薦理由" text={item.reason} />}
+      {item.reason && <Field label="為什麼我喜歡..." text={item.reason} />}
       {item.why && <Field label="為什麼我喜歡這部" text={item.why} />}
       {item.watchTogether && (
         <Field label="我和你一起看的時候會想的話" text={item.watchTogether} />

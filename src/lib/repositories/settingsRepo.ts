@@ -213,6 +213,10 @@ export async function getSettings() {
       196,
       DEFAULT_SETTINGS.mDiaryReadingChibiWidth,
     ),
+    mDiaryShowReadingChibi: normalizeBoolean(
+      persisted.mDiaryShowReadingChibi,
+      DEFAULT_SETTINGS.mDiaryShowReadingChibi,
+    ),
   };
 }
 
