@@ -37,7 +37,7 @@ import { readLetterContent } from './lib/letterReader';
 import { detectBestChatProfileId } from './lib/chatProfileMatcher';
 import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
-import { getBaseChibiPoolInfo, getScopedChibiSources, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
+import { getBaseChibiPoolInfo, getScopedMixedChibiSources, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
 import {
   exportAboutMBackupPart,
   importAboutMBackupPart,
@@ -311,9 +311,9 @@ function App() {
       : `radial-gradient(circle at 20% 10%, ${settings.backgroundGradientStart} 0%, ${settings.backgroundGradientEnd} 72%), linear-gradient(160deg, ${settings.backgroundGradientStart} 0%, ${settings.backgroundGradientEnd} 100%)`;
   const tarotExitChibiSrc = useMemo(() => {
     const fallback = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
-    const sources = getScopedChibiSources('mdiary');
+    const sources = getScopedMixedChibiSources('mdiary', settings.chibiPoolSize);
     return pickRandomItem(sources) ?? fallback;
-  }, []);
+  }, [settings.chibiPoolSize, launcherApp]);
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
