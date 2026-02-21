@@ -12,6 +12,9 @@ const COMPLETE_EXPORT_KIND = 'memorial-wishlist-complete-export';
 export type WishlistWish = {
   id: string;
   text: string;
+  title?: string;
+  why?: string;
+  toYou?: string;
   order: number;
   createdAt: number;
   updatedAt: number;
@@ -37,6 +40,13 @@ export type WishlistSnapshot = {
   wishes: WishlistWish[];
   birthdayTasks: BirthdayTask[];
   prefs: WishlistPrefs;
+};
+
+export type WishSeedItem = {
+  title?: string;
+  why?: string;
+  toYou?: string;
+  text?: string;
 };
 
 export type BirthdaySeedItem = {
@@ -70,8 +80,35 @@ function normalizeText(input: string) {
   return input.trim().replace(/\s+/g, ' ');
 }
 
-function normalizeWishKey(text: string) {
-  return normalizeText(text).toLocaleLowerCase('zh-TW');
+function normalizeParagraph(input: string) {
+  const normalized = String(input ?? '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return normalized;
+}
+
+function normalizeWishKey(item: Pick<WishlistWish, 'title' | 'text'> | WishSeedItem) {
+  const base = normalizeText(String(item.title ?? '')) || normalizeText(String(item.text ?? ''));
+  return base.toLocaleLowerCase('zh-TW');
+}
+
+function normalizeWishSeedItem(raw: WishSeedItem): WishSeedItem | null {
+  const title = normalizeText(String(raw.title ?? ''));
+  const why = normalizeParagraph(String(raw.why ?? ''));
+  const toYou = normalizeParagraph(String(raw.toYou ?? ''));
+  const text = normalizeParagraph(String(raw.text ?? ''));
+  const fallback = text || title || why || toYou;
+  if (!fallback) return null;
+  return {
+    title: title || undefined,
+    why: why || undefined,
+    toYou: toYou || undefined,
+    text: text || title || why || toYou,
+  };
 }
 
 function normalizeBirthdayKey(item: BirthdaySeedItem | BirthdayTask) {
@@ -86,13 +123,20 @@ function clampChibiWidth(value: number | undefined, fallback = 144) {
 }
 
 function normalizeWish(item: WishlistWish, fallbackOrder: number): WishlistWish | null {
-  const text = normalizeText(item.text);
-  if (!text) return null;
+  const title = normalizeText(String(item.title ?? ''));
+  const text = normalizeParagraph(String(item.text ?? ''));
+  const why = normalizeParagraph(String(item.why ?? ''));
+  const toYou = normalizeParagraph(String(item.toYou ?? ''));
+  const resolvedText = text || title || why || toYou;
+  if (!resolvedText) return null;
   const createdAt = Number.isFinite(item.createdAt) && item.createdAt > 0 ? item.createdAt : Date.now();
   const updatedAt = Number.isFinite(item.updatedAt) && item.updatedAt > 0 ? item.updatedAt : createdAt;
   return {
     id: item.id?.trim() || uniqueId('wish'),
-    text,
+    text: resolvedText,
+    title: title || undefined,
+    why: why || undefined,
+    toYou: toYou || undefined,
     order: Number.isFinite(item.order) ? item.order : fallbackOrder,
     createdAt,
     updatedAt,
@@ -102,7 +146,7 @@ function normalizeWish(item: WishlistWish, fallbackOrder: number): WishlistWish 
 
 function normalizeBirthdayTask(item: BirthdayTask, fallbackOrder: number): BirthdayTask | null {
   const year = String(item.year ?? '').trim();
-  const text = normalizeText(item.text ?? '');
+  const text = normalizeParagraph(item.text ?? '');
   if (!year || !text) return null;
   const createdAt = Number.isFinite(item.createdAt) && item.createdAt > 0 ? item.createdAt : Date.now();
   const updatedAt = Number.isFinite(item.updatedAt) && item.updatedAt > 0 ? item.updatedAt : createdAt;
@@ -208,33 +252,39 @@ export async function saveWishlistSnapshot(snapshot: WishlistSnapshot): Promise<
 
 export function mergeWishlistSeed(
   snapshot: WishlistSnapshot,
-  wishTexts: string[],
+  wishItems: WishSeedItem[],
   birthdayItems: BirthdaySeedItem[],
 ): WishlistSnapshot {
   const now = Date.now();
   const base = normalizeSnapshot(snapshot);
 
-  const existingWishByKey = new Map(base.wishes.map((item) => [normalizeWishKey(item.text), item]));
+  const existingWishByKey = new Map(base.wishes.map((item) => [normalizeWishKey(item), item]));
   const incomingWishKeys = new Set<string>();
   const mergedWishes: WishlistWish[] = [];
 
-  for (const raw of wishTexts) {
-    const text = normalizeText(raw);
-    if (!text) continue;
-    const key = normalizeWishKey(text);
+  for (const raw of wishItems) {
+    const normalized = normalizeWishSeedItem(raw);
+    if (!normalized) continue;
+    const key = normalizeWishKey(normalized);
     if (incomingWishKeys.has(key)) continue;
     incomingWishKeys.add(key);
     const existing = existingWishByKey.get(key);
     if (existing) {
       mergedWishes.push({
         ...existing,
-        text,
+        text: normalized.text!,
+        title: normalized.title,
+        why: normalized.why,
+        toYou: normalized.toYou,
         order: mergedWishes.length,
       });
     } else {
       mergedWishes.push({
         id: uniqueId('wish'),
-        text,
+        text: normalized.text!,
+        title: normalized.title,
+        why: normalized.why,
+        toYou: normalized.toYou,
         order: mergedWishes.length,
         createdAt: now,
         updatedAt: now,
@@ -245,7 +295,7 @@ export function mergeWishlistSeed(
 
   // Keep local-only extras so user edits are not lost when JSON updates.
   for (const existing of base.wishes) {
-    const key = normalizeWishKey(existing.text);
+    const key = normalizeWishKey(existing);
     if (incomingWishKeys.has(key)) continue;
     mergedWishes.push({
       ...existing,
@@ -259,7 +309,7 @@ export function mergeWishlistSeed(
 
   for (const raw of birthdayItems) {
     const year = String(raw.year).trim();
-    const text = normalizeText(raw.text);
+    const text = normalizeParagraph(raw.text);
     if (!year || !text) continue;
     const key = normalizeBirthdayKey({ year, text });
     if (incomingBirthdayKeys.has(key)) continue;
@@ -347,7 +397,7 @@ export function buildWishlistCompleteExport(snapshot: WishlistSnapshot): Wishlis
   const completedWishes = snapshot.wishes
     .filter((item) => Boolean(item.doneAt))
     .map((item) => ({
-      text: item.text,
+      text: item.title || item.text,
       doneAt: new Date(item.doneAt!).toISOString(),
     }));
 

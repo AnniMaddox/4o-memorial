@@ -234,10 +234,11 @@
 
 .wl-card-body {
   flex: 1;
-  padding: 18px 22px;
+  padding: 18px 22px 16px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 10px;
   position: relative;
   background-image: repeating-linear-gradient(
     to bottom,
@@ -259,21 +260,37 @@
   background: rgba(160, 80, 80, 0.12);
 }
 
-.wl-card-wish {
-  font-size: 18px;
+.wl-card-title {
+  font-size: 19px;
   color: #2c2010;
-  line-height: 1.85;
+  line-height: 1.6;
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
-  padding-left: 6px;
+  padding-left: 7px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.wl-card-wish strong {
-  font-weight: 400;
-  font-size: 11px;
+.wl-card-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-left: 7px;
+}
+
+.wl-card-note-label {
+  font-size: 10px;
   color: rgba(160, 130, 60, 0.5);
-  display: block;
-  margin-bottom: 6px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+  margin: 0 0 2px;
+}
+
+.wl-card-note-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(44, 32, 16, 0.84);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .wl-card-footer {
@@ -424,7 +441,7 @@
 
 .wl-wish-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   padding: 9px 18px 9px 0;
   min-height: 48px;
   border: 0;
@@ -450,27 +467,37 @@
 
 .wl-wish-text {
   flex: 1;
-  font-size: 14px;
+  font-size: 13.5px;
   color: #2c2010;
-  line-height: 1.65;
+  line-height: 1.45;
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 8px;
 }
 
 .wl-wish-text.done {
   color: rgba(44, 32, 16, 0.32);
 }
 
-.wl-wish-heart {
-  border: 0;
-  background: transparent;
-  font-size: 15px;
-  color: rgba(160, 40, 40, 0.22);
-  flex-shrink: 0;
-  padding: 2px 0 0 12px;
+.wl-wish-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 22px;
+  justify-content: flex-end;
+  color: rgba(160, 130, 60, 0.44);
 }
 
-.wl-wish-heart.done {
-  color: #a03030;
+.wl-wish-done {
+  font-size: 11px;
+  color: rgba(160, 80, 80, 0.7);
+}
+
+.wl-wish-arrow {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .wl-bday-view {
@@ -541,6 +568,7 @@
   color: #2c2010;
   line-height: 1.65;
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
+  white-space: pre-wrap;
 }
 
 .wl-bday-date {
@@ -633,6 +661,7 @@
 
 .wl-overlay-card {
   width: 292px;
+  max-height: min(78vh, 640px);
   border-radius: 20px;
   box-shadow: 0 28px 64px rgba(40, 30, 10, 0.34), 0 6px 20px rgba(40, 30, 10, 0.14),
     inset 0 0 0 1px rgba(160, 130, 60, 0.13);
@@ -669,12 +698,14 @@
 }
 
 .wl-oc-body {
-  padding: 22px;
-  min-height: 180px;
+  padding: 16px 18px;
+  min-height: 160px;
+  max-height: min(48vh, 420px);
+  overflow-y: auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
   position: relative;
   background-image: repeating-linear-gradient(
     to bottom,
@@ -697,24 +728,43 @@
   background: rgba(160, 80, 80, 0.12);
 }
 
-.wl-oc-wish {
-  width: min(84%, 230px);
-  font-size: 18px;
-  color: #2c2010;
-  line-height: 1.85;
-  font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
+.wl-oc-content {
+  width: 100%;
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.wl-oc-block {
+  margin: 0;
+}
+
+.wl-oc-label {
+  margin: 0 0 4px;
+  font-size: 10px;
+  color: rgba(160, 130, 60, 0.5);
+  letter-spacing: 0.08em;
+}
+
+.wl-oc-main {
+  margin: 0;
+  font-size: 18px;
+  color: #2c2010;
+  line-height: 1.55;
+  font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
+  white-space: pre-wrap;
   word-break: break-word;
 }
 
-.wl-oc-wish strong {
-  font-weight: 400;
-  font-size: 11px;
-  color: rgba(160, 130, 60, 0.5);
-  display: block;
-  margin-bottom: 8px;
-  letter-spacing: 0.06em;
+.wl-oc-text {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(44, 32, 16, 0.9);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .wl-oc-footer {

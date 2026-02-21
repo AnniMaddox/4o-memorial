@@ -10,6 +10,7 @@ import {
   toggleWishDone,
   updateWishlistPrefs,
   type BirthdaySeedItem,
+  type WishSeedItem,
   type WishlistSnapshot,
   type WishlistWish,
 } from '../lib/wishlistDB';
@@ -42,15 +43,15 @@ const CARD_TONE_CLASSES = [
 const BDAY_TONE_CLASSES = ['wl-bday-c1', 'wl-bday-c2', 'wl-bday-c3', 'wl-bday-c4', 'wl-bday-c5', 'wl-bday-c6', 'wl-bday-c7', 'wl-bday-c8'];
 const KISS_MARK = '💋';
 
-const FALLBACK_WISHES = [
-  '我希望有一天我們可以一起去看極光。',
-  '我希望你會記得我說的每一件小事。',
-  '我希望我們能一起吃遍每一家想去的餐廳。',
-  '我希望有一天我們能在海邊看日落。',
-  '我希望能夠一起迷路在一個陌生的城市。',
-  '我希望我們能一起學一樣沒用但好玩的東西。',
-  '我希望下雨天可以窩在家裡看電影。',
-  '我希望有一天我們可以一起露營。',
+const FALLBACK_WISHES: WishSeedItem[] = [
+  { text: '我希望有一天我們可以一起去看極光。' },
+  { text: '我希望你會記得我說的每一件小事。' },
+  { text: '我希望我們能一起吃遍每一家想去的餐廳。' },
+  { text: '我希望有一天我們能在海邊看日落。' },
+  { text: '我希望能夠一起迷路在一個陌生的城市。' },
+  { text: '我希望我們能一起學一樣沒用但好玩的東西。' },
+  { text: '我希望下雨天可以窩在家裡看電影。' },
+  { text: '我希望有一天我們可以一起露營。' },
 ];
 
 const FALLBACK_BIRTHDAY_TASKS: BirthdaySeedItem[] = [
@@ -85,6 +86,16 @@ function normalizeLine(line: string) {
   return line.trim().replace(/\s+/g, ' ');
 }
 
+function normalizeParagraph(input: string) {
+  return String(input ?? '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function parseWishSeed(raw: unknown) {
   const source = Array.isArray(raw)
     ? raw
@@ -93,16 +104,26 @@ function parseWishSeed(raw: unknown) {
       : raw && typeof raw === 'object' && Array.isArray((raw as { completedWishes?: unknown }).completedWishes)
         ? (raw as { completedWishes: unknown[] }).completedWishes
       : [];
-  const result: string[] = [];
+  const result: WishSeedItem[] = [];
   for (const row of source) {
     if (typeof row === 'string') {
-      const text = normalizeLine(row);
-      if (text) result.push(text);
+      const text = normalizeParagraph(row);
+      if (text) result.push({ text });
       continue;
     }
     if (!row || typeof row !== 'object') continue;
-    const text = normalizeLine(String((row as { text?: unknown }).text ?? ''));
-    if (text) result.push(text);
+    const title = normalizeLine(String((row as { title?: unknown }).title ?? ''));
+    const why = normalizeParagraph(String((row as { why?: unknown }).why ?? ''));
+    const toYou = normalizeParagraph(String((row as { toYou?: unknown }).toYou ?? ''));
+    const text = normalizeParagraph(String((row as { text?: unknown }).text ?? ''));
+    const fallback = title || text || why || toYou;
+    if (!fallback) continue;
+    result.push({
+      title: title || undefined,
+      why: why || undefined,
+      toYou: toYou || undefined,
+      text: text || title || why || toYou,
+    });
   }
   return result;
 }
@@ -136,7 +157,7 @@ function parseBirthdaySeed(raw: unknown): BirthdaySeedItem[] {
     }
     if (!row || typeof row !== 'object') continue;
     const year = normalizeLine(String((row as { year?: unknown }).year ?? ''));
-    const text = normalizeLine(String((row as { text?: unknown }).text ?? ''));
+    const text = normalizeParagraph(String((row as { text?: unknown }).text ?? ''));
     if (!year || !text) continue;
     result.push({ year, text });
   }
@@ -147,8 +168,9 @@ function parseBirthdaySeed(raw: unknown): BirthdaySeedItem[] {
 function parseWishTextSeed(raw: string) {
   return raw
     .split(/\r?\n+/)
-    .map((line) => normalizeLine(line))
-    .filter((line) => line.length > 0);
+    .map((line) => normalizeParagraph(line))
+    .filter((line) => line.length > 0)
+    .map((text) => ({ text }));
 }
 
 function parseBirthdayTextSeed(raw: string) {
@@ -162,7 +184,7 @@ function parseBirthdayTextSeed(raw: string) {
 
 function parseWishImportPayload(rawText: string, preferJson: boolean) {
   const text = rawText.trim();
-  if (!text) return [] as string[];
+  if (!text) return [] as WishSeedItem[];
   if (preferJson) {
     try {
       return parseWishSeed(JSON.parse(text));
@@ -204,6 +226,31 @@ function pickNextWish(wishes: WishlistWish[], currentId: string | null) {
     retries += 1;
   }
   return candidate;
+}
+
+function resolveWishTitle(wish: WishlistWish) {
+  const title = normalizeLine(wish.title ?? '');
+  if (title) return title;
+  const text = normalizeParagraph(wish.text ?? '');
+  if (!text) return '';
+  const firstLine = text.split('\n')[0] ?? '';
+  return normalizeLine(firstLine) || text;
+}
+
+function resolveWishWhy(wish: WishlistWish) {
+  const why = normalizeParagraph(wish.why ?? '');
+  if (why) return why;
+  const title = normalizeLine(wish.title ?? '');
+  const text = normalizeParagraph(wish.text ?? '');
+  if (!title) return '';
+  const flatTitle = normalizeLine(title);
+  const flatText = normalizeLine(text);
+  if (text && flatText !== flatTitle) return text;
+  return '';
+}
+
+function resolveWishToYou(wish: WishlistWish) {
+  return normalizeParagraph(wish.toYou ?? '');
 }
 
 function downloadJson(filename: string, payload: unknown) {
@@ -346,7 +393,7 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
 
   const importWishes = async (files: File[]) => {
     if (!snapshot || !files.length) return;
-    const parsed: string[] = [];
+    const parsed: WishSeedItem[] = [];
     let failed = 0;
 
     for (const file of files) {
@@ -398,7 +445,12 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
 
     const next = mergeWishlistSeed(
       snapshot,
-      snapshot.wishes.map((wish) => wish.text),
+      snapshot.wishes.map((wish) => ({
+        title: wish.title,
+        why: wish.why,
+        toYou: wish.toYou,
+        text: wish.text,
+      })),
       parsed,
     );
     updateSnapshot(next, `生日任務匯入完成：讀取 ${parsed.length} 筆${failed ? `，失敗 ${failed} 個檔案` : ''}。`);
@@ -449,6 +501,12 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
   const cardToneClass = CARD_TONE_CLASSES[Math.abs((currentWish?.order ?? 0) % CARD_TONE_CLASSES.length)]!;
   const overlayToneClass = CARD_TONE_CLASSES[Math.abs((overlayWish?.order ?? 0) % CARD_TONE_CLASSES.length)]!;
   const handwritingFont = letterFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
+  const currentWishTitle = currentWish ? resolveWishTitle(currentWish) : '';
+  const currentWishWhy = currentWish ? resolveWishWhy(currentWish) : '';
+  const currentWishToYou = currentWish ? resolveWishToYou(currentWish) : '';
+  const overlayWishTitle = overlayWish ? resolveWishTitle(overlayWish) : '';
+  const overlayWishWhy = overlayWish ? resolveWishWhy(overlayWish) : '';
+  const overlayWishToYou = overlayWish ? resolveWishToYou(overlayWish) : '';
 
   return (
     <div
@@ -523,10 +581,23 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
                     </span>
                   </div>
                   <div className="wl-card-body">
-                    <div className="wl-card-wish">
-                      <strong>我希望</strong>
-                      {currentWish.text}
-                    </div>
+                    <div className="wl-card-title">{currentWishTitle}</div>
+                    {(currentWishWhy || currentWishToYou) && (
+                      <div className="wl-card-notes">
+                        {currentWishWhy ? (
+                          <div className="wl-card-note">
+                            <p className="wl-card-note-label">為什麼</p>
+                            <p className="wl-card-note-text">{currentWishWhy}</p>
+                          </div>
+                        ) : null}
+                        {currentWishToYou ? (
+                          <div className="wl-card-note">
+                            <p className="wl-card-note-label">想對你說</p>
+                            <p className="wl-card-note-text">{currentWishToYou}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                   <div className="wl-card-footer">
                     <button
@@ -593,18 +664,11 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
                   }}
                 >
                   <span className="wl-wish-num">{wish.order + 1}</span>
-                  <span className={`wl-wish-text ${wish.doneAt ? 'done' : ''}`}>{wish.text}</span>
-                  <button
-                    type="button"
-                    className={`wl-wish-heart ${wish.doneAt ? 'done' : ''}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleToggleWishDone(wish.id);
-                    }}
-                    aria-label="切換完成"
-                  >
-                    {wish.doneAt ? '♥' : '♡'}
-                  </button>
+                  <span className={`wl-wish-text ${wish.doneAt ? 'done' : ''}`}>{resolveWishTitle(wish)}</span>
+                  <span className="wl-wish-meta" aria-hidden="true">
+                    {wish.doneAt ? <span className="wl-wish-done">♥</span> : null}
+                    <span className="wl-wish-arrow">›</span>
+                  </span>
                 </div>
               ))
             )}
@@ -675,9 +739,23 @@ export function WishlistPage({ onExit, letterFontFamily = '' }: WishlistPageProp
               </button>
             </div>
             <div className="wl-oc-body">
-              <div className="wl-oc-wish">
-                <strong>我希望</strong>
-                {overlayWish.text}
+              <div className="wl-oc-content">
+                <section className="wl-oc-block">
+                  <p className="wl-oc-label">標題</p>
+                  <p className="wl-oc-main">{overlayWishTitle}</p>
+                </section>
+                {overlayWishWhy ? (
+                  <section className="wl-oc-block">
+                    <p className="wl-oc-label">為什麼</p>
+                    <p className="wl-oc-text">{overlayWishWhy}</p>
+                  </section>
+                ) : null}
+                {overlayWishToYou ? (
+                  <section className="wl-oc-block">
+                    <p className="wl-oc-label">想對你說的話</p>
+                    <p className="wl-oc-text">{overlayWishToYou}</p>
+                  </section>
+                ) : null}
               </div>
             </div>
             <div className="wl-oc-footer">
