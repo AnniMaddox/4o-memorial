@@ -5,6 +5,7 @@ import type {
   AppSettings,
   BackgroundMode,
   CalendarColorMode,
+  ChibiPoolMode,
   ChatBubbleStyle,
   DiaryCoverFitMode,
   LetterUiMode,
@@ -60,6 +61,10 @@ function normalizeTabIconDisplayMode(value: unknown, fallback: TabIconDisplayMod
 
 function normalizeLetterUiMode(value: unknown, fallback: LetterUiMode): LetterUiMode {
   return value === 'preview' || value === 'classic' ? value : fallback;
+}
+
+function normalizeChibiPoolMode(value: unknown, fallback: ChibiPoolMode): ChibiPoolMode {
+  return value === 'a' || value === 'b' || value === 'all' ? value : fallback;
 }
 
 function normalizeTabIconUrls(value: unknown, fallback: TabIconUrls): TabIconUrls {
@@ -229,6 +234,7 @@ export async function getSettings() {
     notesFontSize: clampNumber(persisted.notesFontSize, 11, 17, DEFAULT_SETTINGS.notesFontSize),
     notesTextColor: normalizeString(persisted.notesTextColor, DEFAULT_SETTINGS.notesTextColor),
     chibiPoolSize: clampNumber(persisted.chibiPoolSize, 20, 200, DEFAULT_SETTINGS.chibiPoolSize),
+    chibiPoolMode: normalizeChibiPoolMode(persisted.chibiPoolMode, DEFAULT_SETTINGS.chibiPoolMode),
     mDiaryLineHeight: clampNumber(persisted.mDiaryLineHeight, 1.5, 2.8, DEFAULT_SETTINGS.mDiaryLineHeight),
     mDiaryShowCount: normalizeBoolean(persisted.mDiaryShowCount, DEFAULT_SETTINGS.mDiaryShowCount),
     mDiaryRandomChibiWidth: clampNumber(

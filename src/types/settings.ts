@@ -12,6 +12,7 @@ export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type DiaryCoverFitMode = 'cover' | 'contain';
 export type TabIconDisplayMode = 'framed' | 'full';
 export type LetterUiMode = 'classic' | 'preview';
+export type ChibiPoolMode = 'a' | 'b' | 'all';
 export type TabIconKey =
   | 'home'
   | 'inbox'
@@ -151,6 +152,7 @@ export type AppSettings = {
   notesFontSize: number;
   notesTextColor: string;
   chibiPoolSize: number;
+  chibiPoolMode: ChibiPoolMode;
 };
 
 export const DEFAULT_HOVER_TONE_WEIGHTS: HoverToneWeights = {
@@ -231,4 +233,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notesFontSize: 13,
   notesTextColor: '#44403c',
   chibiPoolSize: 60,
+  chibiPoolMode: 'a',
 };

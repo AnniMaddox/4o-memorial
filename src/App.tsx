@@ -43,7 +43,13 @@ import {
   buildFontFaceRule,
 } from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
-import { getBaseChibiPoolInfo, getScopedMixedChibiSources, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
+import {
+  getBaseChibiPoolInfo,
+  getScopedMixedChibiSources,
+  refreshActiveBaseChibiPool,
+  syncActiveBaseChibiPool,
+  type BaseChibiPoolMode,
+} from './lib/chibiPool';
 import {
   exportAboutMBackupPart,
   importAboutMBackupPart,
@@ -245,7 +251,9 @@ function App() {
   const [notificationPermission, setNotificationPermission] = useState<BrowserNotificationPermission>(
     getNotificationPermission,
   );
-  const [chibiPoolInfo, setChibiPoolInfo] = useState(() => getBaseChibiPoolInfo(DEFAULT_SETTINGS.chibiPoolSize));
+  const [chibiPoolInfo, setChibiPoolInfo] = useState(() =>
+    getBaseChibiPoolInfo(DEFAULT_SETTINGS.chibiPoolSize, DEFAULT_SETTINGS.chibiPoolMode),
+  );
   const monthAccentColor = useMemo(() => getMonthAccentColor(calendarMonthKey), [calendarMonthKey]);
   const appAccentColor = settings.themeMonthColor;
   const calendarHeaderColor = monthAccentColor ?? appAccentColor;
@@ -318,9 +326,9 @@ function App() {
       : `radial-gradient(circle at 20% 10%, ${settings.backgroundGradientStart} 0%, ${settings.backgroundGradientEnd} 72%), linear-gradient(160deg, ${settings.backgroundGradientStart} 0%, ${settings.backgroundGradientEnd} 100%)`;
   const tarotExitChibiSrc = useMemo(() => {
     const fallback = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
-    const sources = getScopedMixedChibiSources('mdiary', settings.chibiPoolSize);
+    const sources = getScopedMixedChibiSources('mdiary', settings.chibiPoolSize, settings.chibiPoolMode);
     return pickRandomItem(sources) ?? fallback;
-  }, [settings.chibiPoolSize, launcherApp]);
+  }, [settings.chibiPoolMode, settings.chibiPoolSize, launcherApp]);
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
@@ -979,29 +987,34 @@ function App() {
     }
   }, []);
 
-  const onReshuffleChibiPool = useCallback(() => {
-    const active = refreshActiveBaseChibiPool(settings.chibiPoolSize);
-    const info = getBaseChibiPoolInfo(settings.chibiPoolSize);
-    setChibiPoolInfo({
-      allCount: info.allCount,
-      activeCount: active.length,
-      targetCount: info.targetCount,
-    });
-    setImportStatus({
-      kind: 'success',
-      message: `透明小人已重抽：啟用 ${active.length} 張`,
-    });
-  }, [settings.chibiPoolSize]);
+  const onReshuffleChibiPool = useCallback(
+    (modeOverride?: BaseChibiPoolMode) => {
+      const targetMode = modeOverride ?? settings.chibiPoolMode;
+      const active = refreshActiveBaseChibiPool(settings.chibiPoolSize, targetMode);
+      const info = getBaseChibiPoolInfo(settings.chibiPoolSize, settings.chibiPoolMode);
+      const modeLabel = targetMode === 'a' ? 'A池' : targetMode === 'b' ? 'B池' : '全部';
+      setChibiPoolInfo({
+        allCount: info.allCount,
+        activeCount: info.activeCount,
+        targetCount: info.targetCount,
+      });
+      setImportStatus({
+        kind: 'success',
+        message: `透明小人已重抽（${modeLabel}）：啟用 ${active.length} 張`,
+      });
+    },
+    [settings.chibiPoolMode, settings.chibiPoolSize],
+  );
 
   useEffect(() => {
-    const active = syncActiveBaseChibiPool(settings.chibiPoolSize);
-    const info = getBaseChibiPoolInfo(settings.chibiPoolSize);
+    const active = syncActiveBaseChibiPool(settings.chibiPoolSize, settings.chibiPoolMode);
+    const info = getBaseChibiPoolInfo(settings.chibiPoolSize, settings.chibiPoolMode);
     setChibiPoolInfo({
       allCount: info.allCount,
-      activeCount: active.length,
+      activeCount: info.activeCount || active.length,
       targetCount: info.targetCount,
     });
-  }, [settings.chibiPoolSize]);
+  }, [settings.chibiPoolMode, settings.chibiPoolSize]);
 
   const onCalendarColorModeChange = useCallback(
     (mode: CalendarColorMode) => {
