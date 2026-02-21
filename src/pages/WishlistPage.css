@@ -1070,7 +1070,7 @@
 .wl-oc-main {
   margin: 0;
   font-size: 18px;
-  color: #2c2010;
+  color: var(--wl-card-title-color, #2c2010);
   line-height: 1.55;
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
   white-space: pre-wrap;
@@ -1080,7 +1080,7 @@
 .wl-oc-text {
   margin: 0;
   font-size: 13px;
-  color: rgba(44, 32, 16, 0.9);
+  color: var(--wl-card-note-text-color, rgba(44, 32, 16, 0.9));
   line-height: 1.65;
   font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
   white-space: pre-wrap;
