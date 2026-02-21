@@ -58,6 +58,24 @@ export function ListPage() {
 
   const sourceList = listType === 'movies' ? movies : listType === 'songs' ? songs : books;
   const currentItem = queue[currentIndex] ?? null;
+  const arrowTheme =
+    listType === 'songs'
+      ? {
+          background: 'linear-gradient(180deg, rgba(245,239,255,0.98) 0%, rgba(228,218,249,0.95) 100%)',
+          color: '#6b59a4',
+          boxShadow: '0 2px 9px rgba(80,66,128,0.18)',
+        }
+      : listType === 'books'
+        ? {
+            background: 'linear-gradient(180deg, rgba(239,250,242,0.98) 0%, rgba(219,241,226,0.95) 100%)',
+            color: '#3f7a5b',
+            boxShadow: '0 2px 9px rgba(56,109,80,0.16)',
+          }
+        : {
+            background: 'linear-gradient(180deg, rgba(255,248,233,0.98) 0%, rgba(253,235,201,0.95) 100%)',
+            color: '#9a6a2e',
+            boxShadow: '0 2px 9px rgba(120,80,20,0.16)',
+          };
 
   function draw() {
     const shuffled = shuffle(sourceList);
@@ -229,17 +247,23 @@ export function ListPage() {
                 type="button"
                 onClick={prev}
                 disabled={currentIndex === 0}
-                className="rounded-xl border border-stone-200 bg-white/80 px-3 py-1.5 text-sm text-stone-500 transition active:scale-95 disabled:opacity-25"
+                aria-label="上一張"
+                title="上一張"
+                className="grid h-8 w-8 place-items-center rounded-full text-[13px] font-semibold transition active:scale-95 disabled:opacity-25"
+                style={{ ...arrowTheme, border: 'none' }}
               >
-                ‹
+                ❮
               </button>
               <button
                 type="button"
                 onClick={next}
                 disabled={currentIndex === queue.length - 1}
-                className="rounded-xl border border-stone-200 bg-white/80 px-3 py-1.5 text-sm text-stone-500 transition active:scale-95 disabled:opacity-25"
+                aria-label="下一張"
+                title="下一張"
+                className="grid h-8 w-8 place-items-center rounded-full text-[13px] font-semibold transition active:scale-95 disabled:opacity-25"
+                style={{ ...arrowTheme, border: 'none' }}
               >
-                ›
+                ❯
               </button>
             </div>
           </div>

@@ -100,7 +100,7 @@ export function FitnessPage({ onExit }: FitnessPageProps) {
 
   return (
     <div
-      className="mx-auto flex w-full max-w-xl flex-col px-4"
+      className="relative mx-auto flex w-full max-w-xl flex-col px-4"
       style={{ height: 'calc(100dvh - 72px)' }}
     >
       {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -160,7 +160,7 @@ export function FitnessPage({ onExit }: FitnessPageProps) {
 
       {/* ── Content ────────────────────────────────────────────────────── */}
       {week ? (
-        <div className="min-h-0 flex-1 overflow-y-auto pb-2">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-20">
 
           {/* ── 菜單 ── */}
           {section === 'meals' && (
@@ -215,14 +215,14 @@ export function FitnessPage({ onExit }: FitnessPageProps) {
         </div>
       )}
 
-      {/* ── Floating chibi (bottom, one per page) ──────────────────────── */}
-      <div className="flex shrink-0 justify-center pb-1 pt-1">
+      {/* ── Floating chibi (same anchor as Tarot) ──────────────────────── */}
+      <div className="pointer-events-none absolute bottom-1 right-1 z-20">
         {showChibi &&
           (onExit ? (
             <button
               type="button"
               onClick={onExit}
-              className="transition active:scale-95"
+              className="pointer-events-auto transition active:scale-95"
               aria-label="返回首頁"
               title="點小人返回首頁"
             >
@@ -230,7 +230,7 @@ export function FitnessPage({ onExit }: FitnessPageProps) {
                 src={chibiSources[chibiIndex]}
                 alt=""
                 draggable={false}
-                className="calendar-chibi w-[7.5rem] select-none"
+                className="calendar-chibi w-[8rem] select-none"
                 onError={() => setShowChibi(false)}
               />
             </button>
@@ -239,7 +239,7 @@ export function FitnessPage({ onExit }: FitnessPageProps) {
               src={chibiSources[chibiIndex]}
               alt=""
               draggable={false}
-              className="calendar-chibi w-[7.5rem] select-none"
+              className="calendar-chibi pointer-events-auto w-[8rem] select-none"
               onError={() => setShowChibi(false)}
             />
           ))}

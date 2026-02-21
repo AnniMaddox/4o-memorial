@@ -492,6 +492,22 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
             </button>
           </header>
 
+          <section className="la-timeline">
+            <div className="la-year-strip">
+              {years.map((year, index) => (
+                <button
+                  type="button"
+                  key={year.year}
+                  className={`la-year-dot ${index === selectedYearIndex ? 'active' : ''}`}
+                  onClick={() => openYear(index)}
+                >
+                  <span className="dot" />
+                  <span className="label">{year.year}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
           <section
             className="la-carousel"
             onTouchStart={(event) => {
@@ -543,22 +559,6 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
             >
               ›
             </button>
-          </section>
-
-          <section className="la-timeline">
-            <div className="la-year-strip">
-              {years.map((year, index) => (
-                <button
-                  type="button"
-                  key={year.year}
-                  className={`la-year-dot ${index === selectedYearIndex ? 'active' : ''}`}
-                  onClick={() => openYear(index)}
-                >
-                  <span className="dot" />
-                  <span className="label">{year.year}</span>
-                </button>
-              ))}
-            </div>
           </section>
         </>
       ) : (
@@ -622,7 +622,6 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear }
               className="calendar-chibi select-none"
               style={{ width: prefs.chibiWidth, height: 'auto' }}
             />
-            <span className="la-chibi-hint">設定</span>
           </button>
         </div>
       ) : null}
