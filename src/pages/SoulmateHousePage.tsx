@@ -41,10 +41,10 @@ const PAGE_TITLE_STORAGE_KEY = 'memorial-soulmate-page-title-v1';
 const READER_PREFS_STORAGE_KEY = 'memorial-soulmate-reader-prefs-v1';
 const DEFAULT_PAGE_TITLE = '家';
 
-type ReaderFontKey = 'serif' | 'sans' | 'mono';
+type ReaderPaperKey = 'lined' | 'soft' | 'plain';
 
 type ReaderPrefs = {
-  fontKey: ReaderFontKey;
+  paperKey: ReaderPaperKey;
   fontSize: number;
   lineHeight: number;
   showChibi: boolean;
@@ -54,7 +54,7 @@ type ReaderPrefs = {
 };
 
 const DEFAULT_READER_PREFS: ReaderPrefs = {
-  fontKey: 'serif',
+  paperKey: 'lined',
   fontSize: 16,
   lineHeight: 1.95,
   showChibi: true,
@@ -75,8 +75,14 @@ function clampNumber(value: number, min: number, max: number, fallback: number) 
 
 function clampReaderPrefs(raw: Partial<ReaderPrefs> | null | undefined): ReaderPrefs {
   const source = raw ?? {};
+  const legacyFontKey = (source as { fontKey?: unknown }).fontKey;
+  const legacyPaperKey =
+    legacyFontKey === 'mono' ? 'plain' : legacyFontKey === 'sans' ? 'soft' : legacyFontKey === 'serif' ? 'lined' : null;
   return {
-    fontKey: source.fontKey === 'sans' || source.fontKey === 'mono' ? source.fontKey : 'serif',
+    paperKey:
+      source.paperKey === 'lined' || source.paperKey === 'soft' || source.paperKey === 'plain'
+        ? source.paperKey
+        : (legacyPaperKey ?? 'lined'),
     fontSize: Math.round(clampNumber(source.fontSize ?? NaN, 13, 24, DEFAULT_READER_PREFS.fontSize)),
     lineHeight: Number(clampNumber(source.lineHeight ?? NaN, 1.45, 2.6, DEFAULT_READER_PREFS.lineHeight).toFixed(2)),
     showChibi: source.showChibi !== false,
@@ -105,10 +111,28 @@ function readReaderPrefs() {
   }
 }
 
-function resolveReaderFontFamily(fontKey: ReaderFontKey) {
-  if (fontKey === 'sans') return "'Noto Sans TC', 'PingFang TC', system-ui, sans-serif";
-  if (fontKey === 'mono') return "'Noto Sans Mono CJK TC', 'SFMono-Regular', ui-monospace, monospace";
-  return "'Iansui', 'Klee One', 'Noto Serif TC', 'PingFang TC', serif";
+function resolveReaderPaperStyle(paperKey: ReaderPaperKey) {
+  if (paperKey === 'soft') {
+    return {
+      className: 'border-stone-200/80 bg-white',
+      style: {} as Record<string, string>,
+    };
+  }
+  if (paperKey === 'plain') {
+    return {
+      className: 'border-[#d9c9af]/85 bg-[#f3e8d7]',
+      style: {} as Record<string, string>,
+    };
+  }
+  return {
+    className: 'border-amber-200/80 bg-[#fff8e8]',
+    style: {
+      backgroundImage:
+        'repeating-linear-gradient(to bottom, rgba(176, 136, 74, 0.2) 0, rgba(176, 136, 74, 0.2) 1px, transparent 1px, transparent 29px)',
+      backgroundPosition: '0 16px',
+      backgroundSize: '100% 30px',
+    } as Record<string, string>,
+  };
 }
 
 function makeTempId(prefix = 'soulmate') {
@@ -218,7 +242,9 @@ export default function SoulmateHousePage({ onExit }: Props) {
   const boxes = snapshot.boxes;
   const entries = snapshot.entries;
   const resolvedPageTitle = pageTitle.trim() || DEFAULT_PAGE_TITLE;
-  const resolvedReaderFont = resolveReaderFontFamily(readerPrefs.fontKey);
+  const resolvedReaderFont = "'Iansui', 'Klee One', 'Noto Serif TC', 'PingFang TC', serif";
+  const readerPaper = resolveReaderPaperStyle(readerPrefs.paperKey);
+  const hideReaderChibi = !readerPrefs.showChibi || !chibiSrc;
 
   const importableBoxes = useMemo(() => boxes.filter((box) => box.id !== MANAGE_BOX_ID), [boxes]);
 
@@ -398,25 +424,20 @@ export default function SoulmateHousePage({ onExit }: Props) {
 
   const renderReaderAssistant = () => {
     if (mode === 'manage') return null;
-    const hideChibi = !readerPrefs.showChibi || !chibiSrc;
     return (
       <>
-        <div className="pointer-events-none absolute bottom-0 right-0 z-30">
-          <button
-            type="button"
-            onClick={() => setShowReaderSettings(true)}
-            className="pointer-events-auto transition active:scale-95"
-            style={{
-              marginRight: `${Math.max(4, 18 + readerPrefs.chibiX)}px`,
-              marginBottom: `${Math.max(6, 10 + readerPrefs.chibiY)}px`,
-            }}
-            aria-label="家頁設定"
-          >
-            {hideChibi ? (
-              <span className="grid h-8 w-8 place-items-center rounded-full border border-stone-300/70 bg-white/88 text-base text-stone-600 shadow-sm">
-                ⚙
-              </span>
-            ) : (
+        {!hideReaderChibi ? (
+          <div className="pointer-events-none absolute bottom-0 right-0 z-30">
+            <button
+              type="button"
+              onClick={() => setShowReaderSettings(true)}
+              className="pointer-events-auto transition active:scale-95"
+              style={{
+                marginRight: `${Math.max(4, 18 + readerPrefs.chibiX)}px`,
+                marginBottom: `${Math.max(6, 10 + readerPrefs.chibiY)}px`,
+              }}
+              aria-label="家頁設定"
+            >
               <img
                 src={chibiSrc}
                 alt="開啟家頁設定"
@@ -431,9 +452,9 @@ export default function SoulmateHousePage({ onExit }: Props) {
                   backgroundColor: 'transparent',
                 }}
               />
-            )}
-          </button>
-        </div>
+            </button>
+          </div>
+        ) : null}
 
         {showReaderSettings ? (
           <div className="absolute inset-0 z-40 bg-black/28" onClick={() => setShowReaderSettings(false)}>
@@ -448,15 +469,15 @@ export default function SoulmateHousePage({ onExit }: Props) {
 
               <div className="mt-4 space-y-3">
                 <label className="space-y-1 text-xs text-stone-500">
-                  <span>閱讀字體</span>
+                  <span>閱讀底部樣式</span>
                   <select
-                    value={readerPrefs.fontKey}
-                    onChange={(event) => patchReaderPrefs({ fontKey: event.target.value as ReaderFontKey })}
+                    value={readerPrefs.paperKey}
+                    onChange={(event) => patchReaderPrefs({ paperKey: event.target.value as ReaderPaperKey })}
                     className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
                   >
-                    <option value="serif">溫柔手札</option>
-                    <option value="sans">清晰無襯線</option>
-                    <option value="mono">等寬筆記</option>
+                    <option value="lined">淺黃筆記線</option>
+                    <option value="soft">柔白紙張</option>
+                    <option value="plain">清爽素底</option>
                   </select>
                 </label>
 
@@ -780,19 +801,39 @@ export default function SoulmateHousePage({ onExit }: Props) {
         onTouchStart={onEntryTouchStart}
         onTouchEnd={onEntryTouchEnd}
       >
-        <header className="shrink-0 border-b border-stone-200/70 bg-white/75 px-4 pb-3 pt-4 backdrop-blur-sm">
-          <p className="text-center text-[10px] uppercase tracking-[0.2em] text-stone-400">{selectedBox.subtitle}</p>
-          <button
-            type="button"
-            onClick={() => setMode('box')}
-            className="mx-auto mt-1 block max-w-full truncate text-lg font-semibold text-stone-800"
-            style={{ fontFamily: 'var(--app-heading-family)' }}
-            aria-label="返回方塊列表"
-            title="點標題返回方塊"
-          >
-            {selectedBox.emoji} {selectedBox.title}
-          </button>
-          <p className="mt-0.5 text-center text-[10px] text-stone-400">{formatImportedAt(selectedEntry.importedAt)}</p>
+        <header className="shrink-0 border-b border-stone-200/70 bg-white/72 px-4 pb-3 pt-4 backdrop-blur-sm">
+          <div className="flex items-start justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setMode('box')}
+              className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-stone-300/80 bg-white/85 text-xl leading-none text-stone-500 transition active:scale-95"
+              aria-label="返回方塊列表"
+              title="返回"
+            >
+              ‹
+            </button>
+            <div className="min-w-0 flex-1 text-center">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400">{selectedBox.subtitle}</p>
+              <p
+                className="mx-auto block max-w-full truncate text-lg font-semibold text-stone-800"
+                style={{ fontFamily: 'var(--app-heading-family)' }}
+              >
+                {selectedBox.emoji} {selectedBox.title}
+              </p>
+            </div>
+            {hideReaderChibi ? (
+              <button
+                type="button"
+                onClick={() => setShowReaderSettings(true)}
+                aria-label="開啟家頁設定"
+                className="grid h-6 w-6 shrink-0 place-items-center text-[20px] leading-none text-stone-400 transition active:opacity-60"
+              >
+                ⋯
+              </button>
+            ) : (
+              <span className="h-6 w-6 shrink-0" aria-hidden="true" />
+            )}
+          </div>
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-28 pt-4">
@@ -800,8 +841,13 @@ export default function SoulmateHousePage({ onExit }: Props) {
             {selectedEntry.title}
           </h3>
           <div
-            className="rounded-2xl border border-stone-200/70 bg-white/70 px-4 py-4 text-stone-700 shadow-sm"
-            style={{ fontFamily: resolvedReaderFont, fontSize: readerPrefs.fontSize, lineHeight: readerPrefs.lineHeight }}
+            className={`rounded-2xl border px-4 py-4 text-stone-700 shadow-sm ${readerPaper.className}`}
+            style={{
+              ...readerPaper.style,
+              fontFamily: resolvedReaderFont,
+              fontSize: readerPrefs.fontSize,
+              lineHeight: readerPrefs.lineHeight,
+            }}
           >
             {selectedEntry.htmlContent ? (
               <div dangerouslySetInnerHTML={{ __html: selectedEntry.htmlContent }} />
@@ -829,7 +875,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
             <button
               type="button"
               onClick={() => setMode('shelf')}
-              className="grid h-8 w-8 place-items-center rounded-full text-2xl leading-none text-stone-500 transition active:scale-95"
+              className="grid h-8 w-8 place-items-center rounded-full border border-stone-300/80 bg-white/85 text-2xl leading-none text-stone-500 transition active:scale-95"
               aria-label="返回家主頁"
             >
               ‹
@@ -848,6 +894,17 @@ export default function SoulmateHousePage({ onExit }: Props) {
             >
               ⚙
             </button>
+            {hideReaderChibi ? (
+              <button
+                type="button"
+                onClick={() => setShowReaderSettings(true)}
+                className="grid h-8 w-8 place-items-center rounded-full text-[20px] text-stone-400 transition active:scale-95"
+                aria-label="開啟家頁設定"
+                title="設定"
+              >
+                ⋯
+              </button>
+            ) : null}
           </div>
         </header>
 
@@ -908,9 +965,11 @@ export default function SoulmateHousePage({ onExit }: Props) {
               type="button"
               onClick={() => void saveBoxSettings()}
               disabled={working}
-              className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700 shadow-sm transition active:scale-95 disabled:opacity-50"
+              className="grid h-8 w-8 place-items-center rounded-xl border border-stone-300 bg-white/85 text-[15px] text-stone-600 shadow-sm transition active:scale-95 disabled:opacity-50"
+              aria-label="儲存方塊設定"
+              title="儲存"
             >
-              儲存
+              💾
             </button>
           </div>
         </header>
@@ -1260,18 +1319,31 @@ export default function SoulmateHousePage({ onExit }: Props) {
           <button
             type="button"
             onClick={onExit}
-            className="grid h-8 w-8 place-items-center rounded-full bg-white/18 text-2xl leading-none text-white/90 transition active:scale-95"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/18 text-2xl leading-none text-white/90 transition active:scale-95"
             aria-label="離開家頁"
           >
             ‹
           </button>
-          <div className="flex-1 text-center pr-10">
+          <div className="flex-1 text-center">
             <p className="text-[10px] uppercase tracking-[0.25em] text-white/70">HOME GRID</p>
             <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--app-heading-family)' }}>
               {resolvedPageTitle}
             </h1>
             <p className="mt-0.5 text-[11px] text-white/75">多主題收納格</p>
           </div>
+          {hideReaderChibi ? (
+            <button
+              type="button"
+              onClick={() => setShowReaderSettings(true)}
+              className="grid h-8 w-8 shrink-0 place-items-center text-[20px] leading-none text-white/85 transition active:opacity-60"
+              aria-label="開啟家頁設定"
+              title="設定"
+            >
+              ⋯
+            </button>
+          ) : (
+            <span className="h-8 w-8 shrink-0" aria-hidden="true" />
+          )}
         </div>
       </div>
 
