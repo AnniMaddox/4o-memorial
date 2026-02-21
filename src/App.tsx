@@ -1294,6 +1294,8 @@ function App() {
                   diaryCoverFitMode={settings.diaryCoverFitMode}
                   mDiaryLineHeight={settings.mDiaryLineHeight}
                   mDiaryShowCount={settings.mDiaryShowCount}
+                  mDiaryRandomChibiWidth={settings.mDiaryRandomChibiWidth}
+                  mDiaryReadingChibiWidth={settings.mDiaryReadingChibiWidth}
                   onSettingChange={(partial) => void onSettingChange(partial)}
                   onExit={() => setLauncherApp(null)}
                 />

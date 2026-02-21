@@ -20,6 +20,7 @@ const MONTH_EN = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP',
 type TabId = 'random' | 'timeline' | 'reading';
 type TimelineFilter = 'all' | 'favorites' | 'unknown';
 type SortDirection = 'desc' | 'asc';
+const TAB_ORDER: TabId[] = ['random', 'timeline', 'reading'];
 
 type ParsedEntry = {
   name: string;
@@ -42,6 +43,8 @@ type MDiaryPageProps = {
   diaryFontFamily?: string;
   mDiaryLineHeight?: number;
   mDiaryShowCount?: boolean;
+  mDiaryRandomChibiWidth?: number;
+  mDiaryReadingChibiWidth?: number;
   onSettingChange?: (partial: Partial<AppSettings>) => void;
 };
 
@@ -53,6 +56,11 @@ function pickRandom<T>(items: T[]): T | null {
 function clampLineHeight(value: number | undefined) {
   if (!Number.isFinite(value)) return 2.16;
   return Math.max(1.5, Math.min(2.8, value ?? 2.16));
+}
+
+function clampChibiWidth(value: number | undefined, fallback = 144) {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(104, Math.min(196, Math.round(value ?? fallback)));
 }
 
 function normalizeText(text: string) {
@@ -249,6 +257,8 @@ export function MDiaryPage({
   diaryFontFamily = '',
   mDiaryLineHeight = 2.16,
   mDiaryShowCount = true,
+  mDiaryRandomChibiWidth = 144,
+  mDiaryReadingChibiWidth = 144,
   onSettingChange,
 }: MDiaryPageProps) {
   const [activeTab, setActiveTab] = useState<TabId>('random');
@@ -260,10 +270,13 @@ export function MDiaryPage({
   const [chibiSrc] = useState(pickRandomChibi);
   const [randomCoverSrc] = useState(() => pickRandom(COVER_SRCS) ?? '');
   const dateStripRef = useRef<HTMLDivElement | null>(null);
+  const tabSwipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
 
   const effectiveFont = diaryFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
   const lineHeight = clampLineHeight(mDiaryLineHeight);
   const showCount = Boolean(mDiaryShowCount);
+  const randomChibiWidth = clampChibiWidth(mDiaryRandomChibiWidth, 144);
+  const readingChibiWidth = clampChibiWidth(mDiaryReadingChibiWidth, 144);
 
   const parsedEntries = useMemo<ParsedEntry[]>(() => {
     return entries.map((entry) => {
@@ -417,7 +430,49 @@ export function MDiaryPage({
     if (next) setSelectedName(next.name);
   }
 
-  function updateMSettings(partial: Partial<Pick<AppSettings, 'mDiaryLineHeight' | 'mDiaryShowCount'>>) {
+  function shouldIgnoreTabSwipe(target: EventTarget | null) {
+    return target instanceof HTMLElement && Boolean(target.closest('[data-mdiary-no-tab-swipe="true"]'));
+  }
+
+  function handleTabSwipeStart(clientX: number, clientY: number, target: EventTarget | null) {
+    tabSwipeStartRef.current = {
+      x: clientX,
+      y: clientY,
+      ignore: showSettings || shouldIgnoreTabSwipe(target),
+    };
+  }
+
+  function resetTabSwipe() {
+    tabSwipeStartRef.current = null;
+  }
+
+  function handleTabSwipeEnd(clientX: number, clientY: number) {
+    const start = tabSwipeStartRef.current;
+    tabSwipeStartRef.current = null;
+    if (!start || start.ignore) return;
+
+    const dx = clientX - start.x;
+    const dy = clientY - start.y;
+    if (Math.abs(dx) < 54 || Math.abs(dx) <= Math.abs(dy)) return;
+
+    const tabIndex = TAB_ORDER.indexOf(activeTab);
+    if (tabIndex === -1) return;
+
+    if (dx < 0 && tabIndex < TAB_ORDER.length - 1) {
+      setActiveTab(TAB_ORDER[tabIndex + 1]!);
+    } else if (dx > 0 && tabIndex > 0) {
+      setActiveTab(TAB_ORDER[tabIndex - 1]!);
+    }
+  }
+
+  function updateMSettings(
+    partial: Partial<
+      Pick<
+        AppSettings,
+        'mDiaryLineHeight' | 'mDiaryShowCount' | 'mDiaryRandomChibiWidth' | 'mDiaryReadingChibiWidth'
+      >
+    >,
+  ) {
     onSettingChange?.(partial);
   }
 
@@ -462,7 +517,21 @@ export function MDiaryPage({
   );
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden" style={{ background: '#f6f2ea' }}>
+    <div
+      className="relative flex h-full flex-col overflow-hidden"
+      style={{ background: '#f6f2ea' }}
+      onTouchStart={(event) => {
+        const touch = event.touches[0];
+        if (!touch) return;
+        handleTabSwipeStart(touch.clientX, touch.clientY, event.target);
+      }}
+      onTouchEnd={(event) => {
+        const touch = event.changedTouches[0];
+        if (!touch) return;
+        handleTabSwipeEnd(touch.clientX, touch.clientY);
+      }}
+      onTouchCancel={resetTabSwipe}
+    >
       {topBar}
 
       <div className="shrink-0 px-4 pt-1">
@@ -921,6 +990,7 @@ export function MDiaryPage({
               <div
                 ref={dateStripRef}
                 className="shrink-0 overflow-x-auto border-t px-[18px] pb-4 pt-2"
+                data-mdiary-no-tab-swipe="true"
                 style={{
                   borderColor: 'rgba(80,100,70,0.05)',
                   scrollbarWidth: 'none',
@@ -970,12 +1040,18 @@ export function MDiaryPage({
             aria-label="M日記設定"
           >
             {chibiSrc ? (
-              <img src={chibiSrc} alt="" draggable={false} className="calendar-chibi w-36 select-none drop-shadow-md" />
+              <img
+                src={chibiSrc}
+                alt=""
+                draggable={false}
+                className="calendar-chibi select-none drop-shadow-md"
+                style={{ width: activeTab === 'reading' ? readingChibiWidth : randomChibiWidth, height: 'auto' }}
+              />
             ) : (
               <span
                 style={{
-                  width: 144,
-                  height: 168,
+                  width: activeTab === 'reading' ? readingChibiWidth : randomChibiWidth,
+                  height: Math.round((activeTab === 'reading' ? readingChibiWidth : randomChibiWidth) * 1.17),
                   borderRadius: 20,
                   background: 'rgba(236,244,236,0.88)',
                   border: '1.5px dashed rgba(90,120,90,0.18)',
@@ -1024,7 +1100,7 @@ export function MDiaryPage({
               </div>
             </div>
 
-            <div className="px-6 py-4">
+            <div className="border-b px-6 py-4" style={{ borderColor: 'rgba(80,100,70,0.06)' }}>
               <p className="text-[14px] text-[#2a2818]">行距設定</p>
               <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{lineHeight.toFixed(2)} 倍</p>
               <input
@@ -1039,6 +1115,42 @@ export function MDiaryPage({
               <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
                 <span>緊密</span>
                 <span>寬鬆</span>
+              </div>
+            </div>
+
+            <div className="border-b px-6 py-4" style={{ borderColor: 'rgba(80,100,70,0.06)' }}>
+              <p className="text-[14px] text-[#2a2818]">封面小人大小</p>
+              <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{randomChibiWidth}px</p>
+              <input
+                type="range"
+                min={104}
+                max={196}
+                step={1}
+                value={randomChibiWidth}
+                onChange={(event) => updateMSettings({ mDiaryRandomChibiWidth: Number(event.target.value) })}
+                className="mt-3 w-full accent-[#5a7060]"
+              />
+              <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
+                <span>小一點</span>
+                <span>大一點</span>
+              </div>
+            </div>
+
+            <div className="px-6 py-4">
+              <p className="text-[14px] text-[#2a2818]">閱讀頁小人大小</p>
+              <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{readingChibiWidth}px</p>
+              <input
+                type="range"
+                min={104}
+                max={196}
+                step={1}
+                value={readingChibiWidth}
+                onChange={(event) => updateMSettings({ mDiaryReadingChibiWidth: Number(event.target.value) })}
+                className="mt-3 w-full accent-[#5a7060]"
+              />
+              <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
+                <span>小一點</span>
+                <span>大一點</span>
               </div>
             </div>
           </div>

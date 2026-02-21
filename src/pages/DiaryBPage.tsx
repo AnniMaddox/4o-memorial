@@ -493,6 +493,12 @@ export function DiaryBPage({
     });
   }
 
+  function jumpToCurrentMonth() {
+    const now = new Date();
+    setCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+    setCalendarDayMenu(null);
+  }
+
   function openEntryByName(name: string) {
     setCalendarDayMenu(null);
     const idx = entries.findIndex((entry) => entry.name === name);
@@ -702,6 +708,10 @@ export function DiaryBPage({
         favorite: false,
       }
     : null;
+  const today = new Date();
+  const isViewingCurrentMonth =
+    calendarMonth.getFullYear() === today.getFullYear() &&
+    calendarMonth.getMonth() === today.getMonth();
 
   return (
     <div
@@ -1058,7 +1068,31 @@ export function DiaryBPage({
               <button type="button" onClick={() => shiftMonth(-1)} style={{ fontSize: 16, color: '#a08060', background: 'transparent', border: 'none', padding: 4 }}>
                 ‹
               </button>
-              <span style={{ fontSize: 15, fontWeight: 600, color: '#2c2218' }}>{formatMonthTitle(calendarMonth)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: '#2c2218' }}>{formatMonthTitle(calendarMonth)}</span>
+                <button
+                  type="button"
+                  onClick={jumpToCurrentMonth}
+                  aria-label="回到當月"
+                  title="回到當月"
+                  disabled={isViewingCurrentMonth}
+                  style={{
+                    width: 21,
+                    height: 21,
+                    borderRadius: '999px',
+                    border: '1px solid rgba(100,80,40,0.2)',
+                    background: isViewingCurrentMonth ? 'rgba(140,120,100,0.08)' : 'rgba(255,255,255,0.72)',
+                    color: isViewingCurrentMonth ? 'rgba(160,128,96,0.45)' : '#a08060',
+                    fontSize: 10.5,
+                    lineHeight: 1,
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: 0,
+                  }}
+                >
+                  ◎
+                </button>
+              </div>
               <button type="button" onClick={() => shiftMonth(1)} style={{ fontSize: 16, color: '#a08060', background: 'transparent', border: 'none', padding: 4 }}>
                 ›
               </button>
@@ -1193,7 +1227,31 @@ export function DiaryBPage({
               <button type="button" onClick={() => shiftMonth(-1)} style={{ fontSize: 13, color: '#a08060', background: 'transparent', border: 'none' }}>
                 ‹
               </button>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#2c2218' }}>{formatMonthTitle(calendarMonth)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#2c2218' }}>{formatMonthTitle(calendarMonth)}</span>
+                <button
+                  type="button"
+                  onClick={jumpToCurrentMonth}
+                  aria-label="回到當月"
+                  title="回到當月"
+                  disabled={isViewingCurrentMonth}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: '999px',
+                    border: '1px solid rgba(100,80,40,0.2)',
+                    background: isViewingCurrentMonth ? 'rgba(140,120,100,0.08)' : 'rgba(255,255,255,0.72)',
+                    color: isViewingCurrentMonth ? 'rgba(160,128,96,0.45)' : '#a08060',
+                    fontSize: 9,
+                    lineHeight: 1,
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: 0,
+                  }}
+                >
+                  ◎
+                </button>
+              </div>
               <button type="button" onClick={() => shiftMonth(1)} style={{ fontSize: 13, color: '#a08060', background: 'transparent', border: 'none' }}>
                 ›
               </button>

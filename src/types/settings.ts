@@ -136,6 +136,8 @@ export type AppSettings = {
   diaryCoverFitMode: DiaryCoverFitMode;
   mDiaryLineHeight: number;
   mDiaryShowCount: boolean;
+  mDiaryRandomChibiWidth: number;
+  mDiaryReadingChibiWidth: number;
   notesFontSize: number;
   notesTextColor: string;
   chibiPoolSize: number;
@@ -204,6 +206,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   diaryCoverFitMode: 'cover',
   mDiaryLineHeight: 2.16,
   mDiaryShowCount: true,
+  mDiaryRandomChibiWidth: 144,
+  mDiaryReadingChibiWidth: 144,
   notesFontSize: 13,
   notesTextColor: '#44403c',
   chibiPoolSize: 60,

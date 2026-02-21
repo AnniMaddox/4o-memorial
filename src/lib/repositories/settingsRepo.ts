@@ -198,6 +198,18 @@ export async function getSettings() {
     chibiPoolSize: clampNumber(persisted.chibiPoolSize, 20, 200, DEFAULT_SETTINGS.chibiPoolSize),
     mDiaryLineHeight: clampNumber(persisted.mDiaryLineHeight, 1.5, 2.8, DEFAULT_SETTINGS.mDiaryLineHeight),
     mDiaryShowCount: normalizeBoolean(persisted.mDiaryShowCount, DEFAULT_SETTINGS.mDiaryShowCount),
+    mDiaryRandomChibiWidth: clampNumber(
+      persisted.mDiaryRandomChibiWidth,
+      104,
+      196,
+      DEFAULT_SETTINGS.mDiaryRandomChibiWidth,
+    ),
+    mDiaryReadingChibiWidth: clampNumber(
+      persisted.mDiaryReadingChibiWidth,
+      104,
+      196,
+      DEFAULT_SETTINGS.mDiaryReadingChibiWidth,
+    ),
   };
 }
 
