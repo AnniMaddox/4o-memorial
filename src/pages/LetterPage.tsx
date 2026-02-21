@@ -1776,7 +1776,7 @@ function PreviewLetterFullscreenView({
         onClick={onPickRandom}
         aria-label={rerollLabel}
         className="absolute left-1/2 z-[18] flex -translate-x-1/2 flex-col items-center gap-[3px] transition active:opacity-65"
-        style={{ bottom: 48 }}
+        style={{ bottom: 18 }}
       >
         {rerollDisplaySrc ? (
           <img
