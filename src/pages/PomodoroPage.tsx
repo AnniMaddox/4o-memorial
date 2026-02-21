@@ -50,7 +50,11 @@ function pickNextChibiIndex(current: number, total: number) {
   return next;
 }
 
-export function PomodoroPage() {
+type PomodoroPageProps = {
+  onExit?: () => void;
+};
+
+export function PomodoroPage({ onExit }: PomodoroPageProps) {
   const [mode, setMode] = useState<PomodoroMode>('focus');
   const [isRunning, setIsRunning] = useState(false);
   const [focusCount, setFocusCount] = useState(0);
@@ -203,14 +207,32 @@ export function PomodoroPage() {
         </div>
 
         {chibiSources.length > 0 && (
-          <div className="pointer-events-none mt-5 flex justify-center">
-            <img
-              src={chibiSources[chibiIndex]}
-              alt=""
-              draggable={false}
-              className="h-36 w-auto select-none object-contain opacity-95 drop-shadow-[0_14px_22px_rgba(0,0,0,0.24)]"
-              loading="lazy"
-            />
+          <div className="mt-5 flex justify-center">
+            {onExit ? (
+              <button
+                type="button"
+                onClick={onExit}
+                className="transition active:scale-95"
+                aria-label="返回首頁"
+                title="點小人返回首頁"
+              >
+                <img
+                  src={chibiSources[chibiIndex]}
+                  alt=""
+                  draggable={false}
+                  className="calendar-chibi h-36 w-auto select-none object-contain opacity-95 drop-shadow-[0_14px_22px_rgba(0,0,0,0.24)]"
+                  loading="lazy"
+                />
+              </button>
+            ) : (
+              <img
+                src={chibiSources[chibiIndex]}
+                alt=""
+                draggable={false}
+                className="calendar-chibi h-36 w-auto select-none object-contain opacity-95 drop-shadow-[0_14px_22px_rgba(0,0,0,0.24)]"
+                loading="lazy"
+              />
+            )}
           </div>
         )}
       </section>

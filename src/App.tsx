@@ -37,7 +37,7 @@ import { readLetterContent } from './lib/letterReader';
 import { detectBestChatProfileId } from './lib/chatProfileMatcher';
 import { APP_CUSTOM_FONT_FAMILY, DIARY_CUSTOM_FONT_FAMILY, LETTER_CUSTOM_FONT_FAMILY, buildFontFaceRule } from './lib/font';
 import { deleteChatProfile, loadChatProfiles, saveChatProfile } from './lib/chatDB';
-import { getBaseChibiPoolInfo, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
+import { getBaseChibiPoolInfo, getScopedChibiSources, refreshActiveBaseChibiPool, syncActiveBaseChibiPool } from './lib/chibiPool';
 import {
   exportAboutMBackupPart,
   importAboutMBackupPart,
@@ -136,6 +136,11 @@ function toSafeCssUrl(url: string) {
 function fallbackLabel(value: string, fallback: string) {
   const trimmed = value.trim();
   return trimmed || fallback;
+}
+
+function pickRandomItem<T>(items: readonly T[]) {
+  if (!items.length) return undefined;
+  return items[Math.floor(Math.random() * items.length)];
 }
 
 function getMonthAccentColor(monthKey: string) {
@@ -304,6 +309,11 @@ function App() {
           backgroundOverlay - 0.12,
         )})), url("${toSafeCssUrl(backgroundImageUrl)}")`
       : `radial-gradient(circle at 20% 10%, ${settings.backgroundGradientStart} 0%, ${settings.backgroundGradientEnd} 72%), linear-gradient(160deg, ${settings.backgroundGradientStart} 0%, ${settings.backgroundGradientEnd} 100%)`;
+  const tarotExitChibiSrc = useMemo(() => {
+    const fallback = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
+    const sources = getScopedChibiSources('mdiary');
+    return pickRandomItem(sources) ?? fallback;
+  }, []);
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
@@ -1217,26 +1227,30 @@ function App() {
           )}
 
           {launcherApp === 'tarot' && (
-            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
-              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
-                    onClick={() => setLauncherApp(null)}
-                  >
-                    ‹
-                  </button>
-                  <p className="text-sm text-white/85">{appLabels.tarot}</p>
-                  <span className="w-16" />
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-2 backdrop-blur-sm">
+              <div className="relative mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-1">
                   <TarotPage
                     tarotGalleryImageUrl={settings.tarotGalleryImageUrl}
                     tarotNameColor={settings.tarotNameColor}
                     tarotNameScale={settings.tarotNameScale}
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setLauncherApp(null)}
+                  className="absolute bottom-1 right-1 z-20 transition active:scale-95"
+                  aria-label="返回首頁"
+                  title="點小人返回首頁"
+                >
+                  <img
+                    src={tarotExitChibiSrc}
+                    alt=""
+                    draggable={false}
+                    className="calendar-chibi w-[8rem] select-none"
+                    loading="lazy"
+                  />
+                </button>
               </div>
             </div>
           )}
@@ -1327,7 +1341,7 @@ function App() {
                   >
                     ‹
                   </button>
-                  <p className="text-sm text-white/85">{appLabels.list}</p>
+                  <span className="w-16" />
                   <span className="w-16" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
@@ -1370,42 +1384,20 @@ function App() {
           )}
 
           {launcherApp === 'fitness' && (
-            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-2 backdrop-blur-sm">
               <div className="mx-auto flex h-full w-full max-w-xl flex-col">
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
-                    onClick={() => setLauncherApp(null)}
-                  >
-                    ‹
-                  </button>
-                  <p className="text-sm text-white/85">{appLabels.fitness}</p>
-                  <span className="w-16" />
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-                  <FitnessPage />
+                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-1">
+                  <FitnessPage onExit={() => setLauncherApp(null)} />
                 </div>
               </div>
             </div>
           )}
 
           {launcherApp === 'pomodoro' && (
-            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-2 backdrop-blur-sm">
               <div className="mx-auto flex h-full w-full max-w-xl flex-col">
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white transition active:scale-95"
-                    onClick={() => setLauncherApp(null)}
-                  >
-                    ‹
-                  </button>
-                  <p className="text-sm text-white/85">{appLabels.pomodoro}</p>
-                  <span className="w-16" />
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-                  <PomodoroPage />
+                <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] pt-1">
+                  <PomodoroPage onExit={() => setLauncherApp(null)} />
                 </div>
               </div>
             </div>
@@ -1463,7 +1455,7 @@ function App() {
                   >
                     ‹
                   </button>
-                  <p className="text-sm text-white/85">{appLabels.album}</p>
+                  <span className="w-16" />
                   <span className="w-16" />
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden pt-3">

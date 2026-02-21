@@ -117,7 +117,11 @@ function writeStoredPool(pool: string[]) {
   if (typeof window === 'undefined') {
     return;
   }
-  window.localStorage.setItem(ACTIVE_BASE_CHIBI_POOL_STORAGE_KEY, JSON.stringify(pool));
+  try {
+    window.localStorage.setItem(ACTIVE_BASE_CHIBI_POOL_STORAGE_KEY, JSON.stringify(pool));
+  } catch {
+    // Ignore storage write failures to avoid crashing app render paths.
+  }
 }
 
 function dispatchPoolUpdated(info: ChibiPoolInfo) {

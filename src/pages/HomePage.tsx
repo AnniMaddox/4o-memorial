@@ -364,7 +364,7 @@ export function HomePage({
     };
     const dailyTaskPlaceholder: HomeAppSlot = {
       id: 'wishlist',
-      label: '每日任務',
+      label: '願望',
       icon: '✅',
       launch: 'wishlist',
     };
@@ -380,24 +380,17 @@ export function HomePage({
       icon: '📜',
       launch: 'lettersAB',
     };
-    const placeholder = (id: string): HomeAppSlot => ({
-      id,
-      label: '',
-      icon: '',
-      disabled: true,
-    });
-
     // Screen 1 order
     const screen1: HomeAppSlot[] = homeSwipeEnabled
       ? [
           chatSlot,
           lettersSlot,
           diarySlot,
-          listSlot,
-          albumSlot,
-          bookcasePlaceholder,
           dailyTaskPlaceholder,
           soulmateSlot,
+          notesSlot,
+          diaryBSlot,
+          periodSlot,
         ]
       : [
           chatSlot,
@@ -429,13 +422,12 @@ export function HomePage({
           slots: [
             fitnessSlot,
             tarotSlot,
-            heartSlot,
             pomodoroSlot,
-            periodSlot,
-            notesSlot,
-            diaryBSlot,
+            heartSlot,
+            listSlot,
+            albumSlot,
             annualLettersSlot,
-            placeholder('placeholder-secondary-3'),
+            bookcasePlaceholder,
           ],
         },
         {

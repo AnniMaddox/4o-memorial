@@ -52,7 +52,11 @@ const EXERCISE_ICONS = ['🏃', '💪', '🧘'];
 
 // ─── FitnessPage ──────────────────────────────────────────────────────────────
 
-export function FitnessPage() {
+type FitnessPageProps = {
+  onExit?: () => void;
+};
+
+export function FitnessPage({ onExit }: FitnessPageProps) {
   const [weeks, setWeeks] = useState<WeekData[]>([]);
   const [activeWeek, setActiveWeek] = useState(1);
   const [section, setSection] = useState<SectionKey>('meals');
@@ -213,15 +217,32 @@ export function FitnessPage() {
 
       {/* ── Floating chibi (bottom, one per page) ──────────────────────── */}
       <div className="flex shrink-0 justify-center pb-1 pt-1">
-        {showChibi && (
-          <img
-            src={chibiSources[chibiIndex]}
-            alt=""
-            draggable={false}
-            className="calendar-chibi w-[7.5rem] select-none"
-            onError={() => setShowChibi(false)}
-          />
-        )}
+        {showChibi &&
+          (onExit ? (
+            <button
+              type="button"
+              onClick={onExit}
+              className="transition active:scale-95"
+              aria-label="返回首頁"
+              title="點小人返回首頁"
+            >
+              <img
+                src={chibiSources[chibiIndex]}
+                alt=""
+                draggable={false}
+                className="calendar-chibi w-[7.5rem] select-none"
+                onError={() => setShowChibi(false)}
+              />
+            </button>
+          ) : (
+            <img
+              src={chibiSources[chibiIndex]}
+              alt=""
+              draggable={false}
+              className="calendar-chibi w-[7.5rem] select-none"
+              onError={() => setShowChibi(false)}
+            />
+          ))}
       </div>
     </div>
   );

@@ -59,6 +59,11 @@ h3 {
   animation: letter-content-fade 0.5s 0.3s ease both;
 }
 
+@keyframes letter-twinkle {
+  from { opacity: 0.15; }
+  to   { opacity: 0.78; }
+}
+
 /* ── List card reveal (ListPage card view) ───────────────────────────────────── */
 @keyframes list-card-reveal {
   from { opacity: 0; transform: translateY(10px) scale(0.97); }
@@ -488,6 +493,15 @@ textarea {
   100% {
     transform: translateY(0);
   }
+}
+
+/* ── Diary star twinkle ──────────────────────────────────────────────────────── */
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.75; }
+  50%       { opacity: 0.18; }
+}
+.diary-star-twinkle {
+  animation: starTwinkle 2.8s ease-in-out infinite;
 }
 
 .bubble-qq {
