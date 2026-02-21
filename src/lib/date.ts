@@ -44,7 +44,7 @@ function parseMonthKey(monthKey: string) {
   return { year, month };
 }
 
-export function buildContinuousMonthKeys(monthKeys: string[], fallbackMonthKey = toMonthKey(), minEndYear = 2030) {
+export function buildContinuousMonthKeys(monthKeys: string[], fallbackMonthKey = toMonthKey(), minEndYear?: number) {
   const unique = Array.from(new Set(monthKeys)).sort((a, b) => a.localeCompare(b));
   const fallbackParsed = parseMonthKey(fallbackMonthKey);
 
@@ -68,7 +68,9 @@ export function buildContinuousMonthKeys(monthKeys: string[], fallbackMonthKey =
     maxYear = Math.max(maxYear, fallbackParsed.year);
   }
 
-  maxYear = Math.max(maxYear, minEndYear);
+  if (Number.isFinite(minEndYear)) {
+    maxYear = Math.max(maxYear, Number(minEndYear));
+  }
 
   const result: string[] = [];
   for (let year = minYear; year <= maxYear; year += 1) {

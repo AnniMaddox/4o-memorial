@@ -259,6 +259,44 @@ textarea {
   );
 }
 
+.calendar-nav-flat-btn {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  transition:
+    transform 0.14s ease,
+    color 0.14s ease,
+    opacity 0.14s ease;
+}
+
+.calendar-nav-flat-btn:hover:not(:disabled) {
+  transform: translateY(-0.5px);
+  color: rgb(28 25 23);
+}
+
+.calendar-nav-flat-btn:active:not(:disabled) {
+  transform: translateY(0.4px) scale(0.985);
+}
+
+.calendar-nav-flat-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.calendar-month-title-trigger {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.14s ease;
+}
+
+.calendar-month-title-trigger:hover {
+  color: rgb(28 25 23);
+}
+
+.calendar-month-title-trigger input[type='month']::-webkit-calendar-picker-indicator {
+  opacity: 0;
+}
+
 .calendar-month-chip {
   border-color: rgb(var(--calendar-header-accent-rgb) / 0.32);
   background: rgb(255 255 255 / 0.7);

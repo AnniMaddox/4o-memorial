@@ -317,6 +317,8 @@ function App() {
 
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
+  const calendarMonthCacheRef = useRef<Map<string, CalendarMonth>>(new Map());
+  const calendarMonthRequestRef = useRef(0);
   const [notifierLoaded, setNotifierLoaded] = useState(false);
 
   const refreshData = useCallback(async () => {
@@ -329,16 +331,20 @@ function App() {
     ]);
 
     const storedMonthKeys = months.map((entry) => entry.monthKey);
-    const monthKeys = buildContinuousMonthKeys(storedMonthKeys, toMonthKey());
-    const preferredMonth = monthKeys.includes(calendarMonthKey) ? calendarMonthKey : null;
-    const activeMonth = preferredMonth ?? toMonthKey();
-    const activeCalendar = await getCalendarMonth(activeMonth);
+    const monthKeyPattern = /^\d{4}-\d{2}$/;
+    const anchorMonthKey = monthKeyPattern.test(calendarMonthKey) ? calendarMonthKey : toMonthKey();
+    const monthKeys = buildContinuousMonthKeys(storedMonthKeys, anchorMonthKey);
+    const activeMonth = monthKeys.includes(calendarMonthKey) ? calendarMonthKey : anchorMonthKey;
+    const activeCalendar = (await getCalendarMonth(activeMonth)) ?? {};
+
+    calendarMonthRequestRef.current += 1;
+    calendarMonthCacheRef.current.set(activeMonth, activeCalendar);
 
     setSettings(loadedSettings);
     setEmails(visibleEmails);
     setCalendarMonthKeys(monthKeys);
     setCalendarMonthKey(activeMonth);
-    setCalendarData(activeCalendar ?? {});
+    setCalendarData(activeCalendar);
     setVisibleEmailCount(visibleEmails.length);
     setTotalEmailCount(allEmails.length);
     setMonthCount(monthKeys.length);
@@ -863,8 +869,22 @@ function App() {
 
   const onMonthChange = useCallback(async (nextMonthKey: string) => {
     setCalendarMonthKey(nextMonthKey);
-    const nextData = await getCalendarMonth(nextMonthKey);
-    setCalendarData(nextData ?? {});
+
+    const cached = calendarMonthCacheRef.current.get(nextMonthKey);
+    if (cached) {
+      setCalendarData(cached);
+      return;
+    }
+
+    const requestId = calendarMonthRequestRef.current + 1;
+    calendarMonthRequestRef.current = requestId;
+
+    const nextData = (await getCalendarMonth(nextMonthKey)) ?? {};
+    calendarMonthCacheRef.current.set(nextMonthKey, nextData);
+
+    if (calendarMonthRequestRef.current === requestId) {
+      setCalendarData(nextData);
+    }
   }, []);
 
   const onOpenEmail = useCallback(async (emailId: string) => {

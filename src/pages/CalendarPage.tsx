@@ -31,6 +31,7 @@ const CALENDAR_FALLBACK_MODULES = import.meta.glob('../../data/calendar/**/*.jso
 }) as Record<string, unknown>;
 const MESSAGE_PREVIEW_LENGTH = 6;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_KEY_PATTERN = /^\d{4}-\d{2}$/;
 const MONTH_SWIPE_THRESHOLD = 54;
 
 function extractUndatedFallbackMessage(payload: unknown) {
@@ -85,6 +86,14 @@ function getMonthMeta(monthKey: string) {
   };
 }
 
+function offsetMonthKey(monthKey: string, offset: number) {
+  const [year, month] = monthKey.split('-').map(Number);
+  const baseYear = Number.isFinite(year) ? year : new Date().getFullYear();
+  const baseMonth = Number.isFinite(month) && month >= 1 && month <= 12 ? month : 1;
+  const shifted = new Date(baseYear, baseMonth - 1 + offset, 1);
+  return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`;
+}
+
 function getDayMessages(day: CalendarDay | null | undefined) {
   if (!day) {
     return [];
@@ -129,11 +138,10 @@ export function CalendarPage({
   const [temporaryUnlockDate, setTemporaryUnlockDate] = useState<string | null>(null);
   const [primedDateKey, setPrimedDateKey] = useState<string | null>(null);
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
-  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [pendingMonthKey, setPendingMonthKey] = useState<string | null>(null);
   const [chibiIndex, setChibiIndex] = useState(0);
   const [showChibi, setShowChibi] = useState(true);
   const [hoverPhraseByDate, setHoverPhraseByDate] = useState<Record<string, string>>({});
-  const [monthFadeSeed, setMonthFadeSeed] = useState(0);
   const hoverPhraseByDateRef = useRef<Record<string, string>>({});
   const monthSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -234,8 +242,7 @@ export function CalendarPage({
     setTemporaryUnlockDate(null);
     setPrimedDateKey(null);
     setHoverPreview(null);
-    setMonthPickerOpen(false);
-    setMonthFadeSeed((prev) => prev + 1);
+    setPendingMonthKey(null);
   }, [monthKey]);
 
   useEffect(() => {
@@ -301,33 +308,17 @@ export function CalendarPage({
   const hoverPreviewLocked = !!hoverPreview && hoverPreview.dateKey > today && temporaryUnlockDate !== hoverPreview.dateKey;
   const monthColorAvailable = !!monthAccentColor;
   const currentMonthKey = today.slice(0, 7);
-
-  const currentMonthIndex = monthKeys.findIndex((entry) => entry === monthKey);
-  const monthGroups = useMemo(() => {
-    const grouped = new Map<string, string[]>();
-
-    for (const key of monthKeys) {
-      const year = key.split('-')[0] ?? '';
-      if (!grouped.has(year)) {
-        grouped.set(year, []);
-      }
-      grouped.get(year)?.push(key);
-    }
-
-    return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [monthKeys]);
+  const monthPickerValue = MONTH_KEY_PATTERN.test(pendingMonthKey ?? '')
+    ? pendingMonthKey!
+    : MONTH_KEY_PATTERN.test(monthKey)
+      ? monthKey
+      : currentMonthKey;
+  const monthPickerLabel = monthKeys.length ? '快速跳到指定月份' : '選擇月份';
+  const hasPendingMonthChange = !!pendingMonthKey && pendingMonthKey !== monthKey;
 
   function goToNeighborMonth(offset: -1 | 1) {
-    if (currentMonthIndex < 0) {
-      return;
-    }
-
-    const nextIndex = currentMonthIndex + offset;
-    if (nextIndex < 0 || nextIndex >= monthKeys.length) {
-      return;
-    }
-
-    onMonthChange(monthKeys[nextIndex]);
+    setPendingMonthKey(null);
+    onMonthChange(offsetMonthKey(monthKey, offset));
   }
 
   function resetMonthSwipe() {
@@ -335,7 +326,7 @@ export function CalendarPage({
   }
 
   function handleCalendarTouchStart(event: TouchEvent<HTMLDivElement>) {
-    if (monthPickerOpen || selectedDate || messageListDate) {
+    if (selectedDate || messageListDate) {
       monthSwipeStartRef.current = null;
       return;
     }
@@ -380,15 +371,28 @@ export function CalendarPage({
   }
 
   function goToCurrentMonth() {
-    const target = monthKeys.includes(currentMonthKey) ? currentMonthKey : monthKeys.at(-1) ?? monthKey;
-    if (target !== monthKey) {
-      onMonthChange(target);
+    if (currentMonthKey !== monthKey) {
+      setPendingMonthKey(null);
+      onMonthChange(currentMonthKey);
     }
   }
 
-  function monthChipLabel(key: string) {
-    const month = Number(key.split('-')[1]);
-    return Number.isInteger(month) ? `${month}月` : key;
+  function handleMonthPickerChange(value: string) {
+    if (!MONTH_KEY_PATTERN.test(value)) {
+      return;
+    }
+    setPendingMonthKey(value === monthKey ? null : value);
+  }
+
+  function applyPendingMonthChange() {
+    if (!hasPendingMonthChange || !pendingMonthKey) {
+      return;
+    }
+    onMonthChange(pendingMonthKey);
+  }
+
+  function cancelPendingMonthChange() {
+    setPendingMonthKey(null);
   }
 
   function clearCalendarSelection() {
@@ -474,19 +478,31 @@ export function CalendarPage({
           <button
             type="button"
             onClick={() => goToNeighborMonth(-1)}
-            disabled={currentMonthIndex <= 0}
-            className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+            className="calendar-nav-flat-btn px-2 py-1 text-[1.35rem] leading-none text-stone-700"
             aria-label="上一月"
             title="上一月"
           >
             ‹
           </button>
-          <h1 className="text-2xl text-stone-900">{monthLabel(monthKey)}</h1>
+          <label
+            className="calendar-month-title-trigger relative inline-flex items-center gap-1.5 text-stone-900"
+            title={monthPickerLabel}
+          >
+            <span className="text-2xl">{monthLabel(monthKey)}</span>
+            <span className="text-sm text-stone-500">▾</span>
+            <input
+              type="month"
+              value={monthPickerValue}
+              onChange={(event) => handleMonthPickerChange(event.target.value)}
+              aria-label={monthPickerLabel}
+              title={monthPickerLabel}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+          </label>
           <button
             type="button"
             onClick={() => goToNeighborMonth(1)}
-            disabled={currentMonthIndex < 0 || currentMonthIndex >= monthKeys.length - 1}
-            className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+            className="calendar-nav-flat-btn px-2 py-1 text-[1.35rem] leading-none text-stone-700"
             aria-label="下一月"
             title="下一月"
           >
@@ -517,64 +533,49 @@ export function CalendarPage({
               自訂色
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {hasPendingMonthChange && (
+              <>
+                <button
+                  type="button"
+                  onClick={applyPendingMonthChange}
+                  className="calendar-nav-flat-btn px-2 py-1 text-[1rem] leading-none text-emerald-700"
+                  aria-label="套用月份"
+                  title="套用月份"
+                >
+                  ✓
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelPendingMonthChange}
+                  className="calendar-nav-flat-btn px-2 py-1 text-[1rem] leading-none text-stone-500"
+                  aria-label="取消月份切換"
+                  title="取消月份切換"
+                >
+                  ✕
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={goToCurrentMonth}
               disabled={monthKey === currentMonthKey}
-              className="calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700"
+              className="calendar-nav-flat-btn px-2 py-1 text-[1.05rem] leading-none text-stone-700"
               aria-label="回當月"
               title="回當月"
             >
-              ◎
-            </button>
-            <button
-              type="button"
-              onClick={() => setMonthPickerOpen((open) => !open)}
-              className={`calendar-nav-btn rounded-lg px-3 py-1 text-lg leading-none text-stone-700 ${
-                monthPickerOpen ? 'calendar-nav-btn-active' : ''
-              }`}
-              aria-label={monthPickerOpen ? '收起月份' : '選擇月份'}
-              title={monthPickerOpen ? '收起月份' : '選擇月份'}
-            >
-              {monthPickerOpen ? '▴' : '▾'}
+              ↺
             </button>
           </div>
         </div>
-
-        {monthPickerOpen && (
-          <div className="calendar-month-picker-panel mt-3 max-h-52 space-y-3 overflow-y-auto rounded-xl border p-3">
-            {monthGroups.map(([year, keys]) => (
-              <div key={year} className="space-y-2">
-                <p className="text-xs font-medium text-stone-500">{year} 年</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {keys.map((key) => {
-                    const active = key === monthKey;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => {
-                          setMonthPickerOpen(false);
-                          onMonthChange(key);
-                        }}
-                        className={`rounded-lg border px-2 py-1 text-sm transition ${active ? 'calendar-month-chip-active' : 'calendar-month-chip'}`}
-                      >
-                        {monthChipLabel(key)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+        {hasPendingMonthChange && (
+          <p className="mt-2 text-right text-[0.72rem] text-stone-500">
+            待切換：{monthLabel(pendingMonthKey!)}
+          </p>
         )}
       </header>
 
-      <div
-        key={`${monthKey}-${monthFadeSeed}`}
-        className="calendar-month-fade grid grid-cols-7 gap-2 rounded-2xl border border-stone-300/70 bg-white/65 p-3 shadow-sm backdrop-blur-sm"
-      >
+      <div className="calendar-month-fade grid grid-cols-7 gap-2 rounded-2xl border border-stone-300/70 bg-white/65 p-3 shadow-sm backdrop-blur-sm">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday, index) => {
           const weekend = index === 0 || index === 6;
           return (
@@ -586,7 +587,7 @@ export function CalendarPage({
 
         {dayCells.map((cell, index) => {
           if (!cell) {
-            return <div key={`blank-${index}`} className="min-h-12 rounded-lg bg-transparent" />;
+            return <div key={`blank-${index}`} className="aspect-square rounded-full bg-transparent" />;
           }
 
           const messageCount = getMessagesForDate(cell.dateKey).length;
@@ -609,7 +610,7 @@ export function CalendarPage({
                   setHoverPreview((current) => (current?.dateKey === cell.dateKey ? null : current));
                 }
               }}
-              className={`calendar-day-glass relative min-h-12 overflow-visible border px-2 py-1 text-sm transition ${
+              className={`calendar-day-glass relative aspect-square w-full overflow-visible border p-0 text-sm transition ${
                 !hasMessage
                   ? 'border-stone-200/80 bg-white/35 text-stone-500 hover:border-stone-300'
                   : locked
@@ -626,9 +627,9 @@ export function CalendarPage({
                       : 'Tap once for phrase, tap again to open'
               }
             >
-              <div className="flex items-center justify-between">
+              <div className="relative flex h-full w-full items-center justify-center">
                 <span>{cell.day}</span>
-                {!hasMessage && <span className="text-xs">-</span>}
+                {!hasMessage && <span className="absolute bottom-1 text-[0.58rem] leading-none">-</span>}
               </div>
             </button>
           );
