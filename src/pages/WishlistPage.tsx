@@ -910,6 +910,11 @@ export function WishlistPage({
                           }}
                           onTouchStart={(event) => event.stopPropagation()}
                         >
+                          {activeTask?.doneAt ? (
+                            <span className="wl-bday-kiss" aria-hidden="true">
+                              {KISS_MARK}
+                            </span>
+                          ) : null}
                           <p className="wl-bday-text">{activeTask?.text ?? '（沒有內容）'}</p>
                           {activeTask?.doneAt ? <p className="wl-bday-date">完成於 {formatDoneDate(activeTask.doneAt)}</p> : null}
                         </div>
@@ -973,7 +978,6 @@ export function WishlistPage({
       {overlayWish ? (
         <div className="wl-overlay" data-wishlist-no-tab-swipe="true" onClick={() => setOverlayWishId(null)}>
           <div className={`wl-overlay-card ${overlayToneClass}`} onClick={(event) => event.stopPropagation()}>
-            {overlayWish.doneAt ? <span className="wl-kiss">{KISS_MARK}</span> : null}
             <div className="wl-oc-header">
               <span className="wl-oc-num">
                 No. {String(overlayWish.order + 1).padStart(2, '0')} / {wishes.length}
@@ -983,6 +987,11 @@ export function WishlistPage({
               </button>
             </div>
             <div className="wl-oc-body">
+              {overlayWish.doneAt ? (
+                <span className="wl-oc-kiss" aria-hidden="true">
+                  {KISS_MARK}
+                </span>
+              ) : null}
               <div className="wl-oc-content">
                 <section className="wl-oc-block">
                   <p className="wl-oc-label">標題</p>
@@ -1007,9 +1016,9 @@ export function WishlistPage({
                 type="button"
                 className={`wl-oc-fav ${overlayWish.doneAt ? 'done' : ''}`}
                 onClick={() => handleToggleWishDone(overlayWish.id)}
+                aria-label={overlayWish.doneAt ? '取消完成' : '標記完成'}
               >
                 <span className="wl-oc-fav-icon">{overlayWish.doneAt ? '♥' : '♡'}</span>
-                <span className="wl-oc-fav-label">{overlayWish.doneAt ? '已完成' : '標記完成'}</span>
               </button>
               {overlayWish.doneAt ? <span className="wl-card-date">完成於 {formatDoneDate(overlayWish.doneAt)}</span> : null}
             </div>
@@ -1029,6 +1038,11 @@ export function WishlistPage({
               </button>
             </div>
             <div className="wl-oc-body wl-bzoom-body">
+              {birthdayZoomTask.doneAt ? (
+                <span className="wl-oc-kiss" aria-hidden="true">
+                  {KISS_MARK}
+                </span>
+              ) : null}
               <p className="wl-bzoom-text">{birthdayZoomTask.text}</p>
             </div>
             <div className="wl-oc-footer">
@@ -1036,9 +1050,9 @@ export function WishlistPage({
                 type="button"
                 className={`wl-oc-fav ${birthdayZoomTask.doneAt ? 'done' : ''}`}
                 onClick={() => handleToggleBirthdayDone(birthdayZoomTask.id)}
+                aria-label={birthdayZoomTask.doneAt ? '取消完成' : '標記完成'}
               >
                 <span className="wl-oc-fav-icon">{birthdayZoomTask.doneAt ? '♥' : '♡'}</span>
-                <span className="wl-oc-fav-label">{birthdayZoomTask.doneAt ? '已完成' : '標記完成'}</span>
               </button>
               {birthdayZoomTask.doneAt ? <span className="wl-card-date">完成於 {formatDoneDate(birthdayZoomTask.doneAt)}</span> : null}
             </div>
