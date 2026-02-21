@@ -8,6 +8,7 @@ type LauncherAppId =
   | 'heart'
   | 'chat'
   | 'list'
+  | 'wishlist'
   | 'fitness'
   | 'pomodoro'
   | 'period'
@@ -361,14 +362,14 @@ export function HomePage({
       disabled: true,
     };
     const dailyTaskPlaceholder: HomeAppSlot = {
-      id: 'daily-task-placeholder',
+      id: 'wishlist',
       label: '每日任務',
       icon: '✅',
-      disabled: true,
+      launch: 'wishlist',
     };
     const soulmateSlot: HomeAppSlot = {
       id: 'soulmate',
-      label: '搬家計劃書',
+      label: '家',
       icon: '🏠',
       launch: 'soulmate',
     };

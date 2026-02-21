@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   MANAGE_BOX_ID,
@@ -14,9 +14,10 @@ import {
   type SoulmateEntry,
   type SoulmateSnapshot,
 } from '../lib/soulmateDB';
+import { getScopedMixedChibiSources } from '../lib/chibiPool';
 
 type ViewMode = 'shelf' | 'box' | 'entry' | 'manage';
-type ManagePanelKey = 'boxes' | 'directImport' | 'batchImport' | 'backup';
+type ManagePanelKey = 'page' | 'boxes' | 'directImport' | 'batchImport' | 'backup';
 
 type BatchImportDraft = {
   id: string;
@@ -34,6 +35,80 @@ type ManageSectionProps = {
 
 interface Props {
   onExit: () => void;
+}
+
+const PAGE_TITLE_STORAGE_KEY = 'memorial-soulmate-page-title-v1';
+const READER_PREFS_STORAGE_KEY = 'memorial-soulmate-reader-prefs-v1';
+const DEFAULT_PAGE_TITLE = '家';
+
+type ReaderFontKey = 'serif' | 'sans' | 'mono';
+
+type ReaderPrefs = {
+  fontKey: ReaderFontKey;
+  fontSize: number;
+  lineHeight: number;
+  showChibi: boolean;
+  chibiSize: number;
+  chibiX: number;
+  chibiY: number;
+};
+
+const DEFAULT_READER_PREFS: ReaderPrefs = {
+  fontKey: 'serif',
+  fontSize: 16,
+  lineHeight: 1.95,
+  showChibi: true,
+  chibiSize: 136,
+  chibiX: 0,
+  chibiY: 0,
+};
+
+function pickRandom<T>(items: T[]): T | null {
+  if (!items.length) return null;
+  return items[Math.floor(Math.random() * items.length)]!;
+}
+
+function clampNumber(value: number, min: number, max: number, fallback: number) {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(max, value));
+}
+
+function clampReaderPrefs(raw: Partial<ReaderPrefs> | null | undefined): ReaderPrefs {
+  const source = raw ?? {};
+  return {
+    fontKey: source.fontKey === 'sans' || source.fontKey === 'mono' ? source.fontKey : 'serif',
+    fontSize: Math.round(clampNumber(source.fontSize ?? NaN, 13, 24, DEFAULT_READER_PREFS.fontSize)),
+    lineHeight: Number(clampNumber(source.lineHeight ?? NaN, 1.45, 2.6, DEFAULT_READER_PREFS.lineHeight).toFixed(2)),
+    showChibi: source.showChibi !== false,
+    chibiSize: Math.round(clampNumber(source.chibiSize ?? NaN, 104, 196, DEFAULT_READER_PREFS.chibiSize)),
+    chibiX: Math.round(clampNumber(source.chibiX ?? NaN, -96, 96, DEFAULT_READER_PREFS.chibiX)),
+    chibiY: Math.round(clampNumber(source.chibiY ?? NaN, -96, 96, DEFAULT_READER_PREFS.chibiY)),
+  };
+}
+
+function readPageTitle() {
+  if (typeof window === 'undefined') return DEFAULT_PAGE_TITLE;
+  const raw = window.localStorage.getItem(PAGE_TITLE_STORAGE_KEY) ?? '';
+  const trimmed = raw.trim();
+  return trimmed || DEFAULT_PAGE_TITLE;
+}
+
+function readReaderPrefs() {
+  if (typeof window === 'undefined') return DEFAULT_READER_PREFS;
+  try {
+    const raw = window.localStorage.getItem(READER_PREFS_STORAGE_KEY);
+    if (!raw) return DEFAULT_READER_PREFS;
+    const parsed = JSON.parse(raw) as Partial<ReaderPrefs>;
+    return clampReaderPrefs(parsed);
+  } catch {
+    return DEFAULT_READER_PREFS;
+  }
+}
+
+function resolveReaderFontFamily(fontKey: ReaderFontKey) {
+  if (fontKey === 'sans') return "'Noto Sans TC', 'PingFang TC', system-ui, sans-serif";
+  if (fontKey === 'mono') return "'Noto Sans Mono CJK TC', 'SFMono-Regular', ui-monospace, monospace";
+  return "'Iansui', 'Klee One', 'Noto Serif TC', 'PingFang TC', serif";
 }
 
 function makeTempId(prefix = 'soulmate') {
@@ -119,12 +194,16 @@ export default function SoulmateHousePage({ onExit }: Props) {
   const [mode, setMode] = useState<ViewMode>('shelf');
   const [snapshot, setSnapshot] = useState<SoulmateSnapshot>({ boxes: [], entries: [] });
   const [draftBoxes, setDraftBoxes] = useState<SoulmateBox[]>([]);
+  const [pageTitle, setPageTitle] = useState<string>(() => readPageTitle());
+  const [readerPrefs, setReaderPrefs] = useState<ReaderPrefs>(() => readReaderPrefs());
+  const [showReaderSettings, setShowReaderSettings] = useState(false);
   const [selectedBoxId, setSelectedBoxId] = useState<string>(UNCATEGORIZED_BOX_ID);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [importTargetBoxId, setImportTargetBoxId] = useState<string>(UNCATEGORIZED_BOX_ID);
   const [backupBoxId, setBackupBoxId] = useState<string>(UNCATEGORIZED_BOX_ID);
   const [batchDrafts, setBatchDrafts] = useState<BatchImportDraft[]>([]);
   const [openPanels, setOpenPanels] = useState<Record<ManagePanelKey, boolean>>({
+    page: true,
     boxes: true,
     directImport: true,
     batchImport: false,
@@ -133,9 +212,13 @@ export default function SoulmateHousePage({ onExit }: Props) {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [status, setStatus] = useState('');
+  const [chibiSrc] = useState(() => pickRandom(getScopedMixedChibiSources('mdiary')) ?? '');
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const boxes = snapshot.boxes;
   const entries = snapshot.entries;
+  const resolvedPageTitle = pageTitle.trim() || DEFAULT_PAGE_TITLE;
+  const resolvedReaderFont = resolveReaderFontFamily(readerPrefs.fontKey);
 
   const importableBoxes = useMemo(() => boxes.filter((box) => box.id !== MANAGE_BOX_ID), [boxes]);
 
@@ -160,6 +243,10 @@ export default function SoulmateHousePage({ onExit }: Props) {
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedEntryId) ?? null,
     [entries, selectedEntryId],
+  );
+  const selectedEntryIndex = useMemo(
+    () => selectedBoxEntries.findIndex((entry) => entry.id === selectedEntryId),
+    [selectedBoxEntries, selectedEntryId],
   );
 
   const getImportFallbackId = (targetBoxes: SoulmateBox[]) => targetBoxes.find((box) => box.id !== MANAGE_BOX_ID)?.id ?? UNCATEGORIZED_BOX_ID;
@@ -241,8 +328,224 @@ export default function SoulmateHousePage({ onExit }: Props) {
     }
   }, [mode, selectedBox]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(PAGE_TITLE_STORAGE_KEY, resolvedPageTitle);
+  }, [resolvedPageTitle]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(READER_PREFS_STORAGE_KEY, JSON.stringify(readerPrefs));
+  }, [readerPrefs]);
+
+  useEffect(() => {
+    if (mode === 'manage') {
+      setShowReaderSettings(false);
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== 'entry') return;
+    if (!selectedBoxEntries.length) {
+      setMode('box');
+      setSelectedEntryId(null);
+      return;
+    }
+    if (!selectedEntry || selectedEntry.boxId !== selectedBox?.id) {
+      setSelectedEntryId(selectedBoxEntries[0]?.id ?? null);
+    }
+  }, [mode, selectedBoxEntries, selectedEntry, selectedBox]);
+
   const toggleManagePanel = (key: ManagePanelKey) => {
     setOpenPanels((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const patchReaderPrefs = (patch: Partial<ReaderPrefs>) => {
+    setReaderPrefs((prev) => clampReaderPrefs({ ...prev, ...patch }));
+  };
+
+  const moveReadingBy = (offset: -1 | 1) => {
+    if (mode !== 'entry') return;
+    if (selectedEntryIndex < 0) return;
+    const target = selectedBoxEntries[selectedEntryIndex + offset];
+    if (!target) return;
+    setSelectedEntryId(target.id);
+  };
+
+  const onEntryTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const first = event.touches[0];
+    if (!first) return;
+    touchStartRef.current = { x: first.clientX, y: first.clientY };
+  };
+
+  const onEntryTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current) return;
+    const end = event.changedTouches[0];
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!end || !start) return;
+
+    const deltaX = end.clientX - start.x;
+    const deltaY = end.clientY - start.y;
+    if (Math.abs(deltaX) < 48) return;
+    if (Math.abs(deltaX) < Math.abs(deltaY) * 1.15) return;
+    if (deltaX < 0) {
+      moveReadingBy(1);
+    } else {
+      moveReadingBy(-1);
+    }
+  };
+
+  const renderReaderAssistant = () => {
+    if (mode === 'manage') return null;
+    const hideChibi = !readerPrefs.showChibi || !chibiSrc;
+    return (
+      <>
+        <div className="pointer-events-none absolute bottom-0 right-0 z-30">
+          <button
+            type="button"
+            onClick={() => setShowReaderSettings(true)}
+            className="pointer-events-auto transition active:scale-95"
+            style={{
+              marginRight: `${Math.max(4, 18 + readerPrefs.chibiX)}px`,
+              marginBottom: `${Math.max(6, 10 + readerPrefs.chibiY)}px`,
+            }}
+            aria-label="家頁設定"
+          >
+            {hideChibi ? (
+              <span className="grid h-8 w-8 place-items-center rounded-full border border-stone-300/70 bg-white/88 text-base text-stone-600 shadow-sm">
+                ⚙
+              </span>
+            ) : (
+              <img
+                src={chibiSrc}
+                alt="開啟家頁設定"
+                draggable={false}
+                className="calendar-chibi calendar-chibi-clickable select-none"
+                style={{
+                  width: `${readerPrefs.chibiSize}px`,
+                  maxWidth: '44vw',
+                  maxHeight: '32vh',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  backgroundColor: 'transparent',
+                }}
+              />
+            )}
+          </button>
+        </div>
+
+        {showReaderSettings ? (
+          <div className="absolute inset-0 z-40 bg-black/28" onClick={() => setShowReaderSettings(false)}>
+            <div
+              className="absolute bottom-0 left-0 right-0 rounded-t-3xl border-t border-stone-200 bg-[#fffaf3] px-5 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-4 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-stone-300/80" />
+              <p className="text-center text-sm font-semibold text-stone-700" style={{ fontFamily: 'var(--app-heading-family)' }}>
+                家頁設定
+              </p>
+
+              <div className="mt-4 space-y-3">
+                <label className="space-y-1 text-xs text-stone-500">
+                  <span>閱讀字體</span>
+                  <select
+                    value={readerPrefs.fontKey}
+                    onChange={(event) => patchReaderPrefs({ fontKey: event.target.value as ReaderFontKey })}
+                    className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+                  >
+                    <option value="serif">溫柔手札</option>
+                    <option value="sans">清晰無襯線</option>
+                    <option value="mono">等寬筆記</option>
+                  </select>
+                </label>
+
+                <label className="space-y-1 text-xs text-stone-500">
+                  <span>閱讀字級：{readerPrefs.fontSize}px</span>
+                  <input
+                    type="range"
+                    min={13}
+                    max={24}
+                    step={1}
+                    value={readerPrefs.fontSize}
+                    onChange={(event) => patchReaderPrefs({ fontSize: Number(event.target.value) })}
+                    className="w-full accent-amber-700"
+                  />
+                </label>
+
+                <label className="space-y-1 text-xs text-stone-500">
+                  <span>閱讀行距：{readerPrefs.lineHeight.toFixed(2)}</span>
+                  <input
+                    type="range"
+                    min={1.45}
+                    max={2.6}
+                    step={0.05}
+                    value={readerPrefs.lineHeight}
+                    onChange={(event) => patchReaderPrefs({ lineHeight: Number(event.target.value) })}
+                    className="w-full accent-amber-700"
+                  />
+                </label>
+
+                <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-3 py-2.5">
+                  <span className="text-xs text-stone-600">顯示小人</span>
+                  <button
+                    type="button"
+                    onClick={() => patchReaderPrefs({ showChibi: !readerPrefs.showChibi })}
+                    className="relative h-6 w-10 rounded-full transition"
+                    style={{ background: readerPrefs.showChibi ? '#9b7a5b' : '#b7b7b7' }}
+                    aria-label="切換小人顯示"
+                  >
+                    <span
+                      className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
+                      style={{ left: readerPrefs.showChibi ? 18 : 2 }}
+                    />
+                  </button>
+                </div>
+
+                <label className="space-y-1 text-xs text-stone-500">
+                  <span>小人大小：{readerPrefs.chibiSize}px</span>
+                  <input
+                    type="range"
+                    min={104}
+                    max={196}
+                    step={1}
+                    value={readerPrefs.chibiSize}
+                    onChange={(event) => patchReaderPrefs({ chibiSize: Number(event.target.value) })}
+                    className="w-full accent-amber-700"
+                  />
+                </label>
+
+                <label className="space-y-1 text-xs text-stone-500">
+                  <span>左右位置：{readerPrefs.chibiX > 0 ? '+' : ''}{readerPrefs.chibiX}</span>
+                  <input
+                    type="range"
+                    min={-96}
+                    max={96}
+                    step={1}
+                    value={readerPrefs.chibiX}
+                    onChange={(event) => patchReaderPrefs({ chibiX: Number(event.target.value) })}
+                    className="w-full accent-amber-700"
+                  />
+                </label>
+
+                <label className="space-y-1 text-xs text-stone-500">
+                  <span>上下位置：{readerPrefs.chibiY > 0 ? '+' : ''}{readerPrefs.chibiY}</span>
+                  <input
+                    type="range"
+                    min={-96}
+                    max={96}
+                    step={1}
+                    value={readerPrefs.chibiY}
+                    onChange={(event) => patchReaderPrefs({ chibiY: Number(event.target.value) })}
+                    className="w-full accent-amber-700"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </>
+    );
   };
 
   const addBox = () => {
@@ -434,7 +737,7 @@ export default function SoulmateHousePage({ onExit }: Props) {
   const exportPageBackup = () => {
     const payload = buildSoulmatePageBackupPayload(snapshot);
     downloadJson(`soulmate-page-${Date.now()}.json`, payload);
-    setStatus('已匯出搬家計劃書整頁備份。');
+    setStatus(`已匯出「${resolvedPageTitle}」整頁備份。`);
   };
 
   const exportSingleBoxBackup = () => {
@@ -463,65 +766,73 @@ export default function SoulmateHousePage({ onExit }: Props) {
   };
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center text-sm text-stone-500">讀取搬家計劃書中...</div>;
+    return <div className="flex h-full items-center justify-center text-sm text-stone-500">{`讀取「${resolvedPageTitle}」中...`}</div>;
   }
 
   if (mode === 'entry' && selectedEntry && selectedBox) {
+    const hasPrev = selectedEntryIndex > 0;
+    const hasNext = selectedEntryIndex >= 0 && selectedEntryIndex < selectedBoxEntries.length - 1;
+
     return (
-      <div className="flex h-full flex-col" style={{ background: '#fdf8f2' }}>
+      <div
+        className="relative flex h-full flex-col"
+        style={{ background: '#fdf8f2' }}
+        onTouchStart={onEntryTouchStart}
+        onTouchEnd={onEntryTouchEnd}
+      >
         <header className="shrink-0 border-b border-stone-200/70 bg-white/75 px-4 pb-3 pt-4 backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setMode('box')}
-              className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 shadow-sm transition active:scale-95"
-            >
-              ‹ 返回
-            </button>
-            <div className="min-w-0 flex-1 text-center">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400">{selectedBox.subtitle}</p>
-              <h2 className="truncate text-lg font-semibold text-stone-800">
-                {selectedBox.emoji} {selectedBox.title}
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => setMode('manage')}
-              className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs text-stone-600 shadow-sm transition active:scale-95"
-            >
-              管理
-            </button>
-          </div>
+          <p className="text-center text-[10px] uppercase tracking-[0.2em] text-stone-400">{selectedBox.subtitle}</p>
+          <button
+            type="button"
+            onClick={() => setMode('box')}
+            className="mx-auto mt-1 block max-w-full truncate text-lg font-semibold text-stone-800"
+            style={{ fontFamily: 'var(--app-heading-family)' }}
+            aria-label="返回方塊列表"
+            title="點標題返回方塊"
+          >
+            {selectedBox.emoji} {selectedBox.title}
+          </button>
+          <p className="mt-0.5 text-center text-[10px] text-stone-400">{formatImportedAt(selectedEntry.importedAt)}</p>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-4">
-          <p className="mb-2 text-[11px] tracking-[0.06em] text-stone-500">{formatImportedAt(selectedEntry.importedAt)}</p>
-          <h3 className="mb-3 text-xl font-semibold text-stone-900" style={{ fontFamily: 'var(--app-heading-family)' }}>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-28 pt-4">
+          <h3 className="mb-3 text-xl font-semibold text-stone-900" style={{ fontFamily: resolvedReaderFont }}>
             {selectedEntry.title}
           </h3>
-          <div className="rounded-2xl border border-stone-200/70 bg-white/70 px-4 py-4 text-[14px] leading-[1.9] text-stone-700 shadow-sm">
+          <div
+            className="rounded-2xl border border-stone-200/70 bg-white/70 px-4 py-4 text-stone-700 shadow-sm"
+            style={{ fontFamily: resolvedReaderFont, fontSize: readerPrefs.fontSize, lineHeight: readerPrefs.lineHeight }}
+          >
             {selectedEntry.htmlContent ? (
               <div dangerouslySetInnerHTML={{ __html: selectedEntry.htmlContent }} />
             ) : (
               <p className="whitespace-pre-wrap">{selectedEntry.content || '（空白內容）'}</p>
             )}
           </div>
+
+          <div className="mt-3 flex items-center justify-between px-1 text-[11px] text-stone-400">
+            <span>{hasPrev ? '右滑：上一篇' : '\u00A0'}</span>
+            <span>{hasNext ? '左滑：下一篇' : '\u00A0'}</span>
+          </div>
         </div>
+
+        {renderReaderAssistant()}
       </div>
     );
   }
 
   if (mode === 'box' && selectedBox) {
     return (
-      <div className="flex h-full flex-col" style={{ background: hexWithAlpha(selectedBox.accentHex, 0.08) }}>
+      <div className="relative flex h-full flex-col" style={{ background: hexWithAlpha(selectedBox.accentHex, 0.08) }}>
         <header className="shrink-0 border-b border-stone-200/70 bg-white/72 px-4 pb-3 pt-4 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setMode('shelf')}
-              className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 shadow-sm transition active:scale-95"
+              className="grid h-8 w-8 place-items-center rounded-full text-2xl leading-none text-stone-500 transition active:scale-95"
+              aria-label="返回家主頁"
             >
-              ‹ 返回
+              ‹
             </button>
             <div className="min-w-0 flex-1 text-center">
               <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400">{selectedBox.subtitle}</p>
@@ -532,14 +843,15 @@ export default function SoulmateHousePage({ onExit }: Props) {
             <button
               type="button"
               onClick={() => setMode('manage')}
-              className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs text-stone-600 shadow-sm transition active:scale-95"
+              className="grid h-8 w-8 place-items-center rounded-full text-[18px] text-stone-500 transition active:scale-95"
+              aria-label="開啟管理"
             >
-              管理
+              ⚙
             </button>
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-24 pt-3">
           {!selectedBoxEntries.length ? (
             <div className="rounded-2xl border border-dashed border-stone-300 bg-white/55 px-4 py-8 text-center text-sm text-stone-500">
               這個方塊還沒有內容
@@ -564,6 +876,8 @@ export default function SoulmateHousePage({ onExit }: Props) {
             </div>
           )}
         </div>
+
+        {renderReaderAssistant()}
       </div>
     );
   }
@@ -579,12 +893,13 @@ export default function SoulmateHousePage({ onExit }: Props) {
             <button
               type="button"
               onClick={() => setMode('shelf')}
-              className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 shadow-sm transition active:scale-95"
+              className="grid h-8 w-8 place-items-center rounded-full text-2xl leading-none text-stone-500 transition active:scale-95"
+              aria-label="返回家主頁"
             >
-              ‹ 返回
+              ‹
             </button>
             <div className="flex-1 text-center">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400">搬家計劃書</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400">{resolvedPageTitle}</p>
               <h2 className="text-lg font-semibold text-stone-800" style={{ fontFamily: 'var(--app-heading-family)' }}>
                 管理頁
               </h2>
@@ -602,6 +917,28 @@ export default function SoulmateHousePage({ onExit }: Props) {
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4">
           <div className="space-y-4">
+            <ManageSection
+              title="主頁標題"
+              description="首頁與方塊頁共用，留空會回到預設「家」"
+              isOpen={openPanels.page}
+              onToggle={() => toggleManagePanel('page')}
+            >
+              <div className="space-y-2">
+                <label className="space-y-1 text-[11px] text-stone-500">
+                  <span>主標題</span>
+                  <input
+                    type="text"
+                    value={pageTitle}
+                    onChange={(event) => setPageTitle(event.target.value)}
+                    onBlur={() => setPageTitle((prev) => prev.trim() || DEFAULT_PAGE_TITLE)}
+                    className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+                    maxLength={20}
+                  />
+                </label>
+                <p className="text-[11px] text-stone-400">目前顯示：{resolvedPageTitle}</p>
+              </div>
+            </ManageSection>
+
             <ManageSection
               title="方塊配置"
               description={`已用 ${draftBoxes.length}/${MAX_SOULMATE_BOXES} 格（可刪除：${removableCount}）`}
@@ -917,27 +1254,28 @@ export default function SoulmateHousePage({ onExit }: Props) {
   }
 
   return (
-    <div className="flex h-full flex-col" style={{ background: '#f8f4ee' }}>
+    <div className="relative flex h-full flex-col" style={{ background: '#f8f4ee' }}>
       <div className="calendar-header-panel shrink-0 border-b border-stone-200/70 px-4 pb-4 pt-5">
         <div className="flex items-start justify-between gap-3">
           <button
             type="button"
             onClick={onExit}
-            className="rounded-xl border border-white/40 bg-white/25 px-3 py-1.5 text-sm text-white/90 shadow-sm transition active:scale-95"
+            className="grid h-8 w-8 place-items-center rounded-full bg-white/18 text-2xl leading-none text-white/90 transition active:scale-95"
+            aria-label="離開家頁"
           >
-            ‹ 離開
+            ‹
           </button>
           <div className="flex-1 text-center pr-10">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-white/70">Moving Plan</p>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-white/70">HOME GRID</p>
             <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--app-heading-family)' }}>
-              搬家計劃書
+              {resolvedPageTitle}
             </h1>
             <p className="mt-0.5 text-[11px] text-white/75">多主題收納格</p>
           </div>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-24 pt-4">
         <div className="grid grid-cols-3 gap-3">
           {boxes.map((box, index) => {
             const count = entryCountMap.get(box.id) ?? 0;
@@ -973,6 +1311,8 @@ export default function SoulmateHousePage({ onExit }: Props) {
         </div>
         {status ? <p className="mt-3 text-center text-[11px] text-stone-500">{status}</p> : null}
       </div>
+
+      {renderReaderAssistant()}
     </div>
   );
 }
