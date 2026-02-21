@@ -671,7 +671,8 @@ export function CheckinPage() {
               <button
                 type="button"
                 onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
-                className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1 text-xs text-stone-700 transition active:scale-95"
+                className="grid h-8 w-8 place-items-center rounded-full border border-stone-300 bg-white/80 text-[18px] leading-none text-stone-700 transition active:scale-95"
+                aria-label="上一月"
               >
                 ‹
               </button>
@@ -679,7 +680,8 @@ export function CheckinPage() {
               <button
                 type="button"
                 onClick={() => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
-                className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1 text-xs text-stone-700 transition active:scale-95"
+                className="grid h-8 w-8 place-items-center rounded-full border border-stone-300 bg-white/80 text-[18px] leading-none text-stone-700 transition active:scale-95"
+                aria-label="下一月"
               >
                 ›
               </button>
