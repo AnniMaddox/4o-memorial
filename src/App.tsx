@@ -21,6 +21,7 @@ import { CalendarPage } from './pages/CalendarPage';
 import { CheckinPage } from './pages/CheckinPage';
 import { ChatLogPage } from './pages/ChatLogPage';
 import { DiaryPage } from './pages/DiaryPage';
+import { DiaryBPage } from './pages/DiaryBPage';
 import { HomePage } from './pages/HomePage';
 import { InboxPage } from './pages/InboxPage';
 import { LetterPage } from './pages/LetterPage';
@@ -67,6 +68,7 @@ type LauncherAppId =
   | 'pomodoro'
   | 'period'
   | 'diary'
+  | 'diaryB'
   | 'album'
   | 'notes'
   | 'soulmate';
@@ -1303,6 +1305,19 @@ function App() {
                     diaryCoverFitMode={settings.diaryCoverFitMode}
                   />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'diaryB' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#f8f4ed' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <DiaryBPage
+                  diaryCoverImageUrl={settings.diaryCoverImageUrl}
+                  diaryFontFamily={diaryFontFamily}
+                  diaryCoverFitMode={settings.diaryCoverFitMode}
+                  onExit={() => setLauncherApp(null)}
+                />
               </div>
             </div>
           )}

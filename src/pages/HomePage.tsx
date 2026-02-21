@@ -12,8 +12,10 @@ type LauncherAppId =
   | 'pomodoro'
   | 'period'
   | 'diary'
+  | 'diaryB'
   | 'album'
-  | 'notes';
+  | 'notes'
+  | 'soulmate';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -332,6 +334,12 @@ export function HomePage({
       iconUrl: tabIconUrls.diary.trim() || undefined,
       launch: 'diary',
     };
+    const diaryBSlot: HomeAppSlot = {
+      id: 'diary-b',
+      label: '我的日記',
+      icon: '📔',
+      launch: 'diaryB',
+    };
     const albumSlot: HomeAppSlot = {
       id: 'album',
       label: launcherLabels.album,
@@ -358,11 +366,11 @@ export function HomePage({
       icon: '✅',
       disabled: true,
     };
-    const movingPlanPlaceholder: HomeAppSlot = {
-      id: 'moving-plan-placeholder',
+    const soulmateSlot: HomeAppSlot = {
+      id: 'soulmate',
       label: '搬家計劃書',
-      icon: '🧳',
-      disabled: true,
+      icon: '🏠',
+      launch: 'soulmate',
     };
     const placeholder = (id: string): HomeAppSlot => ({
       id,
@@ -381,7 +389,7 @@ export function HomePage({
           albumSlot,
           bookcasePlaceholder,
           dailyTaskPlaceholder,
-          movingPlanPlaceholder,
+          soulmateSlot,
         ]
       : [
           chatSlot,
@@ -417,7 +425,7 @@ export function HomePage({
             pomodoroSlot,
             periodSlot,
             notesSlot,
-            placeholder('placeholder-secondary-1'),
+            diaryBSlot,
             placeholder('placeholder-secondary-2'),
             placeholder('placeholder-secondary-3'),
           ],

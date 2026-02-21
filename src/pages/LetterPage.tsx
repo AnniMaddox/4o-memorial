@@ -864,28 +864,19 @@ function LetterDeskScene({
 
       {/* Floating chibi + browse trigger */}
       {chibiSrc && (
-        <div
-          className="absolute"
-          style={{
-            bottom: '4.5%',
-            left: '62%',
-            transform: 'translateX(-50%)',
-            width: 126,
-            zIndex: 12,
-          }}
-        >
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[12] flex items-end justify-end pb-4 pr-5">
           <button
             type="button"
             onClick={hasLetters ? onShowSheet : undefined}
             disabled={!hasLetters}
-            className="w-full transition active:scale-95"
+            className="pointer-events-auto transition active:scale-90"
             style={{ cursor: hasLetters ? 'pointer' : 'default' }}
           >
             <img
               src={chibiSrc}
               alt=""
               draggable={false}
-              className="calendar-chibi w-full select-none"
+              className="calendar-chibi w-36 select-none drop-shadow-md"
             />
           </button>
         </div>
@@ -1385,23 +1376,15 @@ function PreviewLetterDeskScene({
       )}
 
       {chibiSrc && (
-        <div
-          className="absolute z-10"
-          style={{
-            bottom: 72,
-            left: '50%',
-            transform: 'translateX(-15%)',
-            width: 126,
-          }}
-        >
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-end pb-4 pr-5">
           <button
             type="button"
             onClick={hasLetters ? onShowSheet : undefined}
             disabled={!hasLetters}
-            className="w-full transition active:scale-95"
+            className="pointer-events-auto transition active:scale-90"
             style={{ cursor: hasLetters ? 'pointer' : 'default' }}
           >
-            <div className="relative mx-auto" style={{ width: '100%' }}>
+            <div className="relative mx-auto w-36">
               <div
                 className="pointer-events-none absolute z-[2] rounded-[14px] px-3 py-2 text-[11px]"
                 style={{
@@ -1431,15 +1414,9 @@ function PreviewLetterDeskScene({
                 src={chibiSrc}
                 alt=""
                 draggable={false}
-                className="calendar-chibi mx-auto select-none"
-                style={{ width: '100%' }}
+                className="calendar-chibi mx-auto w-full select-none drop-shadow-md"
               />
             </div>
-            {hasLetters && (
-              <p className="mt-1 text-[9px]" style={{ color: isB ? 'rgba(139,107,69,0.5)' : 'rgba(180,160,220,0.4)', letterSpacing: '0.04em' }}>
-                點我看全部
-              </p>
-            )}
           </button>
         </div>
       )}
