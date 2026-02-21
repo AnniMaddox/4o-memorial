@@ -1144,7 +1144,21 @@ export function MDiaryPage({
             </div>
 
             <div className="px-6 py-4">
-              <p className="text-[14px] text-[#2a2818]">閱讀頁M</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[14px] text-[#2a2818]">閱讀頁M</p>
+                <button
+                  type="button"
+                  onClick={() => updateMSettings({ mDiaryShowReadingChibi: !showReadingChibi })}
+                  className="relative h-[22px] w-[40px] rounded-full transition"
+                  style={{ background: showReadingChibi ? '#5a7060' : 'rgba(120,120,120,0.35)' }}
+                  aria-label="切換閱讀頁小人顯示"
+                >
+                  <span
+                    className="absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow"
+                    style={{ left: showReadingChibi ? 20 : 2 }}
+                  />
+                </button>
+              </div>
               <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{readingChibiWidth}px</p>
               <input
                 type="range"
@@ -1158,25 +1172,6 @@ export function MDiaryPage({
               <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
                 <span>小一點</span>
                 <span>大一點</span>
-              </div>
-
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[13px] text-[#2a2818]">顯示小人</p>
-                  <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">閱讀頁右下角</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => updateMSettings({ mDiaryShowReadingChibi: !showReadingChibi })}
-                  className="relative h-[22px] w-[40px] rounded-full transition"
-                  style={{ background: showReadingChibi ? '#5a7060' : 'rgba(120,120,120,0.35)' }}
-                  aria-label="切換閱讀頁小人顯示"
-                >
-                  <span
-                    className="absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow"
-                    style={{ left: showReadingChibi ? 20 : 2 }}
-                  />
-                </button>
               </div>
             </div>
           </div>

@@ -240,16 +240,19 @@ function Bubble({
 }) {
   const styles = {
     rose: {
-      bg: 'rgb(var(--theme-accent-rgb) / 0.14)',
-      border: 'rgb(var(--theme-accent-rgb) / 0.35)',
+      bg: 'rgb(var(--theme-accent-rgb) / 0.24)',
+      border: 'rgb(var(--theme-accent-rgb) / 0.45)',
+      text: '#3f3328',
     },
     amber: {
-      bg: 'rgb(var(--theme-accent-rgb) / 0.2)',
-      border: 'rgb(var(--theme-accent-rgb) / 0.46)',
+      bg: 'rgb(var(--theme-accent-rgb) / 0.28)',
+      border: 'rgb(var(--theme-accent-rgb) / 0.52)',
+      text: '#3c3227',
     },
     purple: {
-      bg: 'rgb(var(--theme-accent-rgb) / 0.26)',
-      border: 'rgb(var(--theme-accent-rgb) / 0.56)',
+      bg: 'linear-gradient(150deg, rgb(255 255 255 / 0.72) 0%, rgb(var(--theme-accent-rgb) / 0.34) 100%)',
+      border: 'rgb(var(--theme-accent-rgb) / 0.62)',
+      text: '#2f2530',
     },
   }[accent];
   const interactive = typeof onTap === 'function';
@@ -259,8 +262,14 @@ function Bubble({
       <button
         type="button"
         onClick={onTap}
-        className="fitness-bubble w-full rounded-2xl rounded-br-sm px-4 py-3 text-left text-sm leading-relaxed text-stone-700 transition active:scale-[0.99]"
-        style={{ background: styles.bg, border: `1px solid ${styles.border}` }}
+        className="fitness-bubble w-full rounded-2xl rounded-br-sm px-4 py-3 text-left text-sm leading-relaxed transition active:scale-[0.99]"
+        style={{
+          background: styles.bg,
+          border: `1px solid ${styles.border}`,
+          color: styles.text,
+          backdropFilter: 'blur(3px)',
+          WebkitBackdropFilter: 'blur(3px)',
+        }}
       >
         {text}
       </button>
@@ -269,8 +278,14 @@ function Bubble({
 
   return (
     <div
-      className="fitness-bubble rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed text-stone-700"
-      style={{ background: styles.bg, border: `1px solid ${styles.border}` }}
+      className="fitness-bubble rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed"
+      style={{
+        background: styles.bg,
+        border: `1px solid ${styles.border}`,
+        color: styles.text,
+        backdropFilter: 'blur(3px)',
+        WebkitBackdropFilter: 'blur(3px)',
+      }}
     >
       {text}
     </div>
