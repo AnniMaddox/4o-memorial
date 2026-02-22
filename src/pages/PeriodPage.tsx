@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
+import { emitActionToast } from '../lib/actionToast';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type PeriodTab = 'overview' | 'calendar' | 'records';
@@ -800,7 +801,7 @@ function PeriodSettingsSheet({
 
         <div className="mb-4 rounded-2xl bg-stone-50 p-4">
           <div className="mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-            <p className="text-xs text-stone-600">顯示小人</p>
+            <p className="text-xs text-stone-600">M</p>
             <button
               type="button"
               onClick={onToggleChibi}
@@ -815,10 +816,6 @@ function PeriodSettingsSheet({
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-stone-500">小人大小</p>
-            <span className="text-[11px] text-stone-400">{Math.round(chibiSize)}px</span>
-          </div>
           <input
             type="range"
             min={120}
@@ -826,12 +823,8 @@ function PeriodSettingsSheet({
             step={1}
             value={chibiSize}
             onChange={(event) => onChibiSizeChange(Number(event.target.value))}
-            className="mt-2 w-full accent-stone-700"
+            className="w-full accent-stone-700"
           />
-          <div className="mt-1 flex justify-between text-[10px] text-stone-400">
-            <span>小一點</span>
-            <span>大一點</span>
-          </div>
         </div>
 
         <div className="mb-4 rounded-2xl bg-stone-50 p-4">
@@ -1165,9 +1158,21 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   function savePeriodRecord() {
     const s = parseDateKey(startDraft);
     const e = parseDateKey(endDraft);
-    if (!s || !e) { setStatusText('請先選擇開始日和結束日。'); return; }
-    if (dayDiff(s, e) < 0) { setStatusText('結束日不能早於開始日。'); return; }
-    if (toDateKey(e) > todayKey) { setStatusText('結束日不能超過今天。'); return; }
+    if (!s || !e) {
+      setStatusText('請先選擇開始日和結束日。');
+      emitActionToast({ kind: 'error', message: '經期紀錄儲存失敗：日期不完整' });
+      return;
+    }
+    if (dayDiff(s, e) < 0) {
+      setStatusText('結束日不能早於開始日。');
+      emitActionToast({ kind: 'error', message: '經期紀錄儲存失敗：結束日早於開始日' });
+      return;
+    }
+    if (toDateKey(e) > todayKey) {
+      setStatusText('結束日不能超過今天。');
+      emitActionToast({ kind: 'error', message: '經期紀錄儲存失敗：結束日超過今天' });
+      return;
+    }
 
     const newRecord: PeriodRecord = {
       id: `${toDateKey(s)}-${Date.now()}`,
@@ -1178,6 +1183,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
     };
     setStore((cur) => ({ ...cur, records: [...cur.records, newRecord] }));
     setStatusText('已儲存這次經期紀錄。');
+    emitActionToast({ kind: 'success', message: '經期紀錄已儲存' });
     setNoteDraft('');
     setStartDraft('');
     setEndDraft('');
@@ -1370,8 +1376,11 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
           <div className="flex-1 text-center">
             <p className="text-[9px] uppercase tracking-[0.28em] text-stone-400">PERIOD</p>
             <h1
-              className="mt-0.5 text-[17px] leading-tight text-stone-800"
-              style={{ fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)" }}
+              className="mt-0.5 leading-tight text-stone-800"
+              style={{
+                fontSize: 'var(--ui-header-title-size, 17px)',
+                fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
+              }}
             >
               經期追蹤
             </h1>
@@ -1400,7 +1409,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
               className="flex-1 border-b-2 transition"
               style={{
                 padding: '9px 0 7px',
-                fontSize: 17,
+                fontSize: 'var(--ui-tab-label-size, 17px)',
                 lineHeight: 1.2,
                 fontWeight: 500,
                 letterSpacing: '0.04em',

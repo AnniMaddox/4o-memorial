@@ -1112,7 +1112,7 @@ export function WishlistPage({
 
             <div className="wl-sh-item">
               <div className="wl-sh-row">
-                <p className="wl-sh-label">顯示小人</p>
+                <p className="wl-sh-label">M</p>
                 <button
                   type="button"
                   className={`wl-switch ${prefs.showChibi ? 'on' : ''}`}
@@ -1125,8 +1125,6 @@ export function WishlistPage({
             </div>
 
             <div className="wl-sh-item">
-              <p className="wl-sh-label">小人大小</p>
-              <p className="wl-slider-caption">目前：{prefs.chibiWidth}px</p>
               <input
                 type="range"
                 min={104}

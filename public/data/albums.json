@@ -36,9 +36,10 @@
   },
   {
     "id": "album06",
-    "title": "相本 06",
+    "title": "新年",
     "subtitle": "待上傳 · 回憶",
-    "accent": "linear-gradient(155deg, #ece9f7 0%, #b7b0d8 100%)"
+    "accent": "linear-gradient(155deg, #ece9f7 0%, #b7b0d8 100%)",
+    "coverImage": "photos/album06/0.webp"
   },
   {
     "id": "album07",

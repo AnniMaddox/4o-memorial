@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { emitActionToast } from '../lib/actionToast';
 import {
   MANAGE_BOX_ID,
   MAX_SOULMATE_BOXES,
@@ -344,8 +345,11 @@ export default function SoulmateHousePage({ onExit, soulmateFontFamily = '' }: P
         reloaded.boxes.some((box) => box.id === current && box.id !== MANAGE_BOX_ID) ? current : fallbackId,
       );
       setStatus(successMessage);
+      emitActionToast({ kind: 'success', message: successMessage });
     } catch (error) {
-      setStatus(`儲存失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
+      const message = `儲存失敗：${error instanceof Error ? error.message : '未知錯誤'}`;
+      setStatus(message);
+      emitActionToast({ kind: 'error', message });
     } finally {
       setWorking(false);
     }
@@ -573,7 +577,7 @@ export default function SoulmateHousePage({ onExit, soulmateFontFamily = '' }: P
                 </label>
 
                 <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-                  <span className="text-xs text-stone-600">顯示小人</span>
+                  <span className="text-xs text-stone-600">M</span>
                   <button
                     type="button"
                     onClick={() => patchReaderPrefs({ showChibi: !readerPrefs.showChibi })}
@@ -589,7 +593,10 @@ export default function SoulmateHousePage({ onExit, soulmateFontFamily = '' }: P
                 </div>
 
                 <label className="space-y-1 text-xs text-stone-500">
-                  <span>小人大小：{readerPrefs.chibiSize}px</span>
+                  <div className="flex items-center justify-between">
+                    <span>大小</span>
+                    <span>{readerPrefs.chibiSize}px</span>
+                  </div>
                   <input
                     type="range"
                     min={104}
@@ -1395,7 +1402,10 @@ export default function SoulmateHousePage({ onExit, soulmateFontFamily = '' }: P
           </button>
           <div className="flex-1 text-center">
             <p className="text-[10px] uppercase tracking-[0.25em] text-white/70">HOME GRID</p>
-            <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--app-heading-family)' }}>
+            <h1
+              className="font-bold text-white"
+              style={{ fontFamily: 'var(--app-heading-family)', fontSize: 'calc(var(--ui-header-title-size, 17px) + 7px)' }}
+            >
               {resolvedPageTitle}
             </h1>
             <p className="mt-0.5 text-[11px] text-white/75">多主題收納格</p>

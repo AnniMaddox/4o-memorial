@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { emitActionToast } from '../lib/actionToast';
 import { getScopedMixedChibiSources } from '../lib/chibiPool';
 import {
   clearAllNotes,
@@ -128,10 +129,19 @@ export function NotesPage({
   };
 
   const handleSave = async (note: StoredNote) => {
-    await saveNote(note);
-    await refreshNotes();
-    setComposing(false);
-    setEditingNote(null);
+    try {
+      await saveNote(note);
+      await refreshNotes();
+      setComposing(false);
+      setEditingNote(null);
+      emitActionToast({ kind: 'success', message: '便利貼已儲存' });
+    } catch (error) {
+      emitActionToast({
+        kind: 'error',
+        message: `便利貼儲存失敗：${error instanceof Error ? error.message : '未知錯誤'}`,
+        durationMs: 2600,
+      });
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -168,10 +178,12 @@ export function NotesPage({
         </button>
 
         <div className="flex-1 text-center">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-stone-400">Notes</p>
+          <p className="uppercase tracking-[0.25em] text-stone-400" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
+            Notes
+          </p>
           <h1
-            className="text-lg leading-tight text-stone-800"
-            style={{ fontFamily: 'var(--app-heading-family)' }}
+            className="leading-tight text-stone-800"
+            style={{ fontFamily: 'var(--app-heading-family)', fontSize: 'var(--ui-header-title-size, 17px)' }}
           >
             便利貼
           </h1>
@@ -552,7 +564,7 @@ function NoteSettingsSheet({
         <div className="space-y-2">
           <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-stone-700">顯示小人</span>
+              <span className="text-sm text-stone-700">M</span>
               <button
                 type="button"
                 onClick={onToggleChibi}
@@ -566,10 +578,6 @@ function NoteSettingsSheet({
                 />
               </button>
             </div>
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-xs text-stone-500">小人大小</span>
-              <span className="text-[11px] text-stone-400">{chibiSize}px</span>
-            </div>
             <input
               type="range"
               min={104}
@@ -577,7 +585,7 @@ function NoteSettingsSheet({
               step={1}
               value={chibiSize}
               onChange={(event) => onChibiSizeChange(Number(event.target.value))}
-              className="mt-1.5 w-full accent-stone-700"
+              className="mt-2 w-full accent-stone-700"
             />
           </div>
 

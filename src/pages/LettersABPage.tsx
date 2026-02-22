@@ -730,7 +730,7 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
 
             <section className="la-sheet-section">
               <div className="la-toggle-row">
-                <span>顯示小人</span>
+                <span>M</span>
                 <button
                   type="button"
                   className={`la-switch ${prefs.showChibi ? 'on' : ''}`}
@@ -741,7 +741,6 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
                 </button>
               </div>
               <label className="la-range-row">
-                <span>小人大小：{prefs.chibiWidth}px</span>
                 <input
                   type="range"
                   min={96}
