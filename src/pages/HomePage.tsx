@@ -18,7 +18,8 @@ type LauncherAppId =
   | 'diaryB'
   | 'album'
   | 'notes'
-  | 'soulmate';
+  | 'soulmate'
+  | 'bookshelf';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -378,11 +379,11 @@ export function HomePage({
       icon: '🏠',
       launch: 'soulmate',
     };
-    const reminderPlaceholder: HomeAppSlot = {
-      id: 'reminder-placeholder',
-      label: '提醒事項',
-      icon: '☑️',
-      disabled: true,
+    const bookshelfSlot: HomeAppSlot = {
+      id: 'bookshelf',
+      label: '書架',
+      icon: '📚',
+      launch: 'bookshelf',
     };
     const annualLettersSlot: HomeAppSlot = {
       id: 'letters-ab',
@@ -404,7 +405,7 @@ export function HomePage({
           lettersSlot,
           diarySlot,
           dailyTaskPlaceholder,
-          reminderPlaceholder,
+          bookshelfSlot,
           notesSlot,
           diaryBSlot,
           periodSlot,
