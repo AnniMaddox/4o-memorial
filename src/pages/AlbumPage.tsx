@@ -373,12 +373,30 @@ function AlbumBookCard({
   album: Album;
   onOpen: () => void;
 }) {
+  const [isPressed, setIsPressed] = useState(false);
+
   return (
-    <div className="group relative w-full overflow-hidden rounded-2xl shadow-md" style={{ aspectRatio: '3/4' }}>
+    <div
+      className="group relative w-full overflow-hidden rounded-2xl shadow-md transition"
+      style={{
+        aspectRatio: '3/4',
+        transform: isPressed ? 'scale(0.985)' : 'scale(1)',
+        filter: isPressed ? 'brightness(0.93)' : 'brightness(1)',
+      }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0 z-[9] bg-black/20 transition-opacity duration-150"
+        style={{ opacity: isPressed ? 0.36 : 0 }}
+      />
       <button
         type="button"
         onClick={onOpen}
-        className="absolute inset-0 z-10 transition active:scale-95"
+        onPointerDown={() => setIsPressed(true)}
+        onPointerUp={() => setIsPressed(false)}
+        onPointerLeave={() => setIsPressed(false)}
+        onPointerCancel={() => setIsPressed(false)}
+        onBlur={() => setIsPressed(false)}
+        className="absolute inset-0 z-10 transition"
         aria-label={`打開相冊：${album.title}`}
         title={album.title}
       />

@@ -151,6 +151,77 @@ function readReadingPrefs(): LetterReadingPrefs {
   }
 }
 
+const CLASSIC_B_GLOW_DOTS = Array.from({ length: 16 }, (_, index) => ({
+  top: `${7 + ((index * 17) % 76)}%`,
+  left: `${6 + ((index * 23) % 88)}%`,
+  size: 20 + ((index * 9) % 44),
+  opacity: 0.16 + (index % 5) * 0.07,
+  duration: 6.6 + (index % 7) * 1.2,
+  delay: -((index * 1.15) % 9.6),
+  blur: index % 3 === 0 ? 0.8 : 1.5,
+}));
+
+const CLASSIC_B_SPARKS = Array.from({ length: 34 }, (_, index) => ({
+  top: `${4 + ((index * 19) % 90)}%`,
+  left: `${2 + ((index * 29) % 95)}%`,
+  size: index % 4 === 0 ? 2.4 : 1.4,
+  opacity: 0.35 + (index % 3) * 0.18,
+  duration: 2.2 + (index % 6) * 0.55,
+  delay: -((index * 0.35) % 3.6),
+}));
+
+const CLASSIC_A_SNOW_FLAKES = Array.from({ length: 112 }, (_, index) => ({
+  left: `${(index * 9.9) % 100}%`,
+  top: `${-12 - ((index * 7.4) % 132)}%`,
+  size: index % 11 === 0 ? 4.4 : index % 5 === 0 ? 3.2 : index % 2 === 0 ? 2.4 : 1.7,
+  opacity: index % 4 === 0 ? 0.92 : index % 3 === 0 ? 0.74 : 0.56,
+  duration: 6.8 + (index % 9) * 0.92,
+  delay: -((index * 0.67) % 12.2),
+  drift: index % 2 === 0 ? 18 + (index % 5) * 3 : -(14 + (index % 5) * 3),
+  blur: index % 6 === 0 ? 0.4 : index % 3 === 0 ? 0.9 : 0,
+}));
+
+const CLASSIC_A_BIG_SNOW_FLAKES = Array.from({ length: 56 }, (_, index) => ({
+  left: `${(index * 15.1) % 100}%`,
+  top: `${-18 - ((index * 10.5) % 190)}%`,
+  size: index % 8 === 0 ? 7.4 : index % 3 === 0 ? 5.9 : 4.2,
+  opacity: index % 4 === 0 ? 0.68 : index % 2 === 0 ? 0.56 : 0.44,
+  duration: 10.2 + (index % 8) * 1.06,
+  delay: -((index * 0.73) % 12.8),
+  drift: index % 2 === 0 ? 26 + (index % 5) * 4 : -(22 + (index % 5) * 4),
+  blur: index % 5 === 0 ? 0.4 : index % 2 === 0 ? 0.9 : 1.3,
+}));
+
+const CLASSIC_C_STAR_DOTS = Array.from({ length: 38 }, (_, index) => ({
+  top: `${3 + ((index * 13) % 56)}%`,
+  left: `${3 + ((index * 31) % 93)}%`,
+  size: index % 5 === 0 ? 2.2 : 1.2,
+  opacity: 0.18 + (index % 4) * 0.16,
+  duration: 2.8 + (index % 5) * 0.7,
+  delay: -((index * 0.3) % 3.8),
+}));
+
+const CLASSIC_C_SNOW_FLAKES = Array.from({ length: 148 }, (_, index) => ({
+  left: `${(index * 14.3) % 100}%`,
+  top: `${-18 - ((index * 8) % 150)}%`,
+  size: index % 12 === 0 ? 4.3 : index % 4 === 0 ? 3.1 : 2,
+  opacity: index % 7 === 0 ? 0.98 : index % 3 === 0 ? 0.82 : 0.64,
+  duration: 5.6 + (index % 10) * 0.96,
+  delay: -((index * 0.78) % 13.2),
+  reverse: index % 2 === 0,
+}));
+
+const CLASSIC_C_UP_SNOW_DOTS = Array.from({ length: 58 }, (_, index) => ({
+  left: `${(index * 11.7) % 100}%`,
+  top: `${102 + ((index * 7.3) % 34)}%`,
+  size: index % 11 === 0 ? 6.2 : index % 5 === 0 ? 4.8 : index % 3 === 0 ? 3.5 : 2.6,
+  opacity: index % 4 === 0 ? 0.86 : index % 2 === 0 ? 0.72 : 0.58,
+  duration: 6.4 + (index % 8) * 0.88,
+  delay: -((index * 0.54) % 9.8),
+  drift: index % 2 === 0 ? 18 + (index % 5) * 4 : -(16 + (index % 5) * 4),
+  blur: index % 6 === 0 ? 0.3 : index % 3 === 0 ? 0.9 : 0,
+}));
+
 // ─── LetterPage ───────────────────────────────────────────────────────────────
 
 export function LetterPage({
@@ -456,62 +527,6 @@ function DriedFlowers() {
   );
 }
 
-function PressedFlowerCluster({
-  arrangement = 'single',
-  tone = 'rose',
-}: {
-  arrangement?: 'single' | 'double';
-  tone?: 'rose' | 'peach' | 'mauve';
-}) {
-  const palette =
-    tone === 'peach'
-      ? { petal: '#DDB89F', core: '#B68767' }
-      : tone === 'mauve'
-        ? { petal: '#CF9CB3', core: '#AA6780' }
-        : { petal: '#D7A1AF', core: '#B26A7B' };
-
-  const blossoms =
-    arrangement === 'double'
-      ? [
-          { x: 16, y: 13, scale: 1 },
-          { x: 34, y: 10, scale: 0.84 },
-        ]
-      : [{ x: 18, y: 12, scale: 1 }];
-  const width = arrangement === 'double' ? 46 : 30;
-
-  return (
-    <svg
-      width={width}
-      height="24"
-      viewBox={`0 0 ${width} 24`}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d={arrangement === 'double' ? 'M4 21Q20 14 42 19' : 'M3 21Q12 16 27 19'}
-        stroke="rgba(122,155,92,0.34)"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-      {blossoms.map((flower, index) => (
-        <g
-          key={`pressed-flower-${arrangement}-${index}`}
-          transform={`translate(${flower.x} ${flower.y}) scale(${flower.scale})`}
-          opacity="0.75"
-        >
-          <circle cx="0" cy="-2.4" r="2.2" fill={palette.petal} />
-          <circle cx="2.3" cy="-0.8" r="2.2" fill={palette.petal} />
-          <circle cx="1.4" cy="1.9" r="2.2" fill={palette.petal} />
-          <circle cx="-1.4" cy="1.9" r="2.2" fill={palette.petal} />
-          <circle cx="-2.3" cy="-0.8" r="2.2" fill={palette.petal} />
-          <circle cx="0" cy="0" r="1.5" fill={palette.core} />
-        </g>
-      ))}
-    </svg>
-  );
-}
-
 // ─── LetterPile ───────────────────────────────────────────────────────────────
 
 function LetterPile({
@@ -534,9 +549,9 @@ function LetterPile({
         ]
       : variant === 'B'
         ? [
-            { rotate: -4, y: 5, z: 0, bg: '#D8E9CB', inner: '#CDE0BE' },
-            { rotate: 2, y: 2, z: 1, bg: '#E6F2DC', inner: '#D8E9CB' },
-            { rotate: -1, y: 0, z: 2, bg: '#F0F8E9', inner: '#E2F0D8' },
+            { rotate: -4, y: 5, z: 0, bg: '#E8DBFF', inner: '#D8C4F5' },
+            { rotate: 2, y: 2, z: 1, bg: '#DDE9FF', inner: '#C9D9F8' },
+            { rotate: -1, y: 0, z: 2, bg: '#F5EDFF', inner: '#E6D7FA' },
           ]
         : [
             { rotate: -4, y: 5, z: 0, bg: '#C8D8E8', inner: '#B8CCE0' },
@@ -551,9 +566,9 @@ function LetterPile({
   const ribbonHeight = Math.max(8, Math.round(12 * scale));
   const bowSize = Math.max(26, Math.round(34 * scale));
   const sealSymbol = variant === 'C' ? '✦' : '❤';
-  const ribbonColor = variant === 'A' ? '#C4697A' : variant === 'B' ? '#86AD76' : '#6F98C0';
-  const bowColor = variant === 'A' ? '#D4818E' : variant === 'B' ? '#A7C791' : '#97BEDD';
-  const bowCenterColor = variant === 'A' ? '#C4697A' : variant === 'B' ? '#789E65' : '#6F98C0';
+  const ribbonColor = variant === 'A' ? '#C4697A' : variant === 'B' ? '#9D7AE2' : '#6F98C0';
+  const bowColor = variant === 'A' ? '#D4818E' : variant === 'B' ? '#C5A8F5' : '#97BEDD';
+  const bowCenterColor = variant === 'A' ? '#C4697A' : variant === 'B' ? '#8362CB' : '#6F98C0';
 
   return (
     <button
@@ -752,27 +767,12 @@ function LetterDeskScene({
   const isA = uiVariant === 'A';
   const isB = uiVariant === 'B';
   const isC = uiVariant === 'C';
-  const bFlowerDecor: Array<{
-    top: string;
-    left: string;
-    rotate: number;
-    scale: number;
-    opacity: number;
-    arrangement: 'single' | 'double';
-    tone: 'rose' | 'peach' | 'mauve';
-  }> = [
-    { top: '15%', left: '8%', rotate: -16, scale: 0.94, opacity: 0.58, arrangement: 'double', tone: 'mauve' },
-    { top: '24%', left: '91%', rotate: 11, scale: 0.78, opacity: 0.5, arrangement: 'single', tone: 'peach' },
-    { top: '37%', left: '6%', rotate: -9, scale: 0.72, opacity: 0.46, arrangement: 'single', tone: 'rose' },
-    { top: '47%', left: '93%', rotate: 13, scale: 0.84, opacity: 0.55, arrangement: 'double', tone: 'mauve' },
-    { top: '61%', left: '11%', rotate: -12, scale: 0.8, opacity: 0.48, arrangement: 'single', tone: 'peach' },
-    { top: '73%', left: '90%', rotate: 8, scale: 0.74, opacity: 0.44, arrangement: 'single', tone: 'rose' },
-    { top: '83%', left: '14%', rotate: -6, scale: 0.7, opacity: 0.4, arrangement: 'double', tone: 'peach' },
-  ];
 
   const sceneTheme = isA
     ? {
         base: '#2C1810',
+        baseSize: 'auto',
+        baseAnimation: 'none',
         glow: 'radial-gradient(ellipse 78% 52% at 16% 0%, rgba(255,216,158,0.20) 0%, transparent 68%)',
         desk: 'linear-gradient(166deg, #6B4226 0%, #5C3A24 16%, #4E3020 36%, #5A3822 54%, #4A2E1C 70%, #553620 86%, #4E3020 100%)',
         titleText: '#F6E0BD',
@@ -789,22 +789,26 @@ function LetterDeskScene({
       }
     : isB
       ? {
-          base: 'radial-gradient(ellipse 100% 80% at 30% 10%, #fff8ef 0%, #fdf0dd 50%, #f8e8cc 100%)',
+          base: 'linear-gradient(132deg, #2f245f 0%, #2e5f87 34%, #704182 66%, #2d355f 100%)',
+          baseSize: '320% 320%',
+          baseAnimation: 'letter-classic-b-bg-shift 18s ease infinite',
           glow: 'none',
           desk: '',
-          titleText: '#3D2414',
-          titleMuted: '#9A8070',
-          switchBg: 'rgba(255,255,255,0.74)',
-          switchBorder: '1px solid rgba(180,140,90,0.26)',
-          switchActive: 'rgba(236,208,168,0.92)',
-          switchText: '#5C3B20',
-          switchMuted: '#94765D',
+          titleText: 'rgba(247,240,255,0.96)',
+          titleMuted: 'rgba(212,198,240,0.8)',
+          switchBg: 'rgba(16,13,44,0.58)',
+          switchBorder: '1px solid rgba(255,255,255,0.16)',
+          switchActive: 'rgba(160,138,239,0.34)',
+          switchText: '#F8F3FF',
+          switchMuted: 'rgba(221,210,245,0.74)',
           deskGrain: 'none',
-          backIcon: '#8B6B45',
+          backIcon: 'rgba(236,230,255,0.82)',
           flowerOpacity: 0,
         }
       : {
-          base: 'radial-gradient(ellipse 80% 60% at 30% 0%, #1e1840 0%, #0d0b1e 55%, #09071a 100%)',
+          base: 'radial-gradient(circle at 20% 15%, #3a4a72 0%, #18233f 46%, #0d142a 100%)',
+          baseSize: '100% 100%',
+          baseAnimation: 'none',
           glow: 'none',
           desk: '',
           titleText: 'rgba(240,235,255,0.95)',
@@ -822,7 +826,11 @@ function LetterDeskScene({
   return (
     <div
       className="absolute inset-0 overflow-hidden"
-      style={{ background: sceneTheme.base }}
+      style={{
+        background: sceneTheme.base,
+        backgroundSize: sceneTheme.baseSize,
+        animation: sceneTheme.baseAnimation,
+      }}
     >
       {sceneTheme.glow !== 'none' && (
         <div
@@ -831,42 +839,105 @@ function LetterDeskScene({
         />
       )}
 
+      {isA && (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 2 }}>
+          {CLASSIC_A_SNOW_FLAKES.map((flake, index) => (
+            <span
+              key={`classic-a-snow-${index}`}
+              className="absolute rounded-full"
+              style={{
+                ['--snow-drift' as any]: `${flake.drift}px`,
+                width: flake.size,
+                height: flake.size,
+                top: flake.top,
+                left: flake.left,
+                background: 'rgba(248,252,255,0.96)',
+                boxShadow: '0 0 10px rgba(255,255,255,0.88)',
+                opacity: flake.opacity,
+                filter: `blur(${flake.blur}px)`,
+                animation: `letter-classic-a-snow ${flake.duration}s linear ${flake.delay}s infinite`,
+              }}
+            />
+          ))}
+          {CLASSIC_A_BIG_SNOW_FLAKES.map((flake, index) => (
+            <span
+              key={`classic-a-snow-big-${index}`}
+              className="absolute rounded-full"
+              style={{
+                ['--snow-drift-large' as any]: `${flake.drift}px`,
+                width: flake.size,
+                height: flake.size,
+                top: flake.top,
+                left: flake.left,
+                background: 'rgba(250,252,255,0.92)',
+                boxShadow: '0 0 14px rgba(255,255,255,0.86)',
+                opacity: flake.opacity,
+                filter: `blur(${flake.blur}px)`,
+                animation: `letter-classic-a-snow-large ${flake.duration}s linear ${flake.delay}s infinite`,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {isC && (
-        <div className="pointer-events-none absolute inset-0">
-          {Array.from({ length: 26 }).map((_, index) => {
-            const size = index % 4 === 0 ? 2 : 1.2;
-            const top = 4 + ((index * 17) % 52);
-            const left = 4 + ((index * 29) % 92);
-            const opacity = 0.16 + ((index % 5) * 0.1);
-            return (
-              <span
-                key={`star-${index}`}
-                className="absolute rounded-full"
-                style={{
-                  width: size,
-                  height: size,
-                  top: `${top}%`,
-                  left: `${left}%`,
-                  background: 'rgba(255,255,255,0.85)',
-                  opacity,
-                }}
-              />
-            );
-          })}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          {CLASSIC_C_STAR_DOTS.map((star, index) => (
+            <span
+              key={`classic-c-star-${index}`}
+              className="absolute rounded-full"
+              style={{
+                width: star.size,
+                height: star.size,
+                top: star.top,
+                left: star.left,
+                background: 'rgba(255,255,255,0.92)',
+                boxShadow: '0 0 7px rgba(255,255,255,0.75)',
+                opacity: star.opacity,
+                animation: `letter-twinkle ${star.duration}s ease-in-out ${star.delay}s infinite alternate`,
+              }}
+            />
+          ))}
+          {CLASSIC_C_SNOW_FLAKES.map((flake, index) => (
+            <span
+              key={`classic-c-snow-${index}`}
+              className="absolute rounded-full"
+              style={{
+                width: flake.size,
+                height: flake.size,
+                top: flake.top,
+                left: flake.left,
+                background: 'rgba(255,255,255,0.94)',
+                boxShadow: '0 0 12px rgba(255,255,255,0.9)',
+                opacity: flake.opacity,
+                animation: `letter-classic-c-snow ${flake.duration}s linear ${flake.delay}s infinite`,
+                animationDirection: flake.reverse ? 'reverse' : 'normal',
+              }}
+            />
+          ))}
+          {CLASSIC_C_UP_SNOW_DOTS.map((dot, index) => (
+            <span
+              key={`classic-c-up-snow-${index}`}
+              className="absolute rounded-full"
+              style={{
+                ['--snow-up-drift' as any]: `${dot.drift}px`,
+                width: dot.size,
+                height: dot.size,
+                top: dot.top,
+                left: dot.left,
+                background: 'rgba(250,251,255,0.9)',
+                boxShadow: '0 0 14px rgba(255,255,255,0.72)',
+                opacity: dot.opacity,
+                filter: `blur(${dot.blur}px)`,
+                animation: `letter-classic-c-snow-up ${dot.duration}s linear ${dot.delay}s infinite`,
+              }}
+            />
+          ))}
           <div className="absolute right-4 top-6 opacity-45">
             <svg width="56" height="56" viewBox="0 0 56 56" fill="none" aria-hidden="true">
               <path d="M38 8c8 9 8 24 0 33c4-3 7-8 8-14c1-7-1-13-5-19l-3 0Z" fill="#E8C870" />
               <circle cx="13" cy="10" r="1.4" fill="rgba(232,224,255,0.78)" />
               <circle cx="49" cy="18" r="1" fill="rgba(232,200,112,0.75)" />
-            </svg>
-          </div>
-          <div className="absolute bottom-48 left-3 opacity-30">
-            <svg width="68" height="68" viewBox="0 0 68 68" fill="none" aria-hidden="true">
-              <circle cx="10" cy="54" r="2" fill="#E8E0FF" />
-              <circle cx="34" cy="30" r="2" fill="#E8E0FF" />
-              <circle cx="57" cy="44" r="2" fill="#E8E0FF" />
-              <line x1="10" y1="54" x2="34" y2="30" stroke="#E8E0FF" strokeWidth="0.7" />
-              <line x1="34" y1="30" x2="57" y2="44" stroke="#E8E0FF" strokeWidth="0.7" />
             </svg>
           </div>
         </div>
@@ -888,7 +959,7 @@ function LetterDeskScene({
             WebkitTapHighlightColor: 'transparent',
             outline: 'none',
             boxShadow: 'none',
-            textShadow: uiVariant === 'C' ? '0 1px 4px rgba(0,0,0,0.35)' : '0 1px 3px rgba(255,255,255,0.42)',
+            textShadow: uiVariant !== 'A' ? '0 1px 4px rgba(0,0,0,0.35)' : '0 1px 3px rgba(255,255,255,0.42)',
           }}
         >
           <span aria-hidden="true" style={{ fontSize: 28, lineHeight: 1, transform: 'translateX(-1px)' }}>
@@ -939,26 +1010,50 @@ function LetterDeskScene({
           <span style={{ fontSize: 94, fontWeight: 800, letterSpacing: -3 }}>{letters.length}</span>
           <span style={{ fontSize: 30, marginLeft: 8 }}>次</span>
         </p>
-        <p className="mt-2 text-[11px]" style={{ color: sceneTheme.titleMuted, letterSpacing: '0.14em' }}>
-          每封都在等你打開
-        </p>
       </div>
 
       {isB && (
-        <div className="pointer-events-none absolute inset-0" style={{ zIndex: 3 }}>
-          {bFlowerDecor.map((decor, index) => (
-            <div
-              key={`b-flower-${index}`}
-              className="absolute"
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 3 }}>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(circle at 16% 14%, rgba(255,255,255,0.22) 0%, transparent 34%), radial-gradient(circle at 84% 26%, rgba(173,236,255,0.2) 0%, transparent 36%), radial-gradient(circle at 48% 78%, rgba(242,157,255,0.16) 0%, transparent 35%)',
+            }}
+          />
+          {CLASSIC_B_GLOW_DOTS.map((dot, index) => (
+            <span
+              key={`classic-b-glow-${index}`}
+              className="absolute rounded-full"
               style={{
-                top: decor.top,
-                left: decor.left,
-                opacity: decor.opacity,
-                transform: `translate(-50%, -50%) rotate(${decor.rotate}deg) scale(${decor.scale})`,
+                width: dot.size,
+                height: dot.size,
+                top: dot.top,
+                left: dot.left,
+                background:
+                  'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.94), rgba(181,235,255,0.45) 34%, rgba(158,120,255,0.03) 72%)',
+                opacity: dot.opacity,
+                filter: `blur(${dot.blur}px)`,
+                mixBlendMode: 'screen',
+                animation: `letter-classic-b-glow ${dot.duration}s ease-in-out ${dot.delay}s infinite`,
               }}
-            >
-              <PressedFlowerCluster arrangement={decor.arrangement} tone={decor.tone} />
-            </div>
+            />
+          ))}
+          {CLASSIC_B_SPARKS.map((spark, index) => (
+            <span
+              key={`classic-b-spark-${index}`}
+              className="absolute rounded-full"
+              style={{
+                width: spark.size,
+                height: spark.size,
+                top: spark.top,
+                left: spark.left,
+                background: 'rgba(232,255,248,0.95)',
+                boxShadow: '0 0 8px rgba(181,255,244,0.9)',
+                opacity: spark.opacity,
+                animation: `letter-classic-b-sparkle ${spark.duration}s ease-in-out ${spark.delay}s infinite`,
+              }}
+            />
           ))}
         </div>
       )}
@@ -1038,16 +1133,23 @@ function LetterDeskScene({
 // ─── Preview B/C Scene ────────────────────────────────────────────────────────
 
 function PreviewNightStars() {
-  const stars = [
-    { top: '8%', left: '15%', size: 1.5, delay: 0 },
-    { top: '12%', left: '72%', size: 2, delay: 0.8 },
-    { top: '5%', left: '45%', size: 1, delay: 1.4 },
-    { top: '20%', left: '85%', size: 1.5, delay: 0.3 },
-    { top: '28%', left: '8%', size: 1, delay: 1.8 },
-    { top: '18%', left: '30%', size: 2, delay: 0.6 },
-    { top: '35%', left: '92%', size: 1, delay: 1.2 },
-    { top: '15%', left: '55%', size: 1.5, delay: 0.4 },
-    { top: '42%', left: '20%', size: 1, delay: 2 },
+  const stars = Array.from({ length: 40 }, (_, index) => ({
+    top: `${4 + ((index * 9) % 60)}%`,
+    left: `${2 + ((index * 13) % 96)}%`,
+    size: index % 7 === 0 ? 2.9 : index % 3 === 0 ? 2.2 : 1.5,
+    delay: (index * 0.28) % 3.2,
+    duration: 1.9 + (index % 6) * 0.52,
+    opacity: index % 5 === 0 ? 0.98 : index % 2 === 0 ? 0.84 : 0.7,
+  }));
+
+  const shootingStars = [
+    { top: '9%', left: '5%', width: 92, delay: 0.1, duration: 4.2 },
+    { top: '15%', left: '45%', width: 80, delay: 1.2, duration: 4.4 },
+    { top: '27%', left: '18%', width: 70, delay: 1.9, duration: 4.1 },
+    { top: '11%', left: '68%', width: 76, delay: 2.6, duration: 4.3 },
+    { top: '22%', left: '73%', width: 66, delay: 3.1, duration: 4.5 },
+    { top: '31%', left: '48%', width: 64, delay: 3.8, duration: 4.2 },
+    { top: '18%', left: '24%', width: 72, delay: 4.5, duration: 4.6 },
   ];
 
   return (
@@ -1062,7 +1164,26 @@ function PreviewNightStars() {
             top: star.top,
             left: star.left,
             background: '#fff',
-            animation: `letter-twinkle 3s ease-in-out ${star.delay}s infinite alternate`,
+            boxShadow: '0 0 12px rgba(255,255,255,0.98), 0 0 20px rgba(205,194,255,0.4)',
+            opacity: star.opacity,
+            animation: `letter-twinkle ${star.duration}s ease-in-out ${star.delay}s infinite alternate`,
+          }}
+        />
+      ))}
+      {shootingStars.map((shoot, index) => (
+        <span
+          key={`preview-shoot-${index}`}
+          className="absolute rounded-full"
+          style={{
+            top: shoot.top,
+            left: shoot.left,
+            width: shoot.width,
+            height: 1.8,
+            background: 'linear-gradient(90deg, rgba(255,255,255,0.98), rgba(223,214,255,0.56) 62%, transparent)',
+            boxShadow: '0 0 12px rgba(255,255,255,0.76)',
+            transform: 'rotate(-20deg)',
+            opacity: 0,
+            animation: `letter-preview-shoot ${shoot.duration}s ease-in-out ${shoot.delay}s infinite`,
           }}
         />
       ))}
@@ -1098,6 +1219,62 @@ function PreviewConstellationDeco() {
         <line x1="32" y1="32" x2="22" y2="14" stroke="#E8E0FF" strokeWidth="0.6" />
         <line x1="22" y1="14" x2="50" y2="10" stroke="#E8C870" strokeWidth="0.5" />
       </svg>
+    </div>
+  );
+}
+
+function PreviewPaperPlanesDeco({ faded = false }: { faded?: boolean }) {
+  const planes = [
+    {
+      top: '34%',
+      left: '-6%',
+      width: 96,
+      animation: 'letter-preview-plane-arc-a 5.8s linear 0s infinite',
+    },
+    {
+      top: '28%',
+      left: '102%',
+      width: 72,
+      animation: 'letter-preview-plane-arc-b-left 7.2s linear 2.3s infinite',
+    },
+    {
+      top: '64%',
+      left: '-8%',
+      width: 66,
+      animation: 'letter-preview-plane-arc-c 6.6s linear 4.4s infinite',
+    },
+  ] as const;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ opacity: faded ? 0.24 : 0.56 }}>
+      {planes.map((plane, index) => (
+        <span
+          key={`preview-paper-plane-${index}`}
+          className="absolute"
+          style={{
+            top: plane.top,
+            left: plane.left,
+            animation: plane.animation,
+            filter: 'drop-shadow(0 2px 4px rgba(26,44,82,0.25))',
+          }}
+        >
+          <svg
+            width={plane.width}
+            height={Math.round(plane.width * 0.62)}
+            viewBox="-14 -10 34 20"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M18 0L-12 -9L-6 0L-12 9L18 0Z"
+              fill="rgba(252,254,255,0.94)"
+              stroke="rgba(117,138,170,0.48)"
+              strokeWidth="0.9"
+            />
+            <path d="M-6 0H8" stroke="rgba(122,144,182,0.62)" strokeWidth="0.9" strokeLinecap="round" />
+          </svg>
+        </span>
+      ))}
     </div>
   );
 }
@@ -1321,6 +1498,7 @@ function PreviewLetterDeskScene({
     >
       {!isB && <PreviewNightStars />}
       {isB ? <PreviewBotanicalDeco faded={!hasLetters} /> : <PreviewMoonDeco faded={!hasLetters} />}
+      {isB && <PreviewPaperPlanesDeco faded={!hasLetters} />}
 
       {!isB && hasLetters && <PreviewConstellationDeco />}
 
@@ -1424,15 +1602,6 @@ function PreviewLetterDeskScene({
               }}
             >
               {letters.length}
-            </p>
-            <p
-              className="mt-1.5 text-[13px]"
-              style={{
-                color: isB ? '#9A8070' : 'rgba(180,160,220,0.6)',
-                letterSpacing: '0.06em',
-              }}
-            >
-              封思念，靜靜等你
             </p>
           </div>
         </>
