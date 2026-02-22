@@ -95,6 +95,16 @@ const FONT_PRESET_KEY: FontSlotSettingKey = 'customFontUrlSlots';
 const FONT_PRESET_LIMIT = 10;
 const FONT_PRESET_INDICES = Array.from({ length: FONT_PRESET_LIMIT }, (_, index) => index);
 
+function normalizeFontSlotArray(input: unknown, fallback: string[]) {
+  if (!Array.isArray(input)) {
+    return [...fallback];
+  }
+  return Array.from({ length: FONT_PRESET_LIMIT }, (_, index) => {
+    const value = input[index];
+    return typeof value === 'string' ? value.trim() : '';
+  });
+}
+
 const FONT_TARGET_OPTIONS: Array<{ key: FontApplyTargetKey; label: string; hint: string }> = [
   { key: 'app', label: '整站', hint: '主標題 / 頁籤等基底字體' },
   { key: 'letter', label: '情書', hint: '情書頁閱讀文字' },
@@ -235,8 +245,20 @@ type AppearancePresetPayload = {
     chatAiBubbleBorderColor: string;
     chatAiBubbleTextColor: string;
     chatBubbleRadius: number;
+    customFontCssUrl: string;
     customFontFileUrl: string;
     customFontFamily: string;
+    customFontUrlSlots: string[];
+    customFontUrlSlotNames: string[];
+    letterFontUrl: string;
+    letterFontUrlSlots: string[];
+    letterFontUrlSlotNames: string[];
+    diaryFontUrl: string;
+    diaryFontUrlSlots: string[];
+    diaryFontUrlSlotNames: string[];
+    soulmateFontUrl: string;
+    soulmateFontUrlSlots: string[];
+    soulmateFontUrlSlotNames: string[];
     fontScale: number;
     uiHeaderTitleSize: number;
     uiTabLabelSize: number;
@@ -882,8 +904,20 @@ export function SettingsPage({
         chatAiBubbleBorderColor: settings.chatAiBubbleBorderColor,
         chatAiBubbleTextColor: settings.chatAiBubbleTextColor,
         chatBubbleRadius: settings.chatBubbleRadius,
+        customFontCssUrl: settings.customFontCssUrl,
         customFontFileUrl: settings.customFontFileUrl,
         customFontFamily: settings.customFontFamily,
+        customFontUrlSlots: [...settings.customFontUrlSlots],
+        customFontUrlSlotNames: [...settings.customFontUrlSlotNames],
+        letterFontUrl: settings.letterFontUrl,
+        letterFontUrlSlots: [...settings.letterFontUrlSlots],
+        letterFontUrlSlotNames: [...settings.letterFontUrlSlotNames],
+        diaryFontUrl: settings.diaryFontUrl,
+        diaryFontUrlSlots: [...settings.diaryFontUrlSlots],
+        diaryFontUrlSlotNames: [...settings.diaryFontUrlSlotNames],
+        soulmateFontUrl: settings.soulmateFontUrl,
+        soulmateFontUrlSlots: [...settings.soulmateFontUrlSlots],
+        soulmateFontUrlSlotNames: [...settings.soulmateFontUrlSlotNames],
         fontScale: settings.fontScale,
         uiHeaderTitleSize: settings.uiHeaderTitleSize,
         uiTabLabelSize: settings.uiTabLabelSize,
@@ -976,11 +1010,47 @@ export function SettingsPage({
       if (typeof source.chatBubbleRadius === 'number' && Number.isFinite(source.chatBubbleRadius)) {
         next.chatBubbleRadius = source.chatBubbleRadius;
       }
+      if (typeof source.customFontCssUrl === 'string') {
+        next.customFontCssUrl = source.customFontCssUrl;
+      }
       if (typeof source.customFontFileUrl === 'string') {
         next.customFontFileUrl = source.customFontFileUrl;
       }
       if (typeof source.customFontFamily === 'string') {
         next.customFontFamily = source.customFontFamily;
+      }
+      if (typeof source.letterFontUrl === 'string') {
+        next.letterFontUrl = source.letterFontUrl;
+      }
+      if (typeof source.diaryFontUrl === 'string') {
+        next.diaryFontUrl = source.diaryFontUrl;
+      }
+      if (typeof source.soulmateFontUrl === 'string') {
+        next.soulmateFontUrl = source.soulmateFontUrl;
+      }
+      if (Array.isArray(source.customFontUrlSlots)) {
+        next.customFontUrlSlots = normalizeFontSlotArray(source.customFontUrlSlots, settings.customFontUrlSlots);
+      }
+      if (Array.isArray(source.customFontUrlSlotNames)) {
+        next.customFontUrlSlotNames = normalizeFontSlotArray(source.customFontUrlSlotNames, settings.customFontUrlSlotNames);
+      }
+      if (Array.isArray(source.letterFontUrlSlots)) {
+        next.letterFontUrlSlots = normalizeFontSlotArray(source.letterFontUrlSlots, settings.letterFontUrlSlots);
+      }
+      if (Array.isArray(source.letterFontUrlSlotNames)) {
+        next.letterFontUrlSlotNames = normalizeFontSlotArray(source.letterFontUrlSlotNames, settings.letterFontUrlSlotNames);
+      }
+      if (Array.isArray(source.diaryFontUrlSlots)) {
+        next.diaryFontUrlSlots = normalizeFontSlotArray(source.diaryFontUrlSlots, settings.diaryFontUrlSlots);
+      }
+      if (Array.isArray(source.diaryFontUrlSlotNames)) {
+        next.diaryFontUrlSlotNames = normalizeFontSlotArray(source.diaryFontUrlSlotNames, settings.diaryFontUrlSlotNames);
+      }
+      if (Array.isArray(source.soulmateFontUrlSlots)) {
+        next.soulmateFontUrlSlots = normalizeFontSlotArray(source.soulmateFontUrlSlots, settings.soulmateFontUrlSlots);
+      }
+      if (Array.isArray(source.soulmateFontUrlSlotNames)) {
+        next.soulmateFontUrlSlotNames = normalizeFontSlotArray(source.soulmateFontUrlSlotNames, settings.soulmateFontUrlSlotNames);
       }
       if (typeof source.fontScale === 'number' && Number.isFinite(source.fontScale)) {
         next.fontScale = source.fontScale;

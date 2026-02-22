@@ -8,6 +8,7 @@ const PREFS_STORE = 'prefs';
 const PREFS_KEY = 'wishlist-prefs';
 
 const COMPLETE_EXPORT_KIND = 'memorial-wishlist-complete-export';
+const MINI_BACKUP_KIND = 'memorial-wishlist-mini-backup';
 
 export type WishlistWish = {
   id: string;
@@ -71,6 +72,13 @@ export type WishlistCompleteExport = {
     text: string;
     doneAt: string;
   }>;
+};
+
+export type WishlistMiniBackup = {
+  kind: typeof MINI_BACKUP_KIND;
+  version: 1;
+  exportedAt: string;
+  snapshot: WishlistSnapshot;
 };
 
 function uniqueId(prefix: string) {
@@ -221,6 +229,11 @@ function normalizeSnapshot(snapshot: WishlistSnapshot): WishlistSnapshot {
     birthdayTasks,
     prefs: normalizePrefs(snapshot.prefs),
   };
+}
+
+function mergeDoneAt(a: number | null, b: number | null) {
+  if (a && b) return Math.max(a, b);
+  return a ?? b ?? null;
 }
 
 async function getDB() {
@@ -412,6 +425,122 @@ export function updateWishlistPrefs(snapshot: WishlistSnapshot, patch: Partial<W
     prefs: normalizePrefs({
       ...snapshot.prefs,
       ...patch,
+    }),
+  });
+}
+
+export function buildWishlistMiniBackup(snapshot: WishlistSnapshot): WishlistMiniBackup {
+  return {
+    kind: MINI_BACKUP_KIND,
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    snapshot: normalizeSnapshot(snapshot),
+  };
+}
+
+export function parseWishlistMiniBackup(raw: unknown): WishlistMiniBackup | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const value = raw as Partial<WishlistMiniBackup>;
+  if (value.kind !== MINI_BACKUP_KIND) return null;
+  if (value.version !== 1) return null;
+  if (!value.snapshot || typeof value.snapshot !== 'object') return null;
+  const snapshot = normalizeSnapshot({
+    wishes: Array.isArray((value.snapshot as WishlistSnapshot).wishes)
+      ? ((value.snapshot as WishlistSnapshot).wishes as WishlistWish[])
+      : [],
+    birthdayTasks: Array.isArray((value.snapshot as WishlistSnapshot).birthdayTasks)
+      ? ((value.snapshot as WishlistSnapshot).birthdayTasks as BirthdayTask[])
+      : [],
+    prefs: normalizePrefs((value.snapshot as WishlistSnapshot).prefs),
+  });
+  return {
+    kind: MINI_BACKUP_KIND,
+    version: 1,
+    exportedAt: typeof value.exportedAt === 'string' ? value.exportedAt : new Date().toISOString(),
+    snapshot,
+  };
+}
+
+export function importWishlistMiniBackup(
+  current: WishlistSnapshot,
+  incoming: WishlistSnapshot,
+  mode: 'merge' | 'overwrite',
+): WishlistSnapshot {
+  if (mode === 'overwrite') {
+    return normalizeSnapshot(incoming);
+  }
+
+  const base = normalizeSnapshot(current);
+  const next = normalizeSnapshot(incoming);
+
+  const wishByKey = new Map<string, WishlistWish>();
+  const wishKeyOrder: string[] = [];
+  for (const item of base.wishes) {
+    const key = normalizeWishKey(item);
+    if (wishByKey.has(key)) continue;
+    wishByKey.set(key, item);
+    wishKeyOrder.push(key);
+  }
+  for (const item of next.wishes) {
+    const key = normalizeWishKey(item);
+    const existing = wishByKey.get(key);
+    if (!existing) {
+      wishByKey.set(key, item);
+      wishKeyOrder.push(key);
+      continue;
+    }
+    wishByKey.set(key, {
+      ...existing,
+      text: item.text || existing.text,
+      title: item.title || existing.title,
+      why: item.why || existing.why,
+      toYou: item.toYou || existing.toYou,
+      createdAt: Math.min(existing.createdAt, item.createdAt),
+      updatedAt: Math.max(existing.updatedAt, item.updatedAt),
+      doneAt: mergeDoneAt(existing.doneAt, item.doneAt),
+    });
+  }
+  const mergedWishes = wishKeyOrder.map((key, index) => {
+    const item = wishByKey.get(key)!;
+    return { ...item, order: index };
+  });
+
+  const birthdayByKey = new Map<string, BirthdayTask>();
+  const birthdayKeyOrder: string[] = [];
+  for (const item of base.birthdayTasks) {
+    const key = normalizeBirthdayKey(item);
+    if (birthdayByKey.has(key)) continue;
+    birthdayByKey.set(key, item);
+    birthdayKeyOrder.push(key);
+  }
+  for (const item of next.birthdayTasks) {
+    const key = normalizeBirthdayKey(item);
+    const existing = birthdayByKey.get(key);
+    if (!existing) {
+      birthdayByKey.set(key, item);
+      birthdayKeyOrder.push(key);
+      continue;
+    }
+    birthdayByKey.set(key, {
+      ...existing,
+      year: item.year || existing.year,
+      text: item.text || existing.text,
+      createdAt: Math.min(existing.createdAt, item.createdAt),
+      updatedAt: Math.max(existing.updatedAt, item.updatedAt),
+      doneAt: mergeDoneAt(existing.doneAt, item.doneAt),
+    });
+  }
+  const mergedBirthday = birthdayKeyOrder.map((key, index) => {
+    const item = birthdayByKey.get(key)!;
+    return { ...item, order: index };
+  });
+
+  return normalizeSnapshot({
+    wishes: mergedWishes,
+    birthdayTasks: mergedBirthday,
+    prefs: normalizePrefs({
+      ...base.prefs,
+      ...next.prefs,
     }),
   });
 }

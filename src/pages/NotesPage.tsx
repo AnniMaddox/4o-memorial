@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { emitActionToast } from '../lib/actionToast';
 import { getScopedMixedChibiSources } from '../lib/chibiPool';
 import {
@@ -60,6 +60,22 @@ function noteRotDeg(id: string): number {
 
 function todayDateStr() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function resolveNoteWallOrder(note: StoredNote) {
+  if (typeof note.wallOrder === 'number' && Number.isFinite(note.wallOrder)) {
+    return note.wallOrder;
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function sortNotesForWall(notes: StoredNote[]) {
+  return [...notes].sort((a, b) => {
+    const aOrder = resolveNoteWallOrder(a);
+    const bOrder = resolveNoteWallOrder(b);
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return b.createdAt - a.createdAt;
+  });
 }
 
 function normalizeNotesPrefs(input: unknown): NotesPrefs {
@@ -130,6 +146,7 @@ export function NotesPage({
   const [editingNote, setEditingNote] = useState<StoredNote | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const hideFloatingChibi = !notesPrefs.showChibi || !chibiSrc;
+  const wallNotes = useMemo(() => sortNotesForWall(notes), [notes]);
 
   useEffect(() => {
     loadNotes()
@@ -149,7 +166,21 @@ export function NotesPage({
 
   const handleSave = async (note: StoredNote) => {
     try {
-      await saveNote(note);
+      const hasWallOrder = notes.some((item) => typeof item.wallOrder === 'number' && Number.isFinite(item.wallOrder));
+      const maxWallOrder = notes.reduce((max, item) => {
+        if (typeof item.wallOrder !== 'number' || !Number.isFinite(item.wallOrder)) return max;
+        return Math.max(max, item.wallOrder);
+      }, -1);
+      const noteToSave: StoredNote = {
+        ...note,
+        wallOrder:
+          typeof note.wallOrder === 'number' && Number.isFinite(note.wallOrder)
+            ? note.wallOrder
+            : hasWallOrder
+              ? maxWallOrder + 1
+              : undefined,
+      };
+      await saveNote(noteToSave);
       await refreshNotes();
       setComposing(false);
       setEditingNote(null);
@@ -177,6 +208,16 @@ export function NotesPage({
 
   const handleImport = async (imported: StoredNote[]) => {
     await importNotes(imported);
+    await refreshNotes();
+  };
+
+  const handleWallReorder = async (orderedIds: string[]) => {
+    const orderMap = new Map(orderedIds.map((id, index) => [id, index]));
+    const next = notes.map((note) => ({
+      ...note,
+      wallOrder: orderMap.get(note.id) ?? note.wallOrder ?? Number.MAX_SAFE_INTEGER,
+    }));
+    await importNotes(next);
     await refreshNotes();
   };
 
@@ -246,7 +287,13 @@ export function NotesPage({
         ) : notes.length === 0 ? (
           <NoteEmptyState />
         ) : view === 'wall' ? (
-          <NoteWall notes={notes} onTap={setEditingNote} notesFontSize={notesPrefs.fontSize} notesTextColor={notesPrefs.textColor} />
+          <NoteWall
+            notes={wallNotes}
+            onTap={setEditingNote}
+            onReorder={(orderedIds) => void handleWallReorder(orderedIds)}
+            notesFontSize={notesPrefs.fontSize}
+            notesTextColor={notesPrefs.textColor}
+          />
         ) : (
           <NoteTimeline notes={notes} onTap={setEditingNote} notesFontSize={notesPrefs.fontSize} notesTextColor={notesPrefs.textColor} />
         )}
@@ -325,36 +372,253 @@ function NoteEmptyState() {
 
 // ─── NoteWall ─────────────────────────────────────────────────────────────────
 
-function NoteWall({ notes, onTap, notesFontSize, notesTextColor }: { notes: StoredNote[]; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
-  const leftColumn: StoredNote[] = [];
-  const rightColumn: StoredNote[] = [];
-  notes.forEach((note, index) => {
-    if (index % 2 === 0) {
-      leftColumn.push(note);
-    } else {
-      rightColumn.push(note);
+function NoteWall({
+  notes,
+  onTap,
+  onReorder,
+  notesFontSize,
+  notesTextColor,
+}: {
+  notes: StoredNote[];
+  onTap: (n: StoredNote) => void;
+  onReorder: (orderedIds: string[]) => void;
+  notesFontSize: number;
+  notesTextColor: string;
+}) {
+  const [orderedIds, setOrderedIds] = useState<string[]>(() => notes.map((item) => item.id));
+  const [pressedId, setPressedId] = useState<string | null>(null);
+  const [dragState, setDragState] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    offsetX: number;
+    offsetY: number;
+    width: number;
+  } | null>(null);
+  const holdTimerRef = useRef<number | null>(null);
+  const dragStartSignatureRef = useRef('');
+  const pressRef = useRef<{
+    id: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+    moved: boolean;
+  } | null>(null);
+  const orderedIdsRef = useRef<string[]>(orderedIds);
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    orderedIdsRef.current = orderedIds;
+  }, [orderedIds]);
+
+  useEffect(() => {
+    setOrderedIds((prev) => {
+      const incoming = notes.map((item) => item.id);
+      const incomingSet = new Set(incoming);
+      const kept = prev.filter((id) => incomingSet.has(id));
+      const appended = incoming.filter((id) => !kept.includes(id));
+      return [...kept, ...appended];
+    });
+  }, [notes]);
+
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current != null) {
+        window.clearTimeout(holdTimerRef.current);
+      }
+    };
+  }, []);
+
+  const noteById = useMemo(() => new Map(notes.map((item) => [item.id, item])), [notes]);
+  const orderedNotes = useMemo(
+    () => orderedIds.map((id) => noteById.get(id)).filter((item): item is StoredNote => Boolean(item)),
+    [orderedIds, noteById],
+  );
+  const draggingNote = dragState ? noteById.get(dragState.id) ?? null : null;
+
+  function clearHoldTimer() {
+    if (holdTimerRef.current != null) {
+      window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
     }
-  });
+  }
+
+  function reorderTowards(dragId: string, clientX: number, clientY: number) {
+    let nearestId: string | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const id of orderedIdsRef.current) {
+      if (id === dragId) continue;
+      const el = itemRefs.current[id];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = cx - clientX;
+      const dy = cy - clientY;
+      const dist = dx * dx + dy * dy;
+      if (dist < nearestDistance) {
+        nearestDistance = dist;
+        nearestId = id;
+      }
+    }
+    if (!nearestId) return;
+    setOrderedIds((prev) => {
+      const from = prev.indexOf(dragId);
+      const to = prev.indexOf(nearestId);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const next = [...prev];
+      next.splice(from, 1);
+      next.splice(to, 0, dragId);
+      return next;
+    });
+  }
+
+  function beginDragging(id: string, pointerId: number) {
+    const press = pressRef.current;
+    const node = itemRefs.current[id];
+    if (!press || !node) return;
+    const rect = node.getBoundingClientRect();
+    dragStartSignatureRef.current = orderedIdsRef.current.join('|');
+    setDragState({
+      id,
+      x: press.lastX,
+      y: press.lastY,
+      offsetX: press.lastX - rect.left,
+      offsetY: press.lastY - rect.top,
+      width: rect.width,
+    });
+    const target = node;
+    if (target.hasPointerCapture(pointerId)) return;
+    target.setPointerCapture(pointerId);
+  }
+
+  function endPointer(note: StoredNote, pointerId: number) {
+    const press = pressRef.current;
+    if (!press || press.pointerId !== pointerId || press.id !== note.id) return;
+
+    const wasDragging = dragState?.id === note.id;
+    clearHoldTimer();
+    pressRef.current = null;
+    setPressedId(null);
+
+    if (wasDragging) {
+      setDragState(null);
+      const nextSignature = orderedIdsRef.current.join('|');
+      if (nextSignature !== dragStartSignatureRef.current) {
+        onReorder(orderedIdsRef.current);
+      }
+      return;
+    }
+
+    if (!press.moved) {
+      onTap(note);
+    }
+  }
 
   return (
-    <div className="px-3 pt-4">
-      <div className="grid grid-cols-2 gap-x-3">
-        <div className="space-y-3">
-          {leftColumn.map((note) => (
-            <StickyNote key={note.id} note={note} onTap={onTap} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
-          ))}
-        </div>
-        <div className="space-y-3">
-          {rightColumn.map((note) => (
-            <StickyNote key={note.id} note={note} onTap={onTap} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
-          ))}
-        </div>
+    <div className="relative px-3 pt-4">
+      <div className="grid grid-cols-2 gap-3">
+        {orderedNotes.map((note) => {
+          const isDragging = dragState?.id === note.id;
+          const isPressed = pressedId === note.id && !isDragging;
+          return (
+            <div
+              key={note.id}
+              ref={(node) => {
+                itemRefs.current[note.id] = node;
+              }}
+              className="touch-pan-y select-none transition-transform"
+              style={{
+                transform: isPressed ? 'scale(0.975)' : undefined,
+                opacity: isDragging ? 0.2 : 1,
+              }}
+              onPointerDown={(event) => {
+                if (event.button !== 0) return;
+                setPressedId(note.id);
+                pressRef.current = {
+                  id: note.id,
+                  pointerId: event.pointerId,
+                  startX: event.clientX,
+                  startY: event.clientY,
+                  lastX: event.clientX,
+                  lastY: event.clientY,
+                  moved: false,
+                };
+                clearHoldTimer();
+                holdTimerRef.current = window.setTimeout(() => {
+                  beginDragging(note.id, event.pointerId);
+                }, 170);
+              }}
+              onPointerMove={(event) => {
+                const press = pressRef.current;
+                if (!press || press.id !== note.id || press.pointerId !== event.pointerId) return;
+                press.lastX = event.clientX;
+                press.lastY = event.clientY;
+
+                const movedX = event.clientX - press.startX;
+                const movedY = event.clientY - press.startY;
+                if (!press.moved && Math.hypot(movedX, movedY) > 8) {
+                  press.moved = true;
+                  if (!dragState) {
+                    clearHoldTimer();
+                  }
+                }
+
+                if (!dragState || dragState.id !== note.id) return;
+                event.preventDefault();
+                setDragState((prev) =>
+                  prev && prev.id === note.id
+                    ? {
+                        ...prev,
+                        x: event.clientX,
+                        y: event.clientY,
+                      }
+                    : prev,
+                );
+                reorderTowards(note.id, event.clientX, event.clientY);
+              }}
+              onPointerUp={(event) => {
+                endPointer(note, event.pointerId);
+              }}
+              onPointerCancel={(event) => {
+                endPointer(note, event.pointerId);
+              }}
+            >
+              <StickyNote note={note} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
+            </div>
+          );
+        })}
       </div>
+
+      {dragState && draggingNote ? (
+        <div
+          className="pointer-events-none fixed z-[80]"
+          style={{
+            left: dragState.x - dragState.offsetX,
+            top: dragState.y - dragState.offsetY,
+            width: dragState.width,
+          }}
+        >
+          <StickyNote note={draggingNote} notesFontSize={notesFontSize} notesTextColor={notesTextColor} lifted />
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function StickyNote({ note, onTap, notesFontSize, notesTextColor }: { note: StoredNote; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
+function StickyNote({
+  note,
+  notesFontSize,
+  notesTextColor,
+  lifted = false,
+}: {
+  note: StoredNote;
+  notesFontSize: number;
+  notesTextColor: string;
+  lifted?: boolean;
+}) {
   const rot = noteRotDeg(note.id);
   const dateStr = new Date(note.createdAt).toLocaleDateString('zh-TW', {
     month: 'short', day: 'numeric',
@@ -362,9 +626,14 @@ function StickyNote({ note, onTap, notesFontSize, notesTextColor }: { note: Stor
 
   return (
     <div
-      className="cursor-pointer select-none rounded-2xl p-3.5 shadow-sm transition active:scale-95"
-      style={{ background: note.color, transform: `rotate(${rot}deg)` }}
-      onClick={() => onTap(note)}
+      className="rounded-2xl p-3.5 shadow-sm transition"
+      style={{
+        background: note.color,
+        transform: `rotate(${rot}deg) ${lifted ? 'scale(1.02)' : ''}`.trim(),
+        boxShadow: lifted
+          ? '0 16px 32px rgba(0,0,0,0.24), 0 4px 10px rgba(0,0,0,0.16)'
+          : undefined,
+      }}
     >
       <p
         className="line-clamp-6 whitespace-pre-wrap leading-relaxed"
@@ -453,6 +722,7 @@ function NoteComposeSheet({
       color,
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
+      wallOrder: initial?.wallOrder,
     };
     onSave(note);
   }

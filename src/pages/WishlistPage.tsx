@@ -3,9 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getScopedMixedChibiSources } from '../lib/chibiPool';
 import {
   DEFAULT_WISHLIST_PREFS,
-  buildWishlistCompleteExport,
+  buildWishlistMiniBackup,
+  importWishlistMiniBackup,
   loadWishlistSnapshot,
   mergeWishlistSeed,
+  parseWishlistMiniBackup,
   saveWishlistSnapshot,
   toggleBirthdayTaskDone,
   toggleWishDone,
@@ -335,7 +337,9 @@ export function WishlistPage({
   const [birthdayFocusYear, setBirthdayFocusYear] = useState<string | null>(null);
   const [birthdayZoomYear, setBirthdayZoomYear] = useState<string | null>(null);
   const [showFontSizeSection, setShowFontSizeSection] = useState(false);
+  const [wishCardAnimPhase, setWishCardAnimPhase] = useState<'idle' | 'out' | 'in'>('idle');
   const tabSwipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
+  const wishCardAnimTimerRef = useRef<number | null>(null);
   const initialTabAppliedRef = useRef<TabId | null>(null);
   const initialYearAppliedRef = useRef<string | null>(null);
 
@@ -423,6 +427,14 @@ export function WishlistPage({
   }, [wishes, currentWishId]);
 
   useEffect(() => {
+    return () => {
+      if (wishCardAnimTimerRef.current != null) {
+        window.clearTimeout(wishCardAnimTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!snapshot) return;
     if (initialTabAppliedRef.current === initialTab) return;
     setActiveTab(initialTab);
@@ -478,8 +490,22 @@ export function WishlistPage({
   };
 
   const drawNextWish = () => {
-    if (!wishes.length) return;
-    setCurrentWishId((prev) => pickNextWish(wishes, prev));
+    if (!wishes.length || wishCardAnimPhase === 'out') return;
+    const nextId = pickNextWish(wishes, currentWishId);
+    if (!nextId || nextId === currentWishId) return;
+    if (wishCardAnimTimerRef.current != null) {
+      window.clearTimeout(wishCardAnimTimerRef.current);
+      wishCardAnimTimerRef.current = null;
+    }
+    setWishCardAnimPhase('out');
+    wishCardAnimTimerRef.current = window.setTimeout(() => {
+      setCurrentWishId(nextId);
+      setWishCardAnimPhase('in');
+      wishCardAnimTimerRef.current = window.setTimeout(() => {
+        setWishCardAnimPhase('idle');
+        wishCardAnimTimerRef.current = null;
+      }, 180);
+    }, 130);
   };
 
   const handleToggleWishDone = (wishId: string) => {
@@ -500,11 +526,28 @@ export function WishlistPage({
     updateSnapshot(next);
   };
 
-  const exportCompleted = () => {
+  const exportMiniBackup = () => {
     if (!snapshot) return;
-    const payload = buildWishlistCompleteExport(snapshot);
-    downloadJson(`wishlist-complete-${Date.now()}.json`, payload);
-    setStatus('已匯出完成清單。');
+    const payload = buildWishlistMiniBackup(snapshot);
+    downloadJson(`wishlist-mini-backup-${Date.now()}.json`, payload);
+    setStatus('願望完整備份已匯出。');
+  };
+
+  const importMiniBackup = async (files: File[], mode: 'merge' | 'overwrite') => {
+    if (!snapshot || !files.length) return;
+    const file = files[0]!;
+    try {
+      const raw = JSON.parse(await file.text()) as unknown;
+      const parsed = parseWishlistMiniBackup(raw);
+      if (!parsed) {
+        setStatus('匯入失敗：檔案不是有效的願望完整備份。');
+        return;
+      }
+      const next = importWishlistMiniBackup(snapshot, parsed.snapshot, mode);
+      updateSnapshot(next, `願望完整備份匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）。`);
+    } catch {
+      setStatus('匯入失敗：JSON 格式錯誤。');
+    }
   };
 
   const importWishes = async (files: File[]) => {
@@ -710,7 +753,9 @@ export function WishlistPage({
                 <div className="wl-card-peek wl-card-peek-2" />
 
                 <div
-                  className={`wl-wish-card ${cardToneClass}`}
+                  className={`wl-wish-card ${cardToneClass} ${wishCardAnimPhase === 'out' ? 'is-out' : ''} ${
+                    wishCardAnimPhase === 'in' ? 'is-in' : ''
+                  }`}
                   role="button"
                   tabIndex={0}
                   onClick={drawNextWish}
@@ -1209,39 +1254,74 @@ export function WishlistPage({
             </div>
 
             <div className="wl-sh-item" style={{ borderBottom: 0 }}>
-              <div className="wl-sh-import-grid">
-                <label className="wl-sh-import">
-                  📥 匯入願望清單
-                  <input
-                    type="file"
-                    className="hidden"
-                    multiple
-                    accept=".txt,.json,application/json,text/plain"
-                    onChange={(event) => {
-                      const files = event.target.files ? Array.from(event.target.files) : [];
-                      void importWishes(files);
-                      event.currentTarget.value = '';
-                    }}
-                  />
-                </label>
-                <label className="wl-sh-import">
-                  🎂 匯入生日任務
-                  <input
-                    type="file"
-                    className="hidden"
-                    multiple
-                    accept=".txt,.json,application/json,text/plain"
-                    onChange={(event) => {
-                      const files = event.target.files ? Array.from(event.target.files) : [];
-                      void importBirthdayTasks(files);
-                      event.currentTarget.value = '';
-                    }}
-                  />
-                </label>
+              <div className="wl-sh-backup-group">
+                <p className="wl-sh-subtitle">完整小備份</p>
+                <button type="button" onClick={exportMiniBackup} className="wl-sh-export">
+                  📤 匯出完整備份
+                </button>
+                <div className="wl-sh-import-grid">
+                  <label className="wl-sh-import">
+                    📥 匯入備份（合併）
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".json,application/json"
+                      onChange={(event) => {
+                        const files = event.target.files ? Array.from(event.target.files) : [];
+                        void importMiniBackup(files, 'merge');
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                  <label className="wl-sh-import wl-sh-import-danger">
+                    🧹 匯入備份（覆蓋）
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".json,application/json"
+                      onChange={(event) => {
+                        const files = event.target.files ? Array.from(event.target.files) : [];
+                        void importMiniBackup(files, 'overwrite');
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
-              <button type="button" onClick={exportCompleted} className="wl-sh-export">
-                📤 匯出完成清單
-              </button>
+
+              <div className="wl-sh-backup-group">
+                <p className="wl-sh-subtitle">原始內容匯入</p>
+                <div className="wl-sh-import-grid">
+                  <label className="wl-sh-import">
+                    📥 匯入願望清單
+                    <input
+                      type="file"
+                      className="hidden"
+                      multiple
+                      accept=".txt,.json,application/json,text/plain"
+                      onChange={(event) => {
+                        const files = event.target.files ? Array.from(event.target.files) : [];
+                        void importWishes(files);
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                  <label className="wl-sh-import">
+                    🎂 匯入生日任務
+                    <input
+                      type="file"
+                      className="hidden"
+                      multiple
+                      accept=".txt,.json,application/json,text/plain"
+                      onChange={(event) => {
+                        const files = event.target.files ? Array.from(event.target.files) : [];
+                        void importBirthdayTasks(files);
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
               {status ? <p className="wl-status">{status}</p> : null}
             </div>
           </div>

@@ -9,6 +9,7 @@ export type StoredNote = {
   color: string;
   createdAt: number;
   updatedAt: number;
+  wallOrder?: number;
 };
 
 async function getDB() {
@@ -29,7 +30,7 @@ export async function saveNote(note: StoredNote): Promise<void> {
 export async function loadNotes(): Promise<StoredNote[]> {
   const db = await getDB();
   const all = await db.getAll(STORE);
-  return all.sort((a, b) => b.createdAt - a.createdAt); // newest first
+  return all.sort((a, b) => b.createdAt - a.createdAt); // newest first for timeline
 }
 
 export async function deleteNote(id: string): Promise<void> {
@@ -63,6 +64,7 @@ export function isValidNote(v: unknown): v is StoredNote {
     typeof n.content === 'string' &&
     typeof n.color === 'string' &&
     typeof n.createdAt === 'number' &&
-    typeof n.updatedAt === 'number'
+    typeof n.updatedAt === 'number' &&
+    (n.wallOrder == null || (typeof n.wallOrder === 'number' && Number.isFinite(n.wallOrder)))
   );
 }
