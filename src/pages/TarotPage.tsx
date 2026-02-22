@@ -126,9 +126,15 @@ export function TarotPage({ tarotGalleryImageUrl, tarotNameColor, tarotNameScale
     <div className="mx-auto w-full max-w-xl space-y-4">
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
-        <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Tarot</p>
-        <h1 className="mt-1 text-2xl text-stone-900">今日牌陣</h1>
-        <p className="mt-0.5 text-sm text-stone-500">{today.replace(/-/g, ' · ')}</p>
+        <p className="uppercase tracking-[0.18em] text-stone-500" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
+          Tarot
+        </p>
+        <h1 className="mt-1 text-stone-900" style={{ fontSize: 'var(--ui-header-title-size, 17px)' }}>
+          今日牌陣
+        </h1>
+        <p className="mt-0.5 text-stone-500" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
+          {today.replace(/-/g, ' · ')}
+        </p>
       </header>
 
       {/* ── Daily 3-card spread ─────────────────────────────────────────── */}
@@ -267,8 +273,12 @@ function TarotGallery({
             ‹
           </button>
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Tarot Gallery</p>
-            <h1 className="text-xl text-stone-900">卡牌閱覽室</h1>
+            <p className="uppercase tracking-[0.18em] text-stone-500" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
+              Tarot Gallery
+            </p>
+            <h1 className="text-stone-900" style={{ fontSize: 'var(--ui-header-title-size, 17px)' }}>
+              卡牌閱覽室
+            </h1>
           </div>
         </div>
         <p className="mt-1 text-xs text-stone-400">共 {allCards.length} 張 · 點任一張牌進入完整流程</p>

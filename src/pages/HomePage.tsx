@@ -19,7 +19,8 @@ type LauncherAppId =
   | 'album'
   | 'notes'
   | 'soulmate'
-  | 'bookshelf';
+  | 'bookshelf'
+  | 'moodLetters';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -385,6 +386,12 @@ export function HomePage({
       icon: '📚',
       launch: 'bookshelf',
     };
+    const moodLettersSlot: HomeAppSlot = {
+      id: 'mood-letters',
+      label: '心情星球',
+      icon: '🫧',
+      launch: 'moodLetters',
+    };
     const annualLettersSlot: HomeAppSlot = {
       id: 'letters-ab',
       label: '年度信件',
@@ -445,6 +452,7 @@ export function HomePage({
             bookshelfSlot,
             albumSlot,
             annualLettersSlot,
+            moodLettersSlot,
             settingsShortcutSlot,
           ],
         },

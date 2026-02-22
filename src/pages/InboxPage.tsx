@@ -180,21 +180,27 @@ export function InboxPage({
             >
               ‹
             </button>
-            <p className="text-xs tracking-[0.08em] text-stone-600">收藏夾</p>
+            <p className="tracking-[0.08em] text-stone-600" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>收藏夾</p>
           </div>
         ) : (
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Inbox</p>
+          <p className="uppercase tracking-[0.18em] text-stone-500" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
+            Inbox
+          </p>
         )}
 
         {favoritesOnly ? (
           <div className="mt-1 flex items-center gap-2">
-            <h1 className="text-2xl text-stone-900">我的最愛</h1>
+            <h1 className="text-stone-900" style={{ fontSize: 'var(--ui-header-title-size, 17px)' }}>
+              我的最愛
+            </h1>
             <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
               {starredCount}
             </span>
           </div>
         ) : (
-          <h1 className="mt-1 text-2xl text-stone-900">{inboxTitle.trim() || 'Memorial Mailroom'}</h1>
+          <h1 className="mt-1 text-stone-900" style={{ fontSize: 'var(--ui-header-title-size, 17px)' }}>
+            {inboxTitle.trim() || 'Memorial Mailroom'}
+          </h1>
         )}
 
         <p className="mt-3 rounded-xl border border-stone-200 bg-white/80 px-3 py-2 text-sm text-stone-700">{dailyHeaderPhrase}</p>
@@ -234,8 +240,10 @@ export function InboxPage({
                   onClick={() => toggleMonthCollapse(group.monthKey)}
                   className="flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left"
                 >
-                  <span className="text-sm text-stone-800">{group.monthLabel}</span>
-                  <span className="text-xs text-stone-500">
+                  <span className="text-stone-800" style={{ fontSize: 'var(--ui-tab-label-size, 17px)' }}>
+                    {group.monthLabel}
+                  </span>
+                  <span className="text-stone-500" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
                     {group.emails.length} 封 {collapsed ? '▸' : '▾'}
                   </span>
                 </button>
@@ -258,7 +266,10 @@ export function InboxPage({
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="flex items-center gap-2 text-sm text-stone-600">
+                                <p
+                                  className="flex items-center gap-2 text-stone-600"
+                                  style={{ fontSize: 'calc(var(--ui-filter-pill-size, 10px) + 4px)' }}
+                                >
                                   <span className="truncate">{email.fromName || email.fromAddress || 'Unknown sender'}</span>
                                   {isUnread && (
                                     <span className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-50 px-2 py-[1px] text-[10px] uppercase tracking-[0.08em] text-rose-600">
@@ -267,7 +278,12 @@ export function InboxPage({
                                     </span>
                                   )}
                                 </p>
-                                <p className="mt-1 line-clamp-2 text-base text-stone-900">{email.subject || '(No subject)'}</p>
+                                <p
+                                  className="mt-1 line-clamp-2 text-stone-900"
+                                  style={{ fontSize: 'calc(var(--ui-header-title-size, 17px) - 1px)' }}
+                                >
+                                  {email.subject || '(No subject)'}
+                                </p>
                               </div>
 
                               <div className="flex shrink-0 items-start gap-2">
@@ -287,7 +303,9 @@ export function InboxPage({
                                 >
                                   {isStarred ? '★' : '☆'}
                                 </button>
-                                <p className="text-xs text-stone-500">{formatDisplayDate(email.unlockAtUtc)}</p>
+                                <p className="text-stone-500" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
+                                  {formatDisplayDate(email.unlockAtUtc)}
+                                </p>
                               </div>
                             </div>
                           </button>

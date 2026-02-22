@@ -473,7 +473,9 @@ export function CalendarPage({
       style={{ touchAction: 'pan-y' }}
     >
       <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
-        <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Calendar</p>
+        <p className="uppercase tracking-[0.18em] text-stone-500" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
+          Calendar
+        </p>
         <div className="mt-1 flex items-center justify-between gap-2">
           <button
             type="button"
@@ -488,7 +490,7 @@ export function CalendarPage({
             className="calendar-month-title-trigger relative inline-flex items-center gap-1.5 text-stone-900"
             title={monthPickerLabel}
           >
-            <span className="text-2xl">{monthLabel(monthKey)}</span>
+            <span style={{ fontSize: 'calc(var(--ui-header-title-size, 17px) + 7px)' }}>{monthLabel(monthKey)}</span>
             <span className="text-sm text-stone-500">▾</span>
             <input
               type="month"

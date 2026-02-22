@@ -73,6 +73,7 @@ import { LettersABPage } from './pages/LettersABPage';
 import { FitnessPage } from './pages/FitnessPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TarotPage } from './pages/TarotPage';
+import { MoodLettersPage } from './pages/MoodLettersPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
 import type { AppSettings, CalendarColorMode, TabIconKey } from './types/settings';
 import { DEFAULT_SETTINGS } from './types/settings';
@@ -106,7 +107,8 @@ type LauncherAppId =
   | 'album'
   | 'bookshelf'
   | 'notes'
-  | 'soulmate';
+  | 'soulmate'
+  | 'moodLetters';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -1362,12 +1364,12 @@ function App() {
         ['--app-font-scale' as string]: settings.fontScale,
         ['--app-font-family' as string]: appFontFamily,
         ['--app-heading-family' as string]: appHeadingFamily,
-        ['--ui-header-title-size' as string]: `${settings.uiHeaderTitleSize}px`,
-        ['--ui-tab-label-size' as string]: `${settings.uiTabLabelSize}px`,
-        ['--ui-filter-pill-size' as string]: `${settings.uiFilterPillSize}px`,
-        ['--ui-hint-text-size' as string]: `${settings.uiHintTextSize}px`,
-        ['--chat-contact-title-size' as string]: `${settings.chatContactNameSize}px`,
-        ['--chat-contact-subtitle-size' as string]: `${settings.chatContactSubtitleSize}px`,
+        ['--ui-header-title-size' as string]: `${settings.uiHeaderTitleSize * settings.fontScale}px`,
+        ['--ui-tab-label-size' as string]: `${settings.uiTabLabelSize * settings.fontScale}px`,
+        ['--ui-filter-pill-size' as string]: `${settings.uiFilterPillSize * settings.fontScale}px`,
+        ['--ui-hint-text-size' as string]: `${settings.uiHintTextSize * settings.fontScale}px`,
+        ['--chat-contact-title-size' as string]: `${settings.chatContactNameSize * settings.fontScale}px`,
+        ['--chat-contact-subtitle-size' as string]: `${settings.chatContactSubtitleSize * settings.fontScale}px`,
         ['--calendar-cell-radius' as string]: `${settings.calendarCellRadius}px`,
         ['--calendar-cell-shadow' as string]: settings.calendarCellShadow,
         ['--calendar-cell-depth' as string]: settings.calendarCellDepth,
@@ -1687,6 +1689,14 @@ function App() {
                   onExit={() => setLauncherApp(null)}
                   soulmateFontFamily={soulmateFontFamily}
                 />
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'moodLetters' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#0b1023' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <MoodLettersPage onExit={() => setLauncherApp(null)} letterFontFamily={letterFontFamily} />
               </div>
             </div>
           )}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
+import { SettingsAccordion } from '../components/SettingsAccordion';
 import { CHIBI_POOL_UPDATED_EVENT, getActiveBaseChibiSources } from '../lib/chibiPool';
 
 type CheckinStyle = 'glass' | 'soft' | 'minimal';
@@ -388,6 +389,10 @@ export function CheckinPage() {
   const [checkinBackupBusy, setCheckinBackupBusy] = useState(false);
   const [checkinBackupStatus, setCheckinBackupStatus] = useState('');
   const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [checkinSettingsPanels, setCheckinSettingsPanels] = useState({
+    backup: false,
+    danger: false,
+  });
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [signInPhrases, setSignInPhrases] = useState<string[]>(DEFAULT_SIGNIN_PHRASES);
   const [milestonePhrases, setMilestonePhrases] = useState<MilestonePhrases>(DEFAULT_MILESTONE_PHRASES);
@@ -848,86 +853,103 @@ export function CheckinPage() {
           <h3 className="mt-1 text-lg text-stone-900">打卡備份</h3>
 
           <div className="mt-3 space-y-2">
-            <button
-              type="button"
-              onClick={exportCheckinBackup}
-              disabled={checkinBackupBusy}
-              className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-left transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            <SettingsAccordion
+              title="資料備份"
+              subtitle="匯出、合併匯入、覆蓋匯入"
+              isOpen={checkinSettingsPanels.backup}
+              onToggle={() => setCheckinSettingsPanels((prev) => ({ ...prev, backup: !prev.backup }))}
+              className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5"
+              bodyClassName="mt-2 space-y-2"
             >
-              <span className="flex items-center gap-3">
-                <span className="w-6 text-center text-lg">📤</span>
-                <span className="flex-1">
-                  <span className="block text-sm text-stone-700">匯出備份</span>
-                  <span className="block text-[10.5px] text-stone-400">下載 JSON（可回復）</span>
-                </span>
-              </span>
-            </button>
-
-            <label className="block w-full cursor-pointer rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 transition active:scale-[0.98]">
-              <span className="flex items-center gap-3">
-                <span className="w-6 text-center text-lg">📥</span>
-                <span className="flex-1">
-                  <span className="block text-sm text-stone-700">匯入備份（合併）</span>
-                  <span className="block text-[10.5px] text-stone-400">保留現有資料，加入新資料</span>
-                </span>
-              </span>
-              <input
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
+              <button
+                type="button"
+                onClick={exportCheckinBackup}
                 disabled={checkinBackupBusy}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.currentTarget.value = '';
-                  if (file) {
-                    void importCheckinBackup('merge', file);
-                  }
-                }}
-              />
-            </label>
-
-            <label className="block w-full cursor-pointer rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 transition active:scale-[0.98]">
-              <span className="flex items-center gap-3">
-                <span className="w-6 text-center text-lg">♻️</span>
-                <span className="flex-1">
-                  <span className="block text-sm text-rose-700">匯入備份（覆蓋）</span>
-                  <span className="block text-[10.5px] text-rose-400">用備份內容直接取代目前資料</span>
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-left transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="flex items-center gap-3">
+                  <span className="w-6 text-center text-lg">📤</span>
+                  <span className="flex-1">
+                    <span className="block text-sm text-stone-700">匯出備份</span>
+                    <span className="block text-[10.5px] text-stone-400">下載 JSON（可回復）</span>
+                  </span>
                 </span>
-              </span>
-              <input
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
-                disabled={checkinBackupBusy}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.currentTarget.value = '';
-                  if (file) {
-                    void importCheckinBackup('overwrite', file);
-                  }
-                }}
-              />
-            </label>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (confirmClearAll) {
-                  clearAllCheckins();
-                  return;
-                }
-                setConfirmClearAll(true);
-              }}
-              className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition active:scale-[0.98] ${
-                confirmClearAll
-                  ? 'border-rose-400 bg-rose-50 text-rose-600'
-                  : 'border-stone-200 bg-stone-50 text-stone-500'
-              }`}
+              <label className="block w-full cursor-pointer rounded-xl border border-stone-200 bg-white px-4 py-3 transition active:scale-[0.98]">
+                <span className="flex items-center gap-3">
+                  <span className="w-6 text-center text-lg">📥</span>
+                  <span className="flex-1">
+                    <span className="block text-sm text-stone-700">匯入備份（合併）</span>
+                    <span className="block text-[10.5px] text-stone-400">保留現有資料，加入新資料</span>
+                  </span>
+                </span>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  disabled={checkinBackupBusy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.currentTarget.value = '';
+                    if (file) {
+                      void importCheckinBackup('merge', file);
+                    }
+                  }}
+                />
+              </label>
+
+              <label className="block w-full cursor-pointer rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 transition active:scale-[0.98]">
+                <span className="flex items-center gap-3">
+                  <span className="w-6 text-center text-lg">♻️</span>
+                  <span className="flex-1">
+                    <span className="block text-sm text-rose-700">匯入備份（覆蓋）</span>
+                    <span className="block text-[10.5px] text-rose-400">用備份內容直接取代目前資料</span>
+                  </span>
+                </span>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  disabled={checkinBackupBusy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.currentTarget.value = '';
+                    if (file) {
+                      void importCheckinBackup('overwrite', file);
+                    }
+                  }}
+                />
+              </label>
+              {checkinBackupStatus && <p className="px-1 text-xs text-stone-500">{checkinBackupStatus}</p>}
+            </SettingsAccordion>
+
+            <SettingsAccordion
+              title="資料清理"
+              subtitle="危險操作"
+              isOpen={checkinSettingsPanels.danger}
+              onToggle={() => setCheckinSettingsPanels((prev) => ({ ...prev, danger: !prev.danger }))}
+              className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5"
+              bodyClassName="mt-2"
             >
-              🗑️ {confirmClearAll ? '確定清除全部打卡？' : '清除全部打卡紀錄'}
-            </button>
-
-            {checkinBackupStatus && <p className="px-1 text-xs text-stone-500">{checkinBackupStatus}</p>}
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirmClearAll) {
+                    clearAllCheckins();
+                    return;
+                  }
+                  setConfirmClearAll(true);
+                }}
+                className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition active:scale-[0.98] ${
+                  confirmClearAll
+                    ? 'border-rose-400 bg-rose-50 text-rose-600'
+                    : 'border-stone-200 bg-white text-stone-500'
+                }`}
+              >
+                🗑️ {confirmClearAll ? '確定清除全部打卡？' : '清除全部打卡紀錄'}
+              </button>
+            </SettingsAccordion>
           </div>
         </ModalFrame>
       )}

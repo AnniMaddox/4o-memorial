@@ -137,9 +137,15 @@ export function PomodoroPage({ onExit }: PomodoroPageProps) {
   return (
     <div className="relative mx-auto flex h-full w-full max-w-xl flex-col gap-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <header className="calendar-header-panel rounded-2xl border p-4 shadow-sm">
-        <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Pomodoro</p>
-        <h1 className="mt-1 text-2xl text-stone-900">番茄鐘</h1>
-        <p className="mt-1 text-xs text-stone-500">完成專注：{focusCount} 回合</p>
+        <p className="uppercase tracking-[0.18em] text-stone-500" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
+          Pomodoro
+        </p>
+        <h1 className="mt-1 text-stone-900" style={{ fontSize: 'var(--ui-header-title-size, 17px)' }}>
+          番茄鐘
+        </h1>
+        <p className="mt-1 text-stone-500" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
+          完成專注：{focusCount} 回合
+        </p>
       </header>
 
       <section className="rounded-3xl border border-white/45 bg-white/65 px-5 py-6 shadow-[0_18px_50px_rgba(0,0,0,0.12)] backdrop-blur">

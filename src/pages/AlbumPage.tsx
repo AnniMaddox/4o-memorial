@@ -19,6 +19,15 @@ const ALL_PHOTO_MODULES = import.meta.glob(
   { eager: true, import: 'default' },
 ) as Record<string, string>;
 
+const ALBUM_SETTINGS_CHIBI_MODULES = import.meta.glob('../../public/chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
+
+const ALBUM_SETTINGS_CHIBI_SOURCES = Object.entries(ALBUM_SETTINGS_CHIBI_MODULES)
+  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+  .map(([, src]) => src);
+
 type AlbumMeta = {
   id: string;
   title: string;
@@ -41,6 +50,11 @@ type AlbumOverride = {
 };
 
 type AlbumOverrides = Record<string, AlbumOverride>;
+
+function pickRandom<T>(items: T[]) {
+  if (!items.length) return null;
+  return items[Math.floor(Math.random() * items.length)] ?? null;
+}
 
 function normalizeAlbumOverride(value: unknown): AlbumOverride {
   if (!value || typeof value !== 'object') return {};
@@ -306,6 +320,8 @@ function AlbumShelf({
   onOpen: (albumId: string) => void;
   onOpenManager: () => void;
 }) {
+  const [shelfChibiSrc] = useState(() => pickRandom(ALBUM_SETTINGS_CHIBI_SOURCES) ?? CHIBI_00_SRC);
+
   return (
     <div
       className="mx-auto w-full max-w-xl overflow-y-auto px-4 pb-6 pt-5"
@@ -330,10 +346,10 @@ function AlbumShelf({
           title="相冊設定"
         >
           <img
-            src={CHIBI_00_SRC}
+            src={shelfChibiSrc}
             alt=""
             draggable={false}
-            className="calendar-chibi w-16 select-none"
+            className="calendar-chibi w-24 select-none"
           />
         </button>
       </header>
@@ -532,9 +548,11 @@ function AlbumManager({
                   <button
                     type="button"
                     onClick={() => onResetAlbum(album.id)}
-                    className="rounded-lg border border-stone-300 px-2 py-1 text-[11px] text-stone-600 transition active:scale-95"
+                    className="grid h-7 w-7 place-items-center rounded-full border border-stone-300 text-sm text-stone-600 transition active:scale-95"
+                    title="還原預設"
+                    aria-label="還原預設"
                   >
-                    還原預設
+                    ↺
                   </button>
                 </div>
               </div>

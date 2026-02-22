@@ -917,7 +917,7 @@ export async function exportAboutMeBackupPackage(): Promise<string> {
   downloadJson(checkinFile, checkinPayload);
   downloadJson(manifestFile, manifest);
 
-  return `關於我已匯出：${diaryBEntries.length} 篇日記B、${notes.length} 則便利貼。`;
+  return `關於我已匯出：${diaryBEntries.length} 篇 Anni 日記、${notes.length} 則便利貼。`;
 }
 
 export async function exportAboutMBackupPackage(): Promise<string> {
@@ -1210,7 +1210,7 @@ export async function importAboutMeBackupPackage(files: File[], mode: BackupImpo
     }
   }
 
-  return `關於我匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：日記B ${diaryBCount}、便利貼 ${notesCount}。`;
+  return `關於我匯入完成（${mode === 'overwrite' ? '覆蓋' : '合併'}）：Anni 日記 ${diaryBCount}、便利貼 ${notesCount}。`;
 }
 
 export async function importAboutMBackupPackage(files: File[], mode: BackupImportMode): Promise<string> {
