@@ -158,6 +158,30 @@ function parseDateFromText(source: string): Date | null {
   return null;
 }
 
+function pickDateFromCandidates(candidates: string[]) {
+  for (const candidate of candidates) {
+    const parsed = parseDateFromText(candidate);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+function collectDateCandidates(params: { entryName: string; baseTitle: string; entryTitle: string; lines: string[] }) {
+  const { entryName, baseTitle, entryTitle, lines } = params;
+  const topLines = lines.slice(0, 2);
+  const tailLines = lines.slice(-2);
+  const ordered = [entryName, baseTitle, entryTitle, ...topLines, ...tailLines];
+  const dedup = new Set<string>();
+  const result: string[] = [];
+  for (const value of ordered) {
+    const normalized = value.trim();
+    if (!normalized || dedup.has(normalized)) continue;
+    dedup.add(normalized);
+    result.push(normalized);
+  }
+  return result;
+}
+
 function looksLikeDateLine(line: string) {
   if (!parseDateFromText(line)) return false;
   const stripped = line.replace(/[\s\d年月日\/.\-_:：()（）星期禮拜一二三四五六日天]/g, '');
@@ -286,10 +310,13 @@ export function MDiaryPage({
       const baseTitle = toBaseTitle(entry.name) || entry.title?.trim() || '未命名日記';
       const text = normalizeText(entry.content || extractHtmlPlainText(entry.htmlContent || ''));
       const lines = splitMeaningfulLines(text);
-      const parsedDate =
-        parseDateFromText(entry.name) ??
-        parseDateFromText(lines[0] ?? '') ??
-        parseDateFromText(entry.title ?? '');
+      const dateCandidates = collectDateCandidates({
+        entryName: entry.name,
+        baseTitle,
+        entryTitle: entry.title ?? '',
+        lines,
+      });
+      const parsedDate = pickDateFromCandidates(dateCandidates);
       const title = buildDisplayTitle(baseTitle, lines);
       const snippet = buildSnippet(lines, title, text);
 

@@ -60,6 +60,7 @@ import {
   type AboutMPart,
   type BackupImportMode,
 } from './lib/bigBackup';
+import { emitActionToast, subscribeActionToast, type ActionToastKind } from './lib/actionToast';
 import type { ChatProfile } from './lib/chatDB';
 import { AlbumPage } from './pages/AlbumPage';
 import { NotesPage } from './pages/NotesPage';
@@ -79,6 +80,11 @@ type LoadState = 'loading' | 'ready' | 'error';
 type BrowserNotificationPermission = NotificationPermission | 'unsupported';
 type ImportStatus = {
   kind: 'idle' | 'working' | 'success' | 'error';
+  message: string;
+};
+type ActionToastState = {
+  id: number;
+  kind: ActionToastKind;
   message: string;
 };
 type LauncherAppId =
@@ -249,6 +255,7 @@ function App() {
   const [totalEmailCount, setTotalEmailCount] = useState(0);
   const [monthCount, setMonthCount] = useState(0);
   const [importStatus, setImportStatus] = useState<ImportStatus>({ kind: 'idle', message: '' });
+  const [actionToast, setActionToast] = useState<ActionToastState | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<BrowserNotificationPermission>(
     getNotificationPermission,
   );
@@ -335,6 +342,7 @@ function App() {
   const readEmailIdsRef = useRef<Set<string>>(new Set<string>());
   const calendarMonthCacheRef = useRef<Map<string, CalendarMonth>>(new Map());
   const calendarMonthRequestRef = useRef(0);
+  const actionToastTimerRef = useRef<number | null>(null);
   const [notifierLoaded, setNotifierLoaded] = useState(false);
 
   const refreshData = useCallback(async () => {
@@ -666,9 +674,18 @@ function App() {
   );
 
   const handleSaveChatProfile = useCallback(async (profile: ChatProfile) => {
-    await saveChatProfile(profile);
-    const updated = await loadChatProfiles();
-    setChatProfiles(updated);
+    try {
+      await saveChatProfile(profile);
+      const updated = await loadChatProfiles();
+      setChatProfiles(updated);
+      return true;
+    } catch (error) {
+      emitActionToast({
+        kind: 'error',
+        message: `儲存角色設定失敗：${error instanceof Error ? error.message : '未知錯誤'}`,
+      });
+      return false;
+    }
   }, []);
 
   const handleDeleteChatProfile = useCallback(async (id: string) => {
@@ -727,6 +744,35 @@ function App() {
 
     style.textContent = buildFontFaceRule(APP_CUSTOM_FONT_FAMILY, href);
   }, [settings.customFontFileUrl]);
+
+  useEffect(() => {
+    return subscribeActionToast((payload) => {
+      const nextId = Date.now() + Math.floor(Math.random() * 1000);
+      const nextKind: ActionToastKind = payload.kind ?? 'info';
+      const duration = Math.max(900, Math.min(6000, payload.durationMs ?? 1800));
+      setActionToast({
+        id: nextId,
+        kind: nextKind,
+        message: payload.message,
+      });
+
+      if (actionToastTimerRef.current !== null) {
+        window.clearTimeout(actionToastTimerRef.current);
+      }
+      actionToastTimerRef.current = window.setTimeout(() => {
+        setActionToast((current) => (current?.id === nextId ? null : current));
+        actionToastTimerRef.current = null;
+      }, duration);
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (actionToastTimerRef.current !== null) {
+        window.clearTimeout(actionToastTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -850,8 +896,17 @@ function App() {
   }, [checkForNewUnlocks, loadState, notifierLoaded]);
 
   const onSettingChange = useCallback(async (partial: Partial<AppSettings>) => {
-    const next = await saveSettings(partial);
-    setSettings(next);
+    try {
+      const next = await saveSettings(partial);
+      setSettings(next);
+      return true;
+    } catch (error) {
+      emitActionToast({
+        kind: 'error',
+        message: `保存失敗：${error instanceof Error ? error.message : '未知錯誤'}`,
+      });
+      return false;
+    }
   }, []);
 
   const onRequestNotificationPermission = useCallback(async () => {
@@ -1141,7 +1196,7 @@ function App() {
             onImportAboutMeBackup={(files, mode) => handleImportAboutMeBackup(files, mode)}
             onImportAboutMBackup={(files, mode) => handleImportAboutMBackup(files, mode)}
             onImportAboutMBackupPart={(part, files, mode) => handleImportAboutMBackupPart(part, files, mode)}
-            onSaveChatProfile={(profile) => void handleSaveChatProfile(profile)}
+            onSaveChatProfile={(profile) => handleSaveChatProfile(profile)}
             onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
             onHoverToneWeightChange={onHoverToneWeightChange}
             onReshuffleHoverPhrases={onReshuffleHoverPhrases}
@@ -1213,9 +1268,10 @@ function App() {
   const bottomTabs = useMemo(
     () => [
       {
-        id: 'chat',
-        label: appLabels.chat,
-        icon: '💬',
+        id: 'home',
+        label: appLabels.home,
+        icon: DEFAULT_TAB_ICONS.home,
+        iconUrl: settings.tabIconUrls.home || undefined,
       },
       {
         id: 'inbox',
@@ -1230,10 +1286,9 @@ function App() {
         iconUrl: settings.tabIconUrls.calendar || undefined,
       },
       {
-        id: 'home',
-        label: appLabels.home,
-        icon: DEFAULT_TAB_ICONS.home,
-        iconUrl: settings.tabIconUrls.home || undefined,
+        id: 'chat',
+        label: appLabels.chat,
+        icon: '💬',
       },
     ],
     [
@@ -1250,20 +1305,19 @@ function App() {
   const activeBottomTab = useMemo(() => {
     if (activeTab === 1) return 1;
     if (activeTab === 2) return 2;
-    if (activeTab === 0) return 3;
+    if (activeTab === 0) return 0;
     return -1;
   }, [activeTab]);
 
   const onSelectBottomTab = useCallback((index: number) => {
     if (index === 0) {
       setActiveTab(0);
-      setLauncherApp('chat');
+      setLauncherApp(null);
       return;
     }
 
     if (index === 1) {
       setActiveTab(1);
-      setLauncherApp(null);
       return;
     }
 
@@ -1274,7 +1328,7 @@ function App() {
     }
 
     setActiveTab(0);
-    setLauncherApp(null);
+    setLauncherApp('chat');
   }, []);
 
   return (
@@ -1431,7 +1485,7 @@ function App() {
                   onImportChatLogFolderFiles={(files) => void handleImportChatLogFolderFiles(files)}
                   onClearAllChatLogs={() => void handleClearAllChatLogs()}
                   onDeleteChatLog={(name) => void handleDeleteChatLog(name)}
-                  onSaveChatProfile={(profile) => void handleSaveChatProfile(profile)}
+                  onSaveChatProfile={(profile) => handleSaveChatProfile(profile)}
                   onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
                   onBindLogProfile={(logName, profileId) => void handleBindChatLogProfile(logName, profileId)}
                   onExit={() => {
@@ -1624,6 +1678,22 @@ function App() {
             </div>
           )}
         </>
+      )}
+
+      {actionToast && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[250] flex justify-center px-4">
+          <div
+            className={`max-w-[92vw] rounded-2xl border px-4 py-2 text-sm shadow-lg backdrop-blur ${
+              actionToast.kind === 'error'
+                ? 'border-rose-300 bg-rose-50/95 text-rose-700'
+                : actionToast.kind === 'success'
+                  ? 'border-emerald-300 bg-emerald-50/95 text-emerald-700'
+                  : 'border-stone-300 bg-white/95 text-stone-700'
+            }`}
+          >
+            {actionToast.message}
+          </div>
+        </div>
       )}
     </div>
   );
