@@ -61,7 +61,7 @@ async function migrateFromLegacyDiaryDbIfNeeded(currentEntries: StoredMDiary[]) 
   if (currentEntries.length > 0) return currentEntries;
 
   try {
-    const legacyDb = await openDB(LEGACY_DB_NAME, 1);
+    const legacyDb = await openDB(LEGACY_DB_NAME);
     if (!legacyDb.objectStoreNames.contains(STORE)) {
       return currentEntries;
     }
