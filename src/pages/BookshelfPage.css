@@ -246,35 +246,38 @@
 }
 
 .bsl-book.bsl-spine-pattern-linen::after {
-  opacity: 0.32;
+  opacity: 0.56;
   background-image:
     repeating-linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.17) 0 1px,
-      rgba(255, 255, 255, 0) 1px 5px
+      rgba(255, 255, 255, 0.26) 0 1px,
+      rgba(255, 255, 255, 0.03) 1px 4px
     ),
     repeating-linear-gradient(
       0deg,
-      rgba(0, 0, 0, 0.14) 0 1px,
-      rgba(0, 0, 0, 0) 1px 7px
-    );
+      rgba(0, 0, 0, 0.24) 0 1px,
+      rgba(0, 0, 0, 0) 1px 6px
+    ),
+    linear-gradient(115deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.14));
 }
 
 .bsl-book.bsl-spine-pattern-grain::after {
-  opacity: 0.3;
+  opacity: 0.5;
   background-image:
-    radial-gradient(circle at 15% 8%, rgba(255, 255, 255, 0.2) 0 1.1px, transparent 1.9px),
-    radial-gradient(circle at 42% 31%, rgba(0, 0, 0, 0.2) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 66% 19%, rgba(255, 255, 255, 0.18) 0 0.95px, transparent 1.7px),
-    radial-gradient(circle at 78% 40%, rgba(0, 0, 0, 0.18) 0 1.05px, transparent 1.9px),
-    radial-gradient(circle at 22% 65%, rgba(255, 255, 255, 0.15) 0 0.9px, transparent 1.7px);
+    radial-gradient(circle at 14% 9%, rgba(255, 255, 255, 0.28) 0 1.15px, transparent 2px),
+    radial-gradient(circle at 42% 31%, rgba(0, 0, 0, 0.28) 0 1.05px, transparent 1.9px),
+    radial-gradient(circle at 66% 19%, rgba(255, 255, 255, 0.24) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 78% 40%, rgba(0, 0, 0, 0.22) 0 1.15px, transparent 1.95px),
+    radial-gradient(circle at 23% 65%, rgba(255, 255, 255, 0.2) 0 0.95px, transparent 1.8px),
+    linear-gradient(125deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.15));
 }
 
 .bsl-book.bsl-spine-pattern-dots::after {
-  opacity: 0.28;
+  opacity: 0.48;
   background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.2) 1px, transparent 1.8px);
-  background-size: 8px 8px;
+    radial-gradient(circle, rgba(255, 255, 255, 0.26) 1px, transparent 2px),
+    linear-gradient(115deg, rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.08));
+  background-size: 7px 7px, 100% 100%;
   background-position: 0 0;
 }
 
@@ -432,12 +435,18 @@
   opacity: 1;
 }
 
+.bsl-shelf-chibi:active .bsl-chibi-img {
+  transform: scale(0.94);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.36)) brightness(0.95);
+}
+
 .bsl-chibi-img {
   width: 100%;
   height: auto;
   display: block;
   user-select: none;
   pointer-events: none;
+  transition: transform 0.16s ease, filter 0.16s ease;
   filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.32));
 }
 

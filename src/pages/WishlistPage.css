@@ -1388,6 +1388,14 @@
   pointer-events: auto;
   border: 0;
   background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.wl-chibi-btn:active {
+  transform: scale(0.94);
+  filter: brightness(0.95);
 }
 
 .wl-chibi-fallback {

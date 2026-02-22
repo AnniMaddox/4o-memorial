@@ -105,11 +105,12 @@ function pickSpinePatternClass(book: Book, index: number) {
   }
 
   const patterns = ['bsl-spine-pattern-linen', 'bsl-spine-pattern-grain', 'bsl-spine-pattern-dots'];
-  const shouldHide = index % 2 === 1 && Math.abs(hash) % 3 === 0;
+  const seedValue = Math.abs(hash + index * 131);
+  const shouldHide = seedValue % 5 === 0;
   if (shouldHide) {
     return '';
   }
-  return patterns[(Math.abs(hash) + index) % patterns.length]!;
+  return patterns[Math.floor(seedValue / 3) % patterns.length]!;
 }
 
 function normalizeSubtitle(value: string | undefined) {

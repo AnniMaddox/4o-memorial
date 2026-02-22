@@ -364,6 +364,14 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.la-chibi-btn:active {
+  transform: scale(0.94);
+  filter: brightness(0.95);
 }
 
 .la-chibi-hint {
