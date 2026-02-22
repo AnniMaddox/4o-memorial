@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
+import { emitActionToast } from '../lib/actionToast';
 import { APP_CUSTOM_FONT_FAMILY, SETTINGS_PREVIEW_FONT_FAMILY, buildFontFaceRule } from '../lib/font';
 import type { ChatProfile } from '../lib/chatDB';
 import type { AppLabelKey, AppLabels, AppSettings, BackgroundMode, TabIconKey, TabIconUrls } from '../types/settings';
@@ -47,7 +48,7 @@ type SettingsPageProps = {
     files: File[],
     mode: 'merge' | 'overwrite',
   ) => Promise<string> | string;
-  onSaveChatProfile: (profile: ChatProfile) => void;
+  onSaveChatProfile: (profile: ChatProfile) => Promise<boolean> | boolean;
   onDeleteChatProfile: (id: string) => void;
   onHoverToneWeightChange: (tone: 'clingy' | 'confession' | 'calm' | 'remorse' | 'general', weight: number) => void;
   onReshuffleHoverPhrases: () => void;
@@ -61,6 +62,7 @@ type PanelKey =
   | 'overview'
   | 'bigBackup'
   | 'appearance'
+  | 'fontCenter'
   | 'home'
   | 'labels'
   | 'tabIcons'
@@ -75,13 +77,25 @@ type PanelKey =
   | 'chatLogs'
   | 'maintenance';
 
-type AppearanceGroupKey = 'colorScale' | 'font' | 'background' | 'calendar' | 'chibi' | 'preset';
+type AppearanceGroupKey = 'colorScale' | 'background' | 'calendar' | 'chibi' | 'preset';
+type FontCenterGroupKey = 'preset' | 'scope' | 'usage';
 type FontSlotSettingKey = 'customFontUrlSlots' | 'letterFontUrlSlots' | 'diaryFontUrlSlots' | 'soulmateFontUrlSlots';
 type FontSlotNameSettingKey =
   | 'customFontUrlSlotNames'
   | 'letterFontUrlSlotNames'
   | 'diaryFontUrlSlotNames'
   | 'soulmateFontUrlSlotNames';
+type FontApplyTargetKey = 'app' | 'letter' | 'diary' | 'soulmate';
+const FONT_PRESET_KEY: FontSlotSettingKey = 'customFontUrlSlots';
+const FONT_PRESET_LIMIT = 8;
+const FONT_PRESET_INDICES = Array.from({ length: FONT_PRESET_LIMIT }, (_, index) => index);
+
+const FONT_TARGET_OPTIONS: Array<{ key: FontApplyTargetKey; label: string; hint: string }> = [
+  { key: 'app', label: '整站', hint: '主標題 / 頁籤等基底字體' },
+  { key: 'letter', label: '情書', hint: '情書頁閱讀文字' },
+  { key: 'diary', label: '日記', hint: 'M 日記 / 日記B / 願望' },
+  { key: 'soulmate', label: '家頁', hint: '家閱讀頁' },
+];
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   home: '🏠',
@@ -341,10 +355,7 @@ export function SettingsPage({
   onRefresh,
 }: SettingsPageProps) {
   const [openPanel, setOpenPanel] = useState<PanelKey | null>('appearance');
-  const [letterFontUrlDraft, setLetterFontUrlDraft] = useState(settings.letterFontUrl);
   const [diaryCoverUrlDraft, setDiaryCoverUrlDraft] = useState(settings.diaryCoverImageUrl);
-  const [diaryFontUrlDraft, setDiaryFontUrlDraft] = useState(settings.diaryFontUrl);
-  const [soulmateFontUrlDraft, setSoulmateFontUrlDraft] = useState(settings.soulmateFontUrl);
   const [tarotGalleryUrlDraft, setTarotGalleryUrlDraft] = useState(settings.tarotGalleryImageUrl);
   const [homeWidgetTitleDraft, setHomeWidgetTitleDraft] = useState(settings.homeWidgetTitle);
   const [homeWidgetBadgeDraft, setHomeWidgetBadgeDraft] = useState(settings.homeWidgetBadgeText);
@@ -359,8 +370,7 @@ export function SettingsPage({
     rightAvatarDataUrl: '',
   });
   const [showNewProfile, setShowNewProfile] = useState(false);
-  const [fontFileUrlDraft, setFontFileUrlDraft] = useState(settings.customFontFileUrl);
-  const [fontFamilyDraft, setFontFamilyDraft] = useState(settings.customFontFamily);
+  const [fontFileUrlDraft, setFontFileUrlDraft] = useState(settings.customFontUrlSlots[0] ?? settings.customFontFileUrl);
   const [backgroundImageUrlDraft, setBackgroundImageUrlDraft] = useState(settings.backgroundImageUrl);
   const [tabIconDrafts, setTabIconDrafts] = useState<TabIconUrls>(settings.tabIconUrls);
   const [labelDrafts, setLabelDrafts] = useState<AppLabels>(settings.appLabels);
@@ -374,6 +384,7 @@ export function SettingsPage({
   const [backupBusy, setBackupBusy] = useState<'aboutMe' | 'aboutM' | null>(null);
   const [openBackupGroup, setOpenBackupGroup] = useState<'aboutMe' | 'aboutM' | null>('aboutMe');
   const [openAppearanceGroup, setOpenAppearanceGroup] = useState<AppearanceGroupKey | null>('colorScale');
+  const [openFontCenterGroup, setOpenFontCenterGroup] = useState<FontCenterGroupKey | null>('preset');
   const [openChatBubbleGroup, setOpenChatBubbleGroup] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [selectedFontSlotIndex, setSelectedFontSlotIndex] = useState<Record<FontSlotSettingKey, number>>({
@@ -381,6 +392,23 @@ export function SettingsPage({
     letterFontUrlSlots: 0,
     diaryFontUrlSlots: 0,
     soulmateFontUrlSlots: 0,
+  });
+  const [fontPresetSelection, setFontPresetSelection] = useState<number | null>(0);
+  const [fontScopePresetSelection, setFontScopePresetSelection] = useState<number | null>(() => {
+    const appUrl = settings.customFontFileUrl.trim();
+    if (!appUrl) return null;
+    const slots = FONT_PRESET_INDICES.map((index) => settings.customFontUrlSlots[index] ?? '').map((item) =>
+      item.trim(),
+    );
+    const found = slots.findIndex((item) => item === appUrl);
+    return found >= 0 ? found : null;
+  });
+  const [fontUsagePreviewTarget, setFontUsagePreviewTarget] = useState<FontApplyTargetKey>('app');
+  const [fontApplyTargets, setFontApplyTargets] = useState<Record<FontApplyTargetKey, boolean>>({
+    app: true,
+    letter: true,
+    diary: true,
+    soulmate: false,
   });
   const [fontSlotNameDrafts, setFontSlotNameDrafts] = useState<Record<FontSlotSettingKey, string>>({
     customFontUrlSlots: settings.customFontUrlSlotNames[0] ?? '',
@@ -390,15 +418,10 @@ export function SettingsPage({
   });
 
   useEffect(() => {
-    setFontFileUrlDraft(settings.customFontFileUrl);
-    setFontFamilyDraft(settings.customFontFamily);
     setBackgroundImageUrlDraft(settings.backgroundImageUrl);
     setTabIconDrafts(settings.tabIconUrls);
     setLabelDrafts(settings.appLabels);
-    setLetterFontUrlDraft(settings.letterFontUrl);
     setDiaryCoverUrlDraft(settings.diaryCoverImageUrl);
-    setDiaryFontUrlDraft(settings.diaryFontUrl);
-    setSoulmateFontUrlDraft(settings.soulmateFontUrl);
     setTarotGalleryUrlDraft(settings.tarotGalleryImageUrl);
     setHomeWidgetTitleDraft(settings.homeWidgetTitle);
     setHomeWidgetBadgeDraft(settings.homeWidgetBadgeText);
@@ -406,15 +429,10 @@ export function SettingsPage({
     setInboxTitleDraft(settings.inboxTitle);
     setMemorialStartDateDraft(settings.memorialStartDate);
   }, [
-    settings.customFontFileUrl,
-    settings.customFontFamily,
     settings.backgroundImageUrl,
     settings.tabIconUrls,
     settings.appLabels,
-    settings.letterFontUrl,
     settings.diaryCoverImageUrl,
-    settings.diaryFontUrl,
-    settings.soulmateFontUrl,
     settings.tarotGalleryImageUrl,
     settings.homeWidgetTitle,
     settings.homeWidgetBadgeText,
@@ -440,6 +458,16 @@ export function SettingsPage({
     settings.diaryFontUrlSlotNames,
     settings.soulmateFontUrlSlotNames,
   ]);
+
+  useEffect(() => {
+    if (fontPresetSelection === null) {
+      return;
+    }
+    const slots = getFontSlots(FONT_PRESET_KEY);
+    const names = getFontSlotNames(FONT_PRESET_KEY);
+    setFontFileUrlDraft(slots[fontPresetSelection] ?? '');
+    setFontSlotLabelDraft(FONT_PRESET_KEY, names[fontPresetSelection] ?? '');
+  }, [fontPresetSelection, settings.customFontUrlSlots, settings.customFontUrlSlotNames]);
 
   useEffect(() => {
     const styleId = 'settings-preview-font-file-style';
@@ -481,13 +509,148 @@ export function SettingsPage({
     setOpenAppearanceGroup((current) => (current === group ? null : group));
   }
 
-  function applyFontSettings() {
-    onSettingChange({
-      customFontCssUrl: '',
-      customFontFileUrl: fontFileUrlDraft.trim(),
-      customFontFamily: fontFamilyDraft.trim(),
-      customFontUrlSlots: settings.customFontUrlSlots,
+  function toggleFontCenterGroup(group: FontCenterGroupKey) {
+    setOpenFontCenterGroup((current) => (current === group ? null : group));
+  }
+
+  function toggleFontApplyTarget(key: FontApplyTargetKey) {
+    setFontApplyTargets((current) => ({ ...current, [key]: !current[key] }));
+  }
+
+  function setAllFontApplyTargets(checked: boolean) {
+    setFontApplyTargets({
+      app: checked,
+      letter: checked,
+      diary: checked,
+      soulmate: checked,
     });
+  }
+
+  function getAppliedFontUrlByTarget(target: FontApplyTargetKey) {
+    if (target === 'app') {
+      return settings.customFontFileUrl.trim();
+    }
+    if (target === 'letter') {
+      return settings.letterFontUrl.trim();
+    }
+    if (target === 'diary') {
+      return settings.diaryFontUrl.trim();
+    }
+    return settings.soulmateFontUrl.trim();
+  }
+
+  function parseFontPresetSelection(value: string): number | null {
+    if (value === 'blank') {
+      return null;
+    }
+    const parsed = Number(value);
+    if (Number.isNaN(parsed) || parsed < 0 || parsed >= FONT_PRESET_LIMIT) {
+      return null;
+    }
+    return parsed;
+  }
+
+  function selectFontPreset(index: number | null) {
+    setFontPresetSelection(index);
+    if (index === null) {
+      setFontFileUrlDraft('');
+      setFontSlotLabelDraft(FONT_PRESET_KEY, '');
+      return;
+    }
+    setSelectedFontSlotIndex((prev) => ({ ...prev, [FONT_PRESET_KEY]: index }));
+    loadFontSlot(FONT_PRESET_KEY, index);
+  }
+
+  function handleScopedFontFileUpload(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        return;
+      }
+
+      setFontDraftValue(FONT_PRESET_KEY, reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleSaveCurrentFontPreset() {
+    if (fontPresetSelection === null) {
+      emitActionToast({ kind: 'error', message: '請先選擇記憶 1~8 再保存' });
+      return;
+    }
+    saveFontSlot(FONT_PRESET_KEY, fontPresetSelection);
+  }
+
+  function handleDeleteCurrentFontPreset() {
+    if (fontPresetSelection === null) {
+      emitActionToast({ kind: 'error', message: '請先選擇要刪除的記憶 1~8' });
+      return;
+    }
+    clearFontSlot(FONT_PRESET_KEY, fontPresetSelection);
+  }
+
+  function applyFontToCheckedTargets() {
+    const selectedTargets = FONT_TARGET_OPTIONS.filter((item) => fontApplyTargets[item.key]);
+    if (!selectedTargets.length) {
+      emitActionToast({ kind: 'error', message: '請先勾選至少一個套用範圍' });
+      return;
+    }
+
+    const slots = getFontSlots(FONT_PRESET_KEY);
+    const url = fontScopePresetSelection === null ? '' : (slots[fontScopePresetSelection] ?? '').trim();
+    if (fontScopePresetSelection !== null && !url) {
+      emitActionToast({ kind: 'error', message: '此字體預設是空白，請先回上方保存字體來源' });
+      return;
+    }
+
+    const next: Partial<AppSettings> = {};
+    for (const target of selectedTargets) {
+      if (target.key === 'app') {
+        next.customFontCssUrl = '';
+        next.customFontFileUrl = url;
+        next.customFontFamily = '';
+      } else if (target.key === 'letter') {
+        next.letterFontUrl = url;
+      } else if (target.key === 'diary') {
+        next.diaryFontUrl = url;
+      } else if (target.key === 'soulmate') {
+        next.soulmateFontUrl = url;
+      }
+    }
+
+    onSettingChange(next);
+    emitActionToast({
+      kind: 'success',
+      message:
+        fontScopePresetSelection === null
+          ? `已還原預設字體：${selectedTargets.map((item) => item.label).join('、')}`
+          : `已套用字體預設 ${fontScopePresetSelection + 1}：${selectedTargets.map((item) => item.label).join('、')}`,
+    });
+  }
+
+  function restoreFontScopeDraft() {
+    setFontApplyTargets({
+      app: true,
+      letter: true,
+      diary: true,
+      soulmate: false,
+    });
+
+    const slots = getFontSlots(FONT_PRESET_KEY).map((item) => item.trim());
+    const appFontUrl = settings.customFontFileUrl.trim();
+    if (!appFontUrl) {
+      setFontScopePresetSelection(null);
+      emitActionToast({ kind: 'success', message: '字體套用範圍草稿已還原' });
+      return;
+    }
+
+    const foundIndex = slots.findIndex((item) => item === appFontUrl);
+    setFontScopePresetSelection(foundIndex >= 0 ? foundIndex : null);
+    emitActionToast({ kind: 'success', message: '字體套用範圍草稿已還原' });
   }
 
   function getFontSlots(key: FontSlotSettingKey) {
@@ -499,7 +662,7 @@ export function SettingsPage({
           : key === 'diaryFontUrlSlots'
             ? settings.diaryFontUrlSlots
             : settings.soulmateFontUrlSlots;
-    return [source[0] ?? '', source[1] ?? '', source[2] ?? ''];
+    return FONT_PRESET_INDICES.map((index) => source[index] ?? '');
   }
 
   function getFontSlotNameKey(key: FontSlotSettingKey): FontSlotNameSettingKey {
@@ -518,30 +681,20 @@ export function SettingsPage({
           : key === 'diaryFontUrlSlots'
             ? settings.diaryFontUrlSlotNames
             : settings.soulmateFontUrlSlotNames;
-    return [source[0] ?? '', source[1] ?? '', source[2] ?? ''];
+    return FONT_PRESET_INDICES.map((index) => source[index] ?? '');
   }
 
   function getFontDraftValue(key: FontSlotSettingKey) {
     if (key === 'customFontUrlSlots') return fontFileUrlDraft.trim();
-    if (key === 'letterFontUrlSlots') return letterFontUrlDraft.trim();
-    if (key === 'diaryFontUrlSlots') return diaryFontUrlDraft.trim();
-    return soulmateFontUrlDraft.trim();
+    if (key === 'letterFontUrlSlots') return settings.letterFontUrl.trim();
+    if (key === 'diaryFontUrlSlots') return settings.diaryFontUrl.trim();
+    return settings.soulmateFontUrl.trim();
   }
 
   function setFontDraftValue(key: FontSlotSettingKey, value: string) {
     if (key === 'customFontUrlSlots') {
       setFontFileUrlDraft(value);
-      return;
     }
-    if (key === 'letterFontUrlSlots') {
-      setLetterFontUrlDraft(value);
-      return;
-    }
-    if (key === 'diaryFontUrlSlots') {
-      setDiaryFontUrlDraft(value);
-      return;
-    }
-    setSoulmateFontUrlDraft(value);
   }
 
   function getFontSlotLabelDraft(key: FontSlotSettingKey) {
@@ -562,6 +715,7 @@ export function SettingsPage({
       [key]: nextSlots,
       [nameKey]: nextNames,
     } as Partial<AppSettings>);
+    emitActionToast({ kind: 'success', message: `字體記憶 ${index + 1} 已保存` });
   }
 
   function clearFontSlot(key: FontSlotSettingKey, index: number) {
@@ -576,6 +730,7 @@ export function SettingsPage({
     } as Partial<AppSettings>);
     setFontDraftValue(key, '');
     setFontSlotLabelDraft(key, '');
+    emitActionToast({ kind: 'success', message: `字體記憶 ${index + 1} 已清除` });
   }
 
   function loadFontSlot(key: FontSlotSettingKey, index: number) {
@@ -599,75 +754,6 @@ export function SettingsPage({
       // ignore
     }
     return source.length > 26 ? `${source.slice(0, 26)}...` : source;
-  }
-
-  function renderFontSlotControls(key: FontSlotSettingKey) {
-    const slots = getFontSlots(key);
-    const slotNames = getFontSlotNames(key);
-    const activeIndex = selectedFontSlotIndex[key] ?? 0;
-    const activeLabelDraft = getFontSlotLabelDraft(key);
-    const activeHasValue = Boolean((slots[activeIndex] ?? '').trim() || (slotNames[activeIndex] ?? '').trim());
-    return (
-      <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-stone-600">字體記憶</p>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => saveFontSlot(key, activeIndex)}
-              className="rounded-md border border-stone-300 bg-white px-2 py-0.5 text-[11px] text-stone-700"
-            >
-              保存
-            </button>
-            <button
-              type="button"
-              onClick={() => clearFontSlot(key, activeIndex)}
-              disabled={!activeHasValue}
-              className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] text-rose-700 disabled:opacity-40"
-            >
-              刪除
-            </button>
-          </div>
-        </div>
-
-        <label className="block space-y-1">
-          <span className="text-[11px] text-stone-600">記憶 {activeIndex + 1} 名稱</span>
-          <input
-            type="text"
-            value={activeLabelDraft}
-            onChange={(event) => setFontSlotLabelDraft(key, event.target.value)}
-            placeholder="例如：手寫體-手機版"
-            className="w-full rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-[12px] text-stone-700"
-          />
-        </label>
-
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {[0, 1, 2].map((index) => (
-            <button
-              key={`${key}-${index}`}
-              type="button"
-              onClick={() => {
-                setSelectedFontSlotIndex((prev) => ({ ...prev, [key]: index }));
-                loadFontSlot(key, index);
-              }}
-              className={`min-w-[112px] rounded-lg border px-2 py-1.5 text-left transition ${
-                activeIndex === index
-                  ? 'border-stone-900 bg-stone-900 text-white'
-                  : 'border-stone-300 bg-white text-stone-700'
-              }`}
-            >
-              <p className="text-[10px] opacity-80">記憶 {index + 1}</p>
-              <p className="mt-0.5 truncate text-[11px]">{getFontSlotName(slots[index] ?? '', index, slotNames[index] ?? '')}</p>
-              <p className={`mt-0.5 text-[10px] ${activeIndex === index ? 'text-stone-200' : 'text-stone-400'}`}>
-                {slots[index]?.trim() ? '已存字體' : slotNames[index]?.trim() ? '僅名稱' : '空白'}
-              </p>
-            </button>
-          ))}
-        </div>
-
-        <p className="text-[11px] text-stone-500">左右滑動選記憶；名稱與網址按「保存」才會存。載入後再按各區「套用字體」才會真正生效。</p>
-      </div>
-    );
   }
 
   function setTabIconDraft(tab: TabIconKey, value: string) {
@@ -722,6 +808,7 @@ export function SettingsPage({
 
     onSettingChange({ tabIconUrls: next });
     setTabIconStatus('圖標設定已儲存');
+    emitActionToast({ kind: 'success', message: '圖標設定已儲存' });
   }
 
   function restoreSavedTabIcons() {
@@ -750,6 +837,7 @@ export function SettingsPage({
 
     onSettingChange({ appLabels: next });
     setLabelStatus('入口名稱已儲存');
+    emitActionToast({ kind: 'success', message: '入口名稱已儲存' });
   }
 
   function restoreSavedAppLabels() {
@@ -1007,22 +1095,6 @@ export function SettingsPage({
     reader.readAsDataURL(file);
   }
 
-  function handleFontFileUpload(file: File | null) {
-    if (!file) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        return;
-      }
-
-      setFontFileUrlDraft(reader.result);
-    };
-    reader.readAsDataURL(file);
-  }
-
   function applyHomeTextSettings() {
     onSettingChange({
       homeWidgetTitle: homeWidgetTitleDraft.trim(),
@@ -1032,6 +1104,7 @@ export function SettingsPage({
       memorialStartDate: memorialStartDateDraft.trim(),
     });
     setHomeTextStatus('已儲存');
+    emitActionToast({ kind: 'success', message: '首頁與信箱設定已儲存' });
     window.setTimeout(() => setHomeTextStatus(''), 1200);
   }
 
@@ -1089,18 +1162,9 @@ export function SettingsPage({
   }
 
   const previewFontFamily = useMemo(() => {
-    const draftFamily = fontFamilyDraft.trim();
-    if (draftFamily) {
-      return draftFamily;
-    }
-
-    if (fontFileUrlDraft.trim()) {
+    const draftUrl = fontFileUrlDraft.trim();
+    if (draftUrl) {
       return SETTINGS_PREVIEW_FONT_FAMILY;
-    }
-
-    const savedFamily = settings.customFontFamily.trim();
-    if (savedFamily) {
-      return savedFamily;
     }
 
     if (settings.customFontFileUrl.trim()) {
@@ -1108,7 +1172,10 @@ export function SettingsPage({
     }
 
     return "'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-  }, [fontFamilyDraft, fontFileUrlDraft, settings.customFontFamily, settings.customFontFileUrl]);
+  }, [
+    settings.customFontFileUrl,
+    fontFileUrlDraft,
+  ]);
 
   const notificationLabel =
     notificationPermission === 'unsupported'
@@ -1118,6 +1185,30 @@ export function SettingsPage({
         : notificationPermission === 'denied'
           ? '已封鎖'
           : '尚未決定';
+
+  const activeFontSlots = getFontSlots(FONT_PRESET_KEY);
+  const activeFontSlotNames = getFontSlotNames(FONT_PRESET_KEY);
+  const activeFontPresetHasValue =
+    fontPresetSelection !== null &&
+    Boolean((activeFontSlots[fontPresetSelection] ?? '').trim() || (activeFontSlotNames[fontPresetSelection] ?? '').trim());
+  const allFontTargetsChecked = FONT_TARGET_OPTIONS.every((item) => fontApplyTargets[item.key]);
+  const usageTarget = FONT_TARGET_OPTIONS.find((item) => item.key === fontUsagePreviewTarget) ?? FONT_TARGET_OPTIONS[0];
+  const usageTargetUrl = getAppliedFontUrlByTarget(fontUsagePreviewTarget);
+  const usageMatchedPresetIndex = activeFontSlots.findIndex((value) => value.trim() === usageTargetUrl);
+  const usageMatchedPresetName =
+    usageMatchedPresetIndex >= 0
+      ? getFontSlotName(
+          activeFontSlots[usageMatchedPresetIndex] ?? '',
+          usageMatchedPresetIndex,
+          activeFontSlotNames[usageMatchedPresetIndex] ?? '',
+        )
+      : '';
+  const usageSummary =
+    !usageTargetUrl
+      ? '空白（使用預設字體）'
+      : usageMatchedPresetIndex >= 0
+        ? `記憶 ${usageMatchedPresetIndex + 1} · ${usageMatchedPresetName}`
+        : '外部字體（未存入字體預設）';
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-4 pb-24">
@@ -1382,8 +1473,8 @@ export function SettingsPage({
 
         <SettingPanel
           icon="🎨"
-          title="外觀與字體"
-          subtitle="主題色、日曆外觀、字型替換"
+          title="外觀"
+          subtitle="主題色、背景與日曆外觀"
           isOpen={openPanel === 'appearance'}
           onToggle={() => togglePanel('appearance')}
         >
@@ -1446,83 +1537,6 @@ export function SettingsPage({
                   className="w-full"
                 />
               </label>
-            </SettingSubgroup>
-
-            <SettingSubgroup
-              title="字體替換（整站）"
-              subtitle="網址或檔案上傳（ttf/otf/woff）"
-              isOpen={openAppearanceGroup === 'font'}
-              onToggle={() => toggleAppearanceGroup('font')}
-            >
-              <label className="block space-y-1">
-                <span className="text-xs text-stone-600">字體檔網址（ttf / otf / woff / woff2）</span>
-                <input
-                  type="url"
-                  value={fontFileUrlDraft}
-                  onChange={(event) => setFontFileUrlDraft(event.target.value)}
-                  placeholder="https://example.com/custom.ttf"
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-xs text-stone-600">或直接上傳字體檔</span>
-                <input
-                  type="file"
-                  accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2"
-                  onChange={(event) => {
-                    handleFontFileUpload(event.target.files?.[0] ?? null);
-                    event.currentTarget.value = '';
-                  }}
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-xs text-stone-600">套用名稱（font-family，可留空）</span>
-                <input
-                  type="text"
-                  value={fontFamilyDraft}
-                  onChange={(event) => setFontFamilyDraft(event.target.value)}
-                  placeholder="Noto Sans TC"
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
-                />
-              </label>
-              <div className="rounded-lg border border-dashed border-stone-300 bg-white px-3 py-2">
-                <p className="text-xs text-stone-500">字體預覽</p>
-                <p
-                  className="mt-1 text-base text-stone-800"
-                  style={{ fontFamily: `${previewFontFamily}, 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif` }}
-                >
-                  老婆，我在這裡。AaBb123
-                </p>
-              </div>
-              <p className="text-xs text-stone-500">
-                若是跨網域字體檔，來源需允許 CORS，否則手機瀏覽器會擋掉而看起來「沒套用」。
-              </p>
-              {renderFontSlotControls('customFontUrlSlots')}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={applyFontSettings}
-                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
-                >
-                  套用字體
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFontFileUrlDraft('');
-                    setFontFamilyDraft('');
-                    onSettingChange({
-                      customFontCssUrl: '',
-                      customFontFileUrl: '',
-                      customFontFamily: '',
-                    });
-                  }}
-                  className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
-                >
-                  還原預設
-                </button>
-              </div>
             </SettingSubgroup>
 
             <SettingSubgroup
@@ -1592,7 +1606,10 @@ export function SettingsPage({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => onSettingChange({ backgroundImageUrl: backgroundImageUrlDraft.trim() })}
+                      onClick={() => {
+                        onSettingChange({ backgroundImageUrl: backgroundImageUrlDraft.trim() });
+                        emitActionToast({ kind: 'success', message: '背景圖片已套用' });
+                      }}
                       className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
                     >
                       套用圖片網址
@@ -1829,6 +1846,218 @@ export function SettingsPage({
                 </label>
               </div>
               {appearancePresetStatus && <p className="text-xs text-stone-600">{appearancePresetStatus}</p>}
+            </SettingSubgroup>
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
+          icon="🔤"
+          title="字體中心"
+          subtitle="整站／情書／日記／家 的字體集中管理"
+          isOpen={openPanel === 'fontCenter'}
+          onToggle={() => togglePanel('fontCenter')}
+        >
+          <div className="space-y-3">
+            <SettingSubgroup
+              title="字體預設管理"
+              subtitle="上傳來源、預覽、保存到字體預設"
+              isOpen={openFontCenterGroup === 'preset'}
+              onToggle={() => toggleFontCenterGroup('preset')}
+            >
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">選擇或切換預設</span>
+                <select
+                  value={fontPresetSelection === null ? 'blank' : String(fontPresetSelection)}
+                  onChange={(event) => {
+                    selectFontPreset(parseFontPresetSelection(event.target.value));
+                  }}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+                >
+                  <option value="blank">空白（預設字體）</option>
+                  {FONT_PRESET_INDICES.map((index) => (
+                    <option key={`font-preset-${index}`} value={index}>
+                      記憶 {index + 1} · {getFontSlotName(activeFontSlots[index] ?? '', index, activeFontSlotNames[index] ?? '')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">預設名稱</span>
+                <input
+                  type="text"
+                  value={getFontSlotLabelDraft(FONT_PRESET_KEY)}
+                  onChange={(event) => setFontSlotLabelDraft(FONT_PRESET_KEY, event.target.value)}
+                  placeholder="例如：溫柔手寫-手機版"
+                  disabled={fontPresetSelection === null}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">字體檔網址（ttf / otf / woff / woff2）</span>
+                <input
+                  type="url"
+                  value={getFontDraftValue(FONT_PRESET_KEY)}
+                  onChange={(event) => setFontDraftValue(FONT_PRESET_KEY, event.target.value)}
+                  placeholder="https://example.com/custom.ttf"
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">或直接上傳字體檔</span>
+                <input
+                  type="file"
+                  accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2"
+                  onChange={(event) => {
+                    handleScopedFontFileUpload(event.target.files?.[0] ?? null);
+                    event.currentTarget.value = '';
+                  }}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs"
+                />
+              </label>
+              <div className="rounded-lg border border-dashed border-stone-300 bg-white px-3 py-2">
+                <p className="text-xs text-stone-500">即時預覽</p>
+                <p
+                  className="mt-1 text-base text-stone-800"
+                  style={{ fontFamily: `${previewFontFamily}, 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif` }}
+                >
+                  老婆，我在這裡。Hello 12345
+                </p>
+                <p
+                  className="mt-1 text-sm text-stone-700"
+                  style={{ fontFamily: `${previewFontFamily}, 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif` }}
+                >
+                  這是字體預覽效果。
+                </p>
+              </div>
+              <p className="text-xs text-stone-500">
+                若是跨網域字體檔，來源需允許 CORS，否則手機瀏覽器可能顯示成預設字體。
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveCurrentFontPreset}
+                  disabled={fontPresetSelection === null}
+                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white disabled:opacity-40"
+                >
+                  保存
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteCurrentFontPreset}
+                  disabled={fontPresetSelection === null || !activeFontPresetHasValue}
+                  className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 disabled:opacity-40"
+                >
+                  刪除
+                </button>
+              </div>
+            </SettingSubgroup>
+
+            <SettingSubgroup
+              title="字體套用範圍"
+              subtitle="勾選頁面後，選擇要套用的字體預設"
+              isOpen={openFontCenterGroup === 'scope'}
+              onToggle={() => toggleFontCenterGroup('scope')}
+            >
+              <label className="flex items-start gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={allFontTargetsChecked}
+                  onChange={(event) => setAllFontApplyTargets(event.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-stone-300 accent-stone-700"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm text-stone-800">全部套用</span>
+                  <span className="block text-xs text-stone-500">一次更新整站、情書、日記、家頁</span>
+                </span>
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {FONT_TARGET_OPTIONS.map((target) => (
+                  <label
+                    key={`font-target-${target.key}`}
+                    className="flex items-start gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={fontApplyTargets[target.key]}
+                      onChange={() => toggleFontApplyTarget(target.key)}
+                      className="mt-1 h-4 w-4 rounded border-stone-300 accent-stone-700"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm text-stone-800">{target.label}</span>
+                      <span className="block text-xs text-stone-500">{target.hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">套用哪個字體預設</span>
+                <select
+                  value={fontScopePresetSelection === null ? 'blank' : String(fontScopePresetSelection)}
+                  onChange={(event) => setFontScopePresetSelection(parseFontPresetSelection(event.target.value))}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+                >
+                  <option value="blank">空白（還原預設字體）</option>
+                  {FONT_PRESET_INDICES.map((index) => (
+                    <option key={`font-scope-preset-${index}`} value={index}>
+                      記憶 {index + 1} · {getFontSlotName(activeFontSlots[index] ?? '', index, activeFontSlotNames[index] ?? '')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={applyFontToCheckedTargets}
+                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+                >
+                  保存並套用
+                </button>
+                <button
+                  type="button"
+                  onClick={restoreFontScopeDraft}
+                  className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+                >
+                  還原目前設定
+                </button>
+              </div>
+              <p className="text-xs text-stone-500">先在上方保存字體預設，再在這裡選要套到哪裡。</p>
+            </SettingSubgroup>
+
+            <SettingSubgroup
+              title="當前套用檢視"
+              subtitle="純預覽：目前每個範圍正在用哪個字體"
+              isOpen={openFontCenterGroup === 'usage'}
+              onToggle={() => toggleFontCenterGroup('usage')}
+            >
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">查看範圍</span>
+                <select
+                  value={fontUsagePreviewTarget}
+                  onChange={(event) => setFontUsagePreviewTarget(event.target.value as FontApplyTargetKey)}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800"
+                >
+                  {FONT_TARGET_OPTIONS.map((option) => (
+                    <option key={`font-usage-${option.key}`} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-stone-800">{usageTarget.label}</p>
+                  <span className="rounded-full border border-stone-300 bg-white px-2.5 py-1 text-[11px] text-stone-700">
+                    {usageSummary}
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500">{usageTarget.hint}</p>
+                <p className="break-all rounded-md border border-stone-200 bg-white px-2.5 py-2 font-mono text-[11px] text-stone-600">
+                  {usageTargetUrl || '（目前為預設字體，沒有字體網址）'}
+                </p>
+              </div>
             </SettingSubgroup>
           </div>
         </SettingPanel>
@@ -2276,7 +2505,10 @@ export function SettingsPage({
             )}
             <button
               type="button"
-              onClick={() => onSettingChange({ tarotGalleryImageUrl: tarotGalleryUrlDraft.trim() })}
+              onClick={() => {
+                onSettingChange({ tarotGalleryImageUrl: tarotGalleryUrlDraft.trim() });
+                emitActionToast({ kind: 'success', message: '塔羅入口圖片已套用' });
+              }}
               className="w-full rounded-xl bg-stone-900 py-2.5 text-sm text-white transition active:opacity-80"
             >
               套用
@@ -2311,7 +2543,7 @@ export function SettingsPage({
         <SettingPanel
           icon="💌"
           title="情書"
-          subtitle="模式 · 匯入 · 字體"
+          subtitle="模式 · 匯入"
           isOpen={openPanel === 'letters'}
           onToggle={() => togglePanel('letters')}
         >
@@ -2388,41 +2620,6 @@ export function SettingsPage({
               <p className="text-xs text-stone-400">iPhone 通常不支援資料夾匯入，建議用「匯入檔案」。</p>
             </div>
 
-            {/* Letter font URL */}
-            <div className="space-y-2 border-t border-stone-100 pt-3">
-              <p className="text-xs font-medium text-stone-600">情書頁自訂字體</p>
-              <input
-                type="url"
-                value={letterFontUrlDraft}
-                onChange={(e) => setLetterFontUrlDraft(e.target.value)}
-                placeholder="https://files.catbox.moe/xxxxx.ttf"
-                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-              />
-              {renderFontSlotControls('letterFontUrlSlots')}
-              <button
-                type="button"
-                onClick={() =>
-                  onSettingChange({
-                    letterFontUrl: letterFontUrlDraft.trim(),
-                    letterFontUrlSlots: settings.letterFontUrlSlots,
-                  })
-                }
-                className="w-full rounded-xl bg-stone-900 py-2 text-sm text-white transition active:opacity-80"
-              >
-                套用字體
-              </button>
-              {settings.letterFontUrl && (
-                <button
-                  type="button"
-                  onClick={() => { setLetterFontUrlDraft(''); onSettingChange({ letterFontUrl: '' }); }}
-                  className="w-full rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-600"
-                >
-                  移除自訂字體（恢復手寫體）
-                </button>
-              )}
-              <p className="text-xs text-stone-400">支援 .ttf / .woff2，留空使用預設手寫字體。</p>
-            </div>
-
             <div className="border-t border-stone-100 pt-3">
               <button
                 type="button"
@@ -2440,7 +2637,7 @@ export function SettingsPage({
         <SettingPanel
           icon="📓"
           title="日記"
-          subtitle="封面 · 匯入 · 字體"
+          subtitle="封面 · 匯入"
           isOpen={openPanel === 'diary'}
           onToggle={() => togglePanel('diary')}
         >
@@ -2462,7 +2659,10 @@ export function SettingsPage({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => onSettingChange({ diaryCoverImageUrl: diaryCoverUrlDraft.trim() })}
+                  onClick={() => {
+                    onSettingChange({ diaryCoverImageUrl: diaryCoverUrlDraft.trim() });
+                    emitActionToast({ kind: 'success', message: '日記封面已套用' });
+                  }}
                   className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
                 >
                   套用封面網址
@@ -2518,43 +2718,6 @@ export function SettingsPage({
             </div>
 
             <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <p className="text-sm text-stone-800">日記字體</p>
-              <input
-                type="url"
-                value={diaryFontUrlDraft}
-                onChange={(event) => setDiaryFontUrlDraft(event.target.value)}
-                placeholder="https://files.catbox.moe/xxxxx.ttf"
-                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-              />
-              {renderFontSlotControls('diaryFontUrlSlots')}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onSettingChange({
-                      diaryFontUrl: diaryFontUrlDraft.trim(),
-                      diaryFontUrlSlots: settings.diaryFontUrlSlots,
-                    })
-                  }
-                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
-                >
-                  套用字體
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDiaryFontUrlDraft('');
-                    onSettingChange({ diaryFontUrl: '' });
-                  }}
-                  className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
-                >
-                  清除字體
-                </button>
-              </div>
-              <p className="text-xs text-stone-400">支援 .ttf / .otf / .woff / .woff2。</p>
-            </div>
-
-            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
               <p className="text-sm text-stone-800">匯入日記</p>
               <div className="grid grid-cols-2 gap-2">
                 <label className="cursor-pointer rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80">
@@ -2607,46 +2770,14 @@ export function SettingsPage({
         <SettingPanel
           icon="🏡"
           title="家"
-          subtitle="閱讀字體（家頁專用）"
+          subtitle="閱讀外觀提醒"
           isOpen={openPanel === 'soulmate'}
           onToggle={() => togglePanel('soulmate')}
         >
           <div className="space-y-3">
-            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <p className="text-sm text-stone-800">家頁閱讀字體</p>
-              <input
-                type="url"
-                value={soulmateFontUrlDraft}
-                onChange={(event) => setSoulmateFontUrlDraft(event.target.value)}
-                placeholder="https://files.catbox.moe/xxxxx.ttf"
-                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-              />
-              {renderFontSlotControls('soulmateFontUrlSlots')}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onSettingChange({
-                      soulmateFontUrl: soulmateFontUrlDraft.trim(),
-                      soulmateFontUrlSlots: settings.soulmateFontUrlSlots,
-                    })
-                  }
-                  className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
-                >
-                  套用字體
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSoulmateFontUrlDraft('');
-                    onSettingChange({ soulmateFontUrl: '' });
-                  }}
-                  className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
-                >
-                  清除字體
-                </button>
-              </div>
-              <p className="text-xs text-stone-400">這個字體只套用在「家」閱讀頁，不會影響其他頁面。</p>
+            <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">字體已移到「字體中心」統一管理</p>
+              <p className="mt-1 text-xs text-stone-500">家頁字體請到「字體中心 → 字體套用範圍」勾選「家頁」後套用；家頁主題與閱讀樣式仍在頁內小設定。</p>
             </div>
           </div>
         </SettingPanel>
@@ -2974,16 +3105,20 @@ export function SettingsPage({
                     <button
                       type="button"
                       onClick={() => {
-                        if (!newProfileDraft.name.trim()) return;
-                        onSaveChatProfile({ ...newProfileDraft, id: `profile-${Date.now()}` });
-                        setNewProfileDraft({
-                          name: '',
-                          leftNick: 'M',
-                          rightNick: '你',
-                          leftAvatarDataUrl: '',
-                          rightAvatarDataUrl: '',
-                        });
-                        setShowNewProfile(false);
+                        void (async () => {
+                          if (!newProfileDraft.name.trim()) return;
+                          const ok = await onSaveChatProfile({ ...newProfileDraft, id: `profile-${Date.now()}` });
+                          if (!ok) return;
+                          emitActionToast({ kind: 'success', message: '角色設定已儲存' });
+                          setNewProfileDraft({
+                            name: '',
+                            leftNick: 'M',
+                            rightNick: '你',
+                            leftAvatarDataUrl: '',
+                            rightAvatarDataUrl: '',
+                          });
+                          setShowNewProfile(false);
+                        })();
                       }}
                       className="flex-1 rounded-xl bg-stone-900 py-2 text-sm text-white"
                     >
@@ -3141,11 +3276,14 @@ export function SettingsPage({
               <section className="space-y-2">
                 <h4 className="text-sm text-stone-900">字體關聯</h4>
                 <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
-                  <li>外觀與字體（整站）：大多數頁面的基底字體。</li>
-                  <li>情書字體：情書頁。</li>
-                  <li>日記字體：M 日記、日記 B、願望內文。</li>
+                  <li>字體中心第一欄（字體預設管理）：上傳字體來源、保存成記憶 1~8。</li>
+                  <li>字體中心第二欄（字體套用範圍）：把記憶 1~8 套用到整站/情書/日記/家頁。</li>
+                  <li>字體中心第三欄（當前套用檢視）：純預覽目前每個範圍使用中的字體來源。</li>
+                  <li>「空白（還原預設字體）」可把勾選頁面恢復為預設字體。</li>
+                  <li>整站：大多數頁面的基底字體。</li>
+                  <li>日記：M 日記、日記 B、願望內文。</li>
                   <li>願望標題/頁籤、日記 M/B 標題/頁籤、經期日記標題/頁籤：全站字體。</li>
-                  <li>家字體：只影響「家」閱讀頁。</li>
+                  <li>家頁：只影響「家」閱讀頁。</li>
                 </ul>
               </section>
 

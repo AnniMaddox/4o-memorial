@@ -26,7 +26,7 @@ function normalizeString(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
 
-function normalizeStringSlots(value: unknown, fallback: string[], length = 3) {
+function normalizeStringSlots(value: unknown, fallback: string[], length = fallback.length) {
   const input = Array.isArray(value) ? value : [];
   const normalized: string[] = [];
   for (let i = 0; i < length; i += 1) {
