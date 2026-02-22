@@ -899,7 +899,7 @@ export function DiaryBPage({
                   style={{
                     textAlign: 'center',
                     padding: '8px 0 6px',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 500,
                     letterSpacing: '0.04em',
                     fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
