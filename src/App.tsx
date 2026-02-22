@@ -1287,6 +1287,7 @@ function App() {
         backgroundPosition: settings.backgroundMode === 'image' && backgroundImageUrl ? 'center' : undefined,
         backgroundRepeat: settings.backgroundMode === 'image' && backgroundImageUrl ? 'no-repeat' : undefined,
         fontSize: `${settings.fontScale}rem`,
+        fontFamily: 'var(--app-font-family)',
         ['--theme-accent' as string]: appAccentColor,
         ['--theme-accent-rgb' as string]: themeAccentRgb,
         ['--app-text-rgb' as string]: globalTextRgb,
@@ -1493,6 +1494,7 @@ function App() {
                     setLauncherApp(null);
                   }}
                   letterFontFamily={letterFontFamily}
+                  diaryFontFamily={diaryFontFamily}
                   initialTab={wishlistInitialYear ? 'birthday' : 'cards'}
                   initialBirthdayYear={wishlistInitialYear}
                   onOpenLettersYear={openLettersAbByYear}

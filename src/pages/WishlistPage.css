@@ -404,7 +404,7 @@
 }
 
 .wl-card-title {
-  font-size: 19px;
+  font-size: var(--wl-wish-title-size, 19px);
   color: var(--wl-card-title-color);
   line-height: 1.6;
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
@@ -429,7 +429,7 @@
 
 .wl-card-note-text {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--wl-wish-body-size, 12px);
   line-height: 1.55;
   color: var(--wl-card-note-text-color);
   font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
@@ -612,7 +612,7 @@
 
 .wl-wish-text {
   flex: 1;
-  font-size: 13.5px;
+  font-size: clamp(11px, calc(var(--wl-wish-title-size, 19px) * 0.71), 18px);
   color: #2c2010;
   line-height: 1.45;
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
@@ -781,7 +781,7 @@
 
 .wl-bday-front-summary {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--wl-bday-card-size, 12.5px);
   line-height: 1.55;
   color: var(--wl-bday-text);
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
@@ -797,7 +797,7 @@
 }
 
 .wl-bday-text {
-  font-size: 12.5px;
+  font-size: var(--wl-bday-card-size, 12.5px);
   color: var(--wl-bday-text);
   line-height: 1.65;
   font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
@@ -1069,7 +1069,7 @@
 
 .wl-oc-main {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--wl-wish-title-size, 18px);
   color: var(--wl-card-title-color, #2c2010);
   line-height: 1.55;
   font-family: var(--wl-handwriting-font, 'Ma Shan Zheng', 'STKaiti', serif);
@@ -1079,7 +1079,7 @@
 
 .wl-oc-text {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--wl-wish-body-size, 13px);
   color: var(--wl-card-note-text-color, rgba(44, 32, 16, 0.9));
   line-height: 1.65;
   font-family: var(--wl-handwriting-font, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
@@ -1106,7 +1106,7 @@
 
 .wl-bzoom-text {
   margin: 0;
-  font-size: 15.5px;
+  font-size: var(--wl-bday-zoom-size, 15.5px);
   line-height: 1.92;
   color: var(--wl-bday-text, rgba(44, 32, 16, 0.95));
   white-space: pre-wrap;
@@ -1201,6 +1201,41 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.wl-collapse-trigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wl-collapse-chevron {
+  font-size: 12px;
+  color: #9a8a68;
+  transform: rotate(-90deg);
+  transition: transform 0.16s ease;
+}
+
+.wl-collapse-chevron.open {
+  transform: rotate(0deg);
+}
+
+.wl-collapse-body {
+  margin-top: 12px;
+  display: grid;
+  gap: 14px;
+}
+
+.wl-slider-group {
+  border: 1px solid rgba(160, 130, 60, 0.12);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.42);
 }
 
 .wl-sh-label {

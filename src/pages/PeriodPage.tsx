@@ -1369,7 +1369,12 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
           </button>
           <div className="flex-1 text-center">
             <p className="text-[9px] uppercase tracking-[0.28em] text-stone-400">PERIOD</p>
-            <h1 className="mt-0.5 text-base leading-tight text-stone-800">經期追蹤</h1>
+            <h1
+              className="mt-0.5 text-base leading-tight text-stone-800"
+              style={{ fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)" }}
+            >
+              經期追蹤
+            </h1>
           </div>
           {hidePeriodChibi ? (
             <button
@@ -1397,6 +1402,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
                 color: activeTab === t.id ? C.accent : '#a8a29e',
                 borderBottomColor: activeTab === t.id ? C.accent : 'transparent',
                 fontWeight: activeTab === t.id ? 600 : undefined,
+                fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
               }}
             >
               {t.label}

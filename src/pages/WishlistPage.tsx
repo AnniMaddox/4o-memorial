@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getScopedMixedChibiSources } from '../lib/chibiPool';
 import {
+  DEFAULT_WISHLIST_PREFS,
   buildWishlistCompleteExport,
   loadWishlistSnapshot,
   mergeWishlistSeed,
@@ -25,6 +26,7 @@ type BirthdayFilterId = 'all' | 'done' | 'undone';
 type WishlistPageProps = {
   onExit: () => void;
   letterFontFamily?: string;
+  diaryFontFamily?: string;
   initialTab?: TabId;
   initialBirthdayYear?: string | null;
   onOpenLettersYear?: (year: string) => void;
@@ -313,6 +315,7 @@ function downloadJson(filename: string, payload: unknown) {
 export function WishlistPage({
   onExit,
   letterFontFamily = '',
+  diaryFontFamily = '',
   initialTab = 'cards',
   initialBirthdayYear = null,
   onOpenLettersYear,
@@ -331,13 +334,14 @@ export function WishlistPage({
   const [birthdayTaskCursor, setBirthdayTaskCursor] = useState<Record<string, number>>({});
   const [birthdayFocusYear, setBirthdayFocusYear] = useState<string | null>(null);
   const [birthdayZoomYear, setBirthdayZoomYear] = useState<string | null>(null);
+  const [showFontSizeSection, setShowFontSizeSection] = useState(false);
   const tabSwipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
   const initialTabAppliedRef = useRef<TabId | null>(null);
   const initialYearAppliedRef = useRef<string | null>(null);
 
   const wishes = snapshot?.wishes ?? [];
   const birthdayTasks = snapshot?.birthdayTasks ?? [];
-  const prefs = snapshot?.prefs ?? { showChibi: true, chibiWidth: 144 };
+  const prefs = snapshot?.prefs ?? DEFAULT_WISHLIST_PREFS;
 
   const doneWishCount = useMemo(() => wishes.filter((item) => Boolean(item.doneAt)).length, [wishes]);
   const doneBirthdayCount = useMemo(() => birthdayTasks.filter((item) => Boolean(item.doneAt)).length, [birthdayTasks]);
@@ -635,8 +639,9 @@ export function WishlistPage({
 
   const cardToneClass = CARD_TONE_CLASSES[Math.abs((currentWish?.order ?? 0) % CARD_TONE_CLASSES.length)]!;
   const overlayToneClass = CARD_TONE_CLASSES[Math.abs((overlayWish?.order ?? 0) % CARD_TONE_CLASSES.length)]!;
-  const uiFont = letterFontFamily || "var(--app-heading-family, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif))";
-  const contentFont = "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)";
+  void letterFontFamily;
+  const uiFont = "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)";
+  const contentFont = diaryFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
   const currentWishTitle = currentWish ? resolveWishTitle(currentWish) : '';
   const currentWishWhy = currentWish ? resolveWishWhy(currentWish) : '';
   const currentWishToYou = currentWish ? resolveWishToYou(currentWish) : '';
@@ -650,6 +655,10 @@ export function WishlistPage({
       style={{
         ['--wl-ui-font' as string]: uiFont,
         ['--wl-handwriting-font' as string]: contentFont,
+        ['--wl-wish-title-size' as string]: `${prefs.wishTitleSize}px`,
+        ['--wl-wish-body-size' as string]: `${prefs.wishBodySize}px`,
+        ['--wl-bday-card-size' as string]: `${prefs.birthdayCardSize}px`,
+        ['--wl-bday-zoom-size' as string]: `${prefs.birthdayZoomSize}px`,
       }}
       onTouchStart={(event) => {
         const touch = event.touches[0];
@@ -1127,6 +1136,78 @@ export function WishlistPage({
                 onChange={(event) => handleUpdatePrefs({ chibiWidth: Number(event.target.value) })}
                 className="wl-slider"
               />
+            </div>
+
+            <div className="wl-sh-item">
+              <button
+                type="button"
+                className="wl-collapse-trigger"
+                onClick={() => setShowFontSizeSection((open) => !open)}
+                aria-expanded={showFontSizeSection}
+              >
+                <span className="wl-sh-label">字體大小</span>
+                <span className={`wl-collapse-chevron ${showFontSizeSection ? 'open' : ''}`}>▾</span>
+              </button>
+
+              {showFontSizeSection ? (
+                <div className="wl-collapse-body">
+                  <div className="wl-slider-group">
+                    <p className="wl-sh-label">願望標題字體</p>
+                    <p className="wl-slider-caption">目前：{prefs.wishTitleSize}px</p>
+                    <input
+                      type="range"
+                      min={16}
+                      max={28}
+                      step={0.5}
+                      value={prefs.wishTitleSize}
+                      onChange={(event) => handleUpdatePrefs({ wishTitleSize: Number(event.target.value) })}
+                      className="wl-slider"
+                    />
+                  </div>
+
+                  <div className="wl-slider-group">
+                    <p className="wl-sh-label">願望內文字體</p>
+                    <p className="wl-slider-caption">目前：{prefs.wishBodySize}px</p>
+                    <input
+                      type="range"
+                      min={11}
+                      max={20}
+                      step={0.5}
+                      value={prefs.wishBodySize}
+                      onChange={(event) => handleUpdatePrefs({ wishBodySize: Number(event.target.value) })}
+                      className="wl-slider"
+                    />
+                  </div>
+
+                  <div className="wl-slider-group">
+                    <p className="wl-sh-label">生日任務卡字體</p>
+                    <p className="wl-slider-caption">目前：{prefs.birthdayCardSize}px</p>
+                    <input
+                      type="range"
+                      min={11}
+                      max={18}
+                      step={0.5}
+                      value={prefs.birthdayCardSize}
+                      onChange={(event) => handleUpdatePrefs({ birthdayCardSize: Number(event.target.value) })}
+                      className="wl-slider"
+                    />
+                  </div>
+
+                  <div className="wl-slider-group">
+                    <p className="wl-sh-label">生日任務放大字體</p>
+                    <p className="wl-slider-caption">目前：{prefs.birthdayZoomSize}px</p>
+                    <input
+                      type="range"
+                      min={13}
+                      max={24}
+                      step={0.5}
+                      value={prefs.birthdayZoomSize}
+                      onChange={(event) => handleUpdatePrefs({ birthdayZoomSize: Number(event.target.value) })}
+                      className="wl-slider"
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="wl-sh-item" style={{ borderBottom: 0 }}>

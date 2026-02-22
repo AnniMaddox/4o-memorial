@@ -831,7 +831,17 @@ export function DiaryBPage({
             >
               ‹
             </button>
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#2c2218', letterSpacing: '0.02em' }}>我的日記</span>
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: '#2c2218',
+                letterSpacing: '0.02em',
+                fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
+              }}
+            >
+              我的日記
+            </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -892,6 +902,7 @@ export function DiaryBPage({
                     fontSize: 11,
                     fontWeight: 500,
                     letterSpacing: '0.04em',
+                    fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
                     color: active ? '#b5623c' : '#a08060',
                     borderBottom: active
                       ? '2px solid #b5623c'

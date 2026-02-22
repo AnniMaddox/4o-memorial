@@ -34,6 +34,10 @@ export type BirthdayTask = {
 export type WishlistPrefs = {
   showChibi: boolean;
   chibiWidth: number;
+  wishTitleSize: number;
+  wishBodySize: number;
+  birthdayCardSize: number;
+  birthdayZoomSize: number;
 };
 
 export type WishlistSnapshot = {
@@ -122,6 +126,21 @@ function clampChibiWidth(value: number | undefined, fallback = 144) {
   return Math.max(104, Math.min(196, Math.round(value ?? fallback)));
 }
 
+function clampFontSize(value: number | undefined, min: number, max: number, fallback: number) {
+  if (!Number.isFinite(value)) return fallback;
+  const clamped = Math.max(min, Math.min(max, value ?? fallback));
+  return Math.round(clamped * 10) / 10;
+}
+
+export const DEFAULT_WISHLIST_PREFS: WishlistPrefs = {
+  showChibi: true,
+  chibiWidth: 144,
+  wishTitleSize: 19,
+  wishBodySize: 12,
+  birthdayCardSize: 12.5,
+  birthdayZoomSize: 15.5,
+};
+
 function normalizeWish(item: WishlistWish, fallbackOrder: number): WishlistWish | null {
   const title = normalizeText(String(item.title ?? ''));
   const text = normalizeParagraph(String(item.text ?? ''));
@@ -164,7 +183,11 @@ function normalizeBirthdayTask(item: BirthdayTask, fallbackOrder: number): Birth
 function normalizePrefs(input: Partial<WishlistPrefs> | null | undefined): WishlistPrefs {
   return {
     showChibi: input?.showChibi !== false,
-    chibiWidth: clampChibiWidth(input?.chibiWidth, 144),
+    chibiWidth: clampChibiWidth(input?.chibiWidth, DEFAULT_WISHLIST_PREFS.chibiWidth),
+    wishTitleSize: clampFontSize(input?.wishTitleSize, 16, 28, DEFAULT_WISHLIST_PREFS.wishTitleSize),
+    wishBodySize: clampFontSize(input?.wishBodySize, 11, 20, DEFAULT_WISHLIST_PREFS.wishBodySize),
+    birthdayCardSize: clampFontSize(input?.birthdayCardSize, 11, 18, DEFAULT_WISHLIST_PREFS.birthdayCardSize),
+    birthdayZoomSize: clampFontSize(input?.birthdayZoomSize, 13, 24, DEFAULT_WISHLIST_PREFS.birthdayZoomSize),
   };
 }
 

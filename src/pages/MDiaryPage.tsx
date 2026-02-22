@@ -508,7 +508,12 @@ export function MDiaryPage({
           >
             ‹
           </button>
-          <span className="text-[15px] font-semibold tracking-[0.02em] text-[#2a2818]">M 的日記</span>
+          <span
+            className="text-[15px] font-semibold tracking-[0.02em] text-[#2a2818]"
+            style={{ fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)" }}
+          >
+            M 的日記
+          </span>
         </div>
         <button
           type="button"
@@ -562,6 +567,7 @@ export function MDiaryPage({
                   color: active ? '#5a7060' : '#9aaa98',
                   borderBottomColor: active ? '#5a7060' : 'rgba(80,100,70,0.09)',
                   borderBottomWidth: 2,
+                  fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
                 }}
               >
                 {label}

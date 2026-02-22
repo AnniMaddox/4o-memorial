@@ -3142,8 +3142,9 @@ export function SettingsPage({
                 <h4 className="text-sm text-stone-900">字體關聯</h4>
                 <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
                   <li>外觀與字體（整站）：大多數頁面的基底字體。</li>
-                  <li>情書字體：情書、願望（M&apos;s wish list）。</li>
-                  <li>日記字體：M 日記、日記 B。</li>
+                  <li>情書字體：情書頁。</li>
+                  <li>日記字體：M 日記、日記 B、願望內文。</li>
+                  <li>願望標題/頁籤、日記 M/B 標題/頁籤、經期日記標題/頁籤：全站字體。</li>
                   <li>家字體：只影響「家」閱讀頁。</li>
                 </ul>
               </section>
