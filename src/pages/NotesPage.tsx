@@ -327,7 +327,7 @@ function NoteEmptyState() {
 
 function NoteWall({ notes, onTap, notesFontSize, notesTextColor }: { notes: StoredNote[]; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
   return (
-    <div className="overflow-visible px-3 pt-1" style={{ columns: 2, columnGap: '0.75rem' }}>
+    <div className="overflow-visible px-3 pt-3" style={{ columns: 2, columnGap: '0.75rem' }}>
       {notes.map((note) => (
         <StickyNote key={note.id} note={note} onTap={onTap} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
       ))}
@@ -344,7 +344,7 @@ function StickyNote({ note, onTap, notesFontSize, notesTextColor }: { note: Stor
   return (
     <div
       className="mb-3 break-inside-avoid cursor-pointer select-none rounded-2xl p-3.5 shadow-sm transition active:scale-95"
-      style={{ background: note.color, transform: `rotate(${rot}deg)` }}
+      style={{ background: note.color, transform: `translateY(6px) rotate(${rot}deg)` }}
       onClick={() => onTap(note)}
     >
       <p
