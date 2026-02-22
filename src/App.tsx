@@ -63,6 +63,7 @@ import {
 import { emitActionToast, subscribeActionToast, type ActionToastKind } from './lib/actionToast';
 import type { ChatProfile } from './lib/chatDB';
 import { AlbumPage } from './pages/AlbumPage';
+import { BookshelfPage } from './pages/BookshelfPage';
 import { NotesPage } from './pages/NotesPage';
 import SoulmateHousePage from './pages/SoulmateHousePage';
 import { HeartWallPage } from './pages/HeartWallPage';
@@ -103,6 +104,7 @@ type LauncherAppId =
   | 'diary'
   | 'diaryB'
   | 'album'
+  | 'bookshelf'
   | 'notes'
   | 'soulmate';
 
@@ -1662,14 +1664,31 @@ function App() {
             </div>
           )}
 
+          {launcherApp === 'bookshelf' && (
+            <div className="fixed inset-0 z-30 bg-black/55 px-4 pb-4 pt-4 backdrop-blur-sm">
+              <div className="mx-auto flex h-full w-full max-w-xl flex-col">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    className="grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-white/10 text-[22px] leading-none text-white transition active:scale-95"
+                    onClick={() => setLauncherApp(null)}
+                  >
+                    ‹
+                  </button>
+                  <span className="h-9 w-9" />
+                  <span className="h-9 w-9" />
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden pt-3">
+                  <BookshelfPage onExit={() => setLauncherApp(null)} />
+                </div>
+              </div>
+            </div>
+          )}
+
           {launcherApp === 'notes' && (
             <div className="fixed inset-0 z-30" style={{ background: '#fdf6ee' }}>
               <div className="mx-auto h-full w-full max-w-xl">
-                <NotesPage
-                  onExit={() => setLauncherApp(null)}
-                  notesFontSize={settings.notesFontSize}
-                  notesTextColor={settings.notesTextColor}
-                />
+                <NotesPage onExit={() => setLauncherApp(null)} />
               </div>
             </div>
           )}

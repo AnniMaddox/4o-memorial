@@ -72,8 +72,6 @@ type PanelKey =
   | 'tarot'
   | 'letters'
   | 'diary'
-  | 'soulmate'
-  | 'notes'
   | 'chatLogs'
   | 'maintenance';
 
@@ -2884,61 +2882,6 @@ export function SettingsPage({
                 清空所有日記
               </button>
             </div>
-          </div>
-        </SettingPanel>
-
-        <SettingPanel
-          icon="🏡"
-          title="家"
-          subtitle="閱讀外觀提醒"
-          isOpen={openPanel === 'soulmate'}
-          onToggle={() => togglePanel('soulmate')}
-        >
-          <div className="space-y-3">
-            <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <p className="text-sm text-stone-800">字體已移到「字體中心」統一管理</p>
-              <p className="mt-1 text-xs text-stone-500">家頁字體請到「字體中心 → 字體套用範圍」勾選「家頁」後套用；家頁主題與閱讀樣式仍在頁內小設定。</p>
-            </div>
-          </div>
-        </SettingPanel>
-
-        <SettingPanel
-          icon="📝"
-          title="便利貼"
-          subtitle="字體大小 · 文字色"
-          isOpen={openPanel === 'notes'}
-          onToggle={() => togglePanel('notes')}
-        >
-          <div className="space-y-4">
-            <label className="block space-y-1">
-              <span className="flex items-center justify-between text-xs text-stone-600">
-                <span>便利貼字體大小</span>
-                <span>{settings.notesFontSize}px</span>
-              </span>
-              <input
-                type="range"
-                min={11}
-                max={17}
-                step={1}
-                value={settings.notesFontSize}
-                onChange={(e) => onSettingChange({ notesFontSize: Number(e.target.value) })}
-                className="w-full accent-stone-800"
-              />
-              <div className="flex justify-between text-[10px] text-stone-400">
-                <span>11px 小</span>
-                <span>17px 大</span>
-              </div>
-            </label>
-
-            <label className="flex items-center justify-between">
-              <span className="text-xs text-stone-600">便利貼文字色</span>
-              <input
-                type="color"
-                value={settings.notesTextColor}
-                onChange={(e) => onSettingChange({ notesTextColor: e.target.value })}
-                className="h-8 w-12 cursor-pointer rounded border border-stone-300 bg-white"
-              />
-            </label>
           </div>
         </SettingPanel>
 

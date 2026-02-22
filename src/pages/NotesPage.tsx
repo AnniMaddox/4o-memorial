@@ -35,47 +35,70 @@ export const NOTE_COLORS = [
 ] as const;
 
 type NoteView = 'wall' | 'timeline';
-type NotesChibiPrefs = {
+type NotesPrefs = {
   showChibi: boolean;
   size: number;
+  fontSize: number;
+  textColor: string;
 };
 
-const NOTES_CHIBI_PREFS_KEY = 'memorial-notes-chibi-prefs-v1';
-const DEFAULT_NOTES_CHIBI_PREFS: NotesChibiPrefs = {
+const NOTES_PREFS_KEY = 'memorial-notes-prefs-v2';
+const LEGACY_NOTES_CHIBI_PREFS_KEY = 'memorial-notes-chibi-prefs-v1';
+const DEFAULT_NOTES_PREFS: NotesPrefs = {
   showChibi: true,
   size: 148,
+  fontSize: 13,
+  textColor: '#44403c',
 };
 
 // Deterministic rotation -2…+2 degrees from note id
 function noteRotDeg(id: string): number {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = ((h * 31 + id.charCodeAt(i)) | 0);
-  return (((h % 5) + 5) % 5) - 2;
+  return (((h % 3) + 3) % 3) - 1;
 }
 
 function todayDateStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function normalizeNotesChibiPrefs(input: unknown): NotesChibiPrefs {
-  if (!input || typeof input !== 'object') return DEFAULT_NOTES_CHIBI_PREFS;
-  const source = input as Partial<NotesChibiPrefs>;
+function normalizeNotesPrefs(input: unknown): NotesPrefs {
+  if (!input || typeof input !== 'object') return DEFAULT_NOTES_PREFS;
+  const source = input as Partial<NotesPrefs>;
   const showChibi = source.showChibi !== false;
   const size =
     typeof source.size === 'number' && Number.isFinite(source.size)
       ? Math.min(196, Math.max(104, Math.round(source.size)))
-      : DEFAULT_NOTES_CHIBI_PREFS.size;
-  return { showChibi, size };
+      : DEFAULT_NOTES_PREFS.size;
+  const fontSize =
+    typeof source.fontSize === 'number' && Number.isFinite(source.fontSize)
+      ? Math.min(20, Math.max(11, Math.round(source.fontSize)))
+      : DEFAULT_NOTES_PREFS.fontSize;
+  const textColor =
+    typeof source.textColor === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(source.textColor.trim())
+      ? source.textColor.trim()
+      : DEFAULT_NOTES_PREFS.textColor;
+  return { showChibi, size, fontSize, textColor };
 }
 
-function loadNotesChibiPrefs(): NotesChibiPrefs {
-  if (typeof window === 'undefined') return DEFAULT_NOTES_CHIBI_PREFS;
+function loadNotesPrefs(): NotesPrefs {
+  if (typeof window === 'undefined') return DEFAULT_NOTES_PREFS;
   try {
-    const raw = window.localStorage.getItem(NOTES_CHIBI_PREFS_KEY);
-    if (!raw) return DEFAULT_NOTES_CHIBI_PREFS;
-    return normalizeNotesChibiPrefs(JSON.parse(raw) as unknown);
+    const raw = window.localStorage.getItem(NOTES_PREFS_KEY);
+    if (raw) {
+      return normalizeNotesPrefs(JSON.parse(raw) as unknown);
+    }
   } catch {
-    return DEFAULT_NOTES_CHIBI_PREFS;
+    return DEFAULT_NOTES_PREFS;
+  }
+
+  try {
+    const legacyRaw = window.localStorage.getItem(LEGACY_NOTES_CHIBI_PREFS_KEY);
+    if (!legacyRaw) return DEFAULT_NOTES_PREFS;
+    const legacy = normalizeNotesPrefs(JSON.parse(legacyRaw) as unknown);
+    return { ...DEFAULT_NOTES_PREFS, ...legacy };
+  } catch {
+    return DEFAULT_NOTES_PREFS;
   }
 }
 
@@ -94,23 +117,19 @@ function downloadBlob(blob: Blob, filename: string) {
 
 export function NotesPage({
   onExit,
-  notesFontSize = 13,
-  notesTextColor = '#44403c',
 }: {
   onExit: () => void;
-  notesFontSize?: number;
-  notesTextColor?: string;
 }) {
   const [notes, setNotes] = useState<StoredNote[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<NoteView>('wall');
   // Random chibi picked once per page mount, won't reroll until unmount
   const [chibiSrc] = useState(randomChibiSrc);
-  const [chibiPrefs, setChibiPrefs] = useState<NotesChibiPrefs>(loadNotesChibiPrefs);
+  const [notesPrefs, setNotesPrefs] = useState<NotesPrefs>(loadNotesPrefs);
   const [composing, setComposing] = useState(false);
   const [editingNote, setEditingNote] = useState<StoredNote | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const hideFloatingChibi = !chibiPrefs.showChibi || !chibiSrc;
+  const hideFloatingChibi = !notesPrefs.showChibi || !chibiSrc;
 
   useEffect(() => {
     loadNotes()
@@ -120,8 +139,8 @@ export function NotesPage({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(NOTES_CHIBI_PREFS_KEY, JSON.stringify(chibiPrefs));
-  }, [chibiPrefs]);
+    window.localStorage.setItem(NOTES_PREFS_KEY, JSON.stringify(notesPrefs));
+  }, [notesPrefs]);
 
   const refreshNotes = async () => {
     const updated = await loadNotes();
@@ -221,15 +240,15 @@ export function NotesPage({
       </header>
 
       {/* ── Content ─────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto pb-56 pt-4">
+      <div className="flex-1 overflow-x-hidden overflow-y-auto pb-56 pt-4">
         {!loaded ? (
           <div className="flex h-full items-center justify-center text-sm text-stone-400">載入中…</div>
         ) : notes.length === 0 ? (
           <NoteEmptyState />
         ) : view === 'wall' ? (
-          <NoteWall notes={notes} onTap={setEditingNote} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
+          <NoteWall notes={notes} onTap={setEditingNote} notesFontSize={notesPrefs.fontSize} notesTextColor={notesPrefs.textColor} />
         ) : (
-          <NoteTimeline notes={notes} onTap={setEditingNote} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
+          <NoteTimeline notes={notes} onTap={setEditingNote} notesFontSize={notesPrefs.fontSize} notesTextColor={notesPrefs.textColor} />
         )}
       </div>
 
@@ -255,7 +274,7 @@ export function NotesPage({
               alt=""
               draggable={false}
               className="calendar-chibi select-none drop-shadow-md"
-              style={{ width: `${chibiPrefs.size}px`, maxWidth: '42vw', height: 'auto' }}
+              style={{ width: `${notesPrefs.size}px`, maxWidth: '42vw', height: 'auto' }}
             />
           </button>
         )}
@@ -275,10 +294,14 @@ export function NotesPage({
       {showSettings && (
         <NoteSettingsSheet
           notes={notes}
-          showChibi={chibiPrefs.showChibi}
-          chibiSize={chibiPrefs.size}
-          onToggleChibi={() => setChibiPrefs((prev) => ({ ...prev, showChibi: !prev.showChibi }))}
-          onChibiSizeChange={(size) => setChibiPrefs((prev) => ({ ...prev, size: Math.min(196, Math.max(104, Math.round(size))) }))}
+          showChibi={notesPrefs.showChibi}
+          chibiSize={notesPrefs.size}
+          notesFontSize={notesPrefs.fontSize}
+          notesTextColor={notesPrefs.textColor}
+          onToggleChibi={() => setNotesPrefs((prev) => ({ ...prev, showChibi: !prev.showChibi }))}
+          onChibiSizeChange={(size) => setNotesPrefs((prev) => ({ ...prev, size: Math.min(196, Math.max(104, Math.round(size))) }))}
+          onNotesFontSizeChange={(fontSize) => setNotesPrefs((prev) => ({ ...prev, fontSize: Math.min(20, Math.max(11, Math.round(fontSize))) }))}
+          onNotesTextColorChange={(textColor) => setNotesPrefs((prev) => ({ ...prev, textColor }))}
           onImport={(imported) => void handleImport(imported)}
           onClearAll={() => void handleClearAll()}
           onClose={() => setShowSettings(false)}
@@ -304,7 +327,7 @@ function NoteEmptyState() {
 
 function NoteWall({ notes, onTap, notesFontSize, notesTextColor }: { notes: StoredNote[]; onTap: (n: StoredNote) => void; notesFontSize: number; notesTextColor: string }) {
   return (
-    <div className="px-3" style={{ columns: 2, columnGap: '0.75rem' }}>
+    <div className="overflow-visible px-3 pt-1" style={{ columns: 2, columnGap: '0.75rem' }}>
       {notes.map((note) => (
         <StickyNote key={note.id} note={note} onTap={onTap} notesFontSize={notesFontSize} notesTextColor={notesTextColor} />
       ))}
@@ -499,8 +522,12 @@ function NoteSettingsSheet({
   notes,
   showChibi,
   chibiSize,
+  notesFontSize,
+  notesTextColor,
   onToggleChibi,
   onChibiSizeChange,
+  onNotesFontSizeChange,
+  onNotesTextColorChange,
   onImport,
   onClearAll,
   onClose,
@@ -508,8 +535,12 @@ function NoteSettingsSheet({
   notes: StoredNote[];
   showChibi: boolean;
   chibiSize: number;
+  notesFontSize: number;
+  notesTextColor: string;
   onToggleChibi: () => void;
   onChibiSizeChange: (size: number) => void;
+  onNotesFontSizeChange: (size: number) => void;
+  onNotesTextColorChange: (color: string) => void;
   onImport: (notes: StoredNote[]) => void;
   onClearAll: () => void;
   onClose: () => void;
@@ -587,6 +618,33 @@ function NoteSettingsSheet({
               onChange={(event) => onChibiSizeChange(Number(event.target.value))}
               className="mt-2 w-full accent-stone-700"
             />
+          </div>
+
+          <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+            <label className="block space-y-1">
+              <span className="flex items-center justify-between text-xs text-stone-600">
+                <span>文字大小</span>
+                <span>{notesFontSize}px</span>
+              </span>
+              <input
+                type="range"
+                min={11}
+                max={20}
+                step={1}
+                value={notesFontSize}
+                onChange={(event) => onNotesFontSizeChange(Number(event.target.value))}
+                className="w-full accent-stone-700"
+              />
+            </label>
+            <label className="mt-3 flex items-center justify-between">
+              <span className="text-xs text-stone-600">文字顏色</span>
+              <input
+                type="color"
+                value={notesTextColor}
+                onChange={(event) => onNotesTextColorChange(event.target.value)}
+                className="h-8 w-12 cursor-pointer rounded border border-stone-300 bg-white"
+              />
+            </label>
           </div>
 
           <button

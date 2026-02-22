@@ -7,6 +7,7 @@ import { emitActionToast } from '../lib/actionToast';
 const BASE = import.meta.env.BASE_URL as string;
 const ALBUM_OVERRIDES_STORAGE_KEY = 'memorial-album-overrides';
 const LEGACY_ALBUM_NAME_OVERRIDES_STORAGE_KEY = 'memorial-album-name-overrides';
+const ALBUM_ORDER_STORAGE_KEY = 'memorial-album-order-v1';
 
 // chibi-00 used as book-cover decoration on the shelf
 const CHIBI_00_SRC = `${BASE}chibi/chibi-00.webp`;
@@ -97,6 +98,58 @@ function saveAlbumOverrides(overrides: AlbumOverrides) {
   }
 }
 
+function normalizeAlbumOrder(value: unknown, availableIds: string[]) {
+  const fallback = [...availableIds];
+  if (!Array.isArray(value)) return fallback;
+
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+
+  for (const item of value) {
+    if (typeof item !== 'string') continue;
+    if (!availableIds.includes(item)) continue;
+    if (seen.has(item)) continue;
+    seen.add(item);
+    ordered.push(item);
+  }
+
+  for (const id of availableIds) {
+    if (!seen.has(id)) ordered.push(id);
+  }
+  return ordered;
+}
+
+function loadAlbumOrder(availableIds: string[]) {
+  if (typeof window === 'undefined') return [...availableIds];
+  try {
+    const raw = window.localStorage.getItem(ALBUM_ORDER_STORAGE_KEY);
+    if (!raw) return [...availableIds];
+    const parsed = JSON.parse(raw) as unknown;
+    return normalizeAlbumOrder(parsed, availableIds);
+  } catch {
+    return [...availableIds];
+  }
+}
+
+function saveAlbumOrder(order: string[]) {
+  try {
+    window.localStorage.setItem(ALBUM_ORDER_STORAGE_KEY, JSON.stringify(order));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sortAlbumsByOrder(albums: Album[], order: string[]) {
+  const rank = new Map(order.map((id, idx) => [id, idx]));
+  return [...albums].sort((a, b) => {
+    const aRank = rank.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+    const bRank = rank.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+    if (aRank !== bRank) return aRank - bRank;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 function resolveAlbumCoverUrl(value: string | undefined) {
   const raw = value?.trim() ?? '';
   if (!raw) return '';
@@ -128,6 +181,7 @@ export function AlbumPage() {
   const [manageMode, setManageMode] = useState(false);
   const [albumOverrides, setAlbumOverrides] = useState<AlbumOverrides>(() => loadAlbumOverrides());
   const [drafts, setDrafts] = useState<AlbumOverrides>(() => loadAlbumOverrides());
+  const [albumOrder, setAlbumOrder] = useState<string[]>(() => loadAlbumOrder(ALBUMS.map((album) => album.id)));
 
   const displayAlbums = useMemo(
     () =>
@@ -140,6 +194,8 @@ export function AlbumPage() {
       })),
     [albumOverrides],
   );
+  const sortedDisplayAlbums = useMemo(() => sortAlbumsByOrder(displayAlbums, albumOrder), [displayAlbums, albumOrder]);
+  const sortedBaseAlbums = useMemo(() => sortAlbumsByOrder(ALBUMS, albumOrder), [albumOrder]);
 
   useEffect(() => {
     if (manageMode) {
@@ -147,7 +203,29 @@ export function AlbumPage() {
     }
   }, [albumOverrides, manageMode]);
 
-  const openedAlbum = openAlbumId ? displayAlbums.find((album) => album.id === openAlbumId) ?? null : null;
+  useEffect(() => {
+    const availableIds = ALBUMS.map((album) => album.id);
+    setAlbumOrder((current) => normalizeAlbumOrder(current, availableIds));
+  }, []);
+
+  useEffect(() => {
+    saveAlbumOrder(albumOrder);
+  }, [albumOrder]);
+
+  function moveAlbum(albumId: string, direction: 'up' | 'down') {
+    setAlbumOrder((current) => {
+      const index = current.indexOf(albumId);
+      if (index === -1) return current;
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      const [item] = next.splice(index, 1);
+      next.splice(target, 0, item);
+      return next;
+    });
+  }
+
+  const openedAlbum = openAlbumId ? sortedDisplayAlbums.find((album) => album.id === openAlbumId) ?? null : null;
 
   if (openedAlbum) {
     return <AlbumReader album={openedAlbum} onClose={() => setOpenAlbumId(null)} />;
@@ -156,7 +234,8 @@ export function AlbumPage() {
   if (manageMode) {
     return (
       <AlbumManager
-        albums={ALBUMS}
+        albums={sortedBaseAlbums}
+        albumOrder={albumOrder}
         drafts={drafts}
         onDraftChange={(albumId, patch) => {
           setDrafts((current) => ({
@@ -206,12 +285,14 @@ export function AlbumPage() {
             emitActionToast({ kind: 'error', message: '相冊設定儲存失敗', durationMs: 2600 });
           }
         }}
+        onMoveUp={(albumId) => moveAlbum(albumId, 'up')}
+        onMoveDown={(albumId) => moveAlbum(albumId, 'down')}
         onCancel={() => setManageMode(false)}
       />
     );
   }
 
-  return <AlbumShelf albums={displayAlbums} onOpen={setOpenAlbumId} onOpenManager={() => setManageMode(true)} />;
+  return <AlbumShelf albums={sortedDisplayAlbums} onOpen={setOpenAlbumId} onOpenManager={() => setManageMode(true)} />;
 }
 
 // ─── AlbumShelf ───────────────────────────────────────────────────────────────
@@ -338,16 +419,22 @@ function AlbumBookCard({
 
 function AlbumManager({
   albums,
+  albumOrder,
   drafts,
   onDraftChange,
   onResetAlbum,
+  onMoveUp,
+  onMoveDown,
   onSave,
   onCancel,
 }: {
   albums: Album[];
+  albumOrder: string[];
   drafts: AlbumOverrides;
   onDraftChange: (albumId: string, patch: AlbumOverride) => void;
   onResetAlbum: (albumId: string) => void;
+  onMoveUp: (albumId: string) => void;
+  onMoveDown: (albumId: string) => void;
   onSave: () => void;
   onCancel: () => void;
 }) {
@@ -400,6 +487,9 @@ function AlbumManager({
 
       <div className="space-y-4">
         {albums.map((album) => {
+          const orderIndex = albumOrder.indexOf(album.id);
+          const canMoveUp = orderIndex > 0;
+          const canMoveDown = orderIndex >= 0 && orderIndex < albumOrder.length - 1;
           const draft = drafts[album.id] ?? {};
           const titleValue = draft.title ?? '';
           const subtitleValue = draft.subtitle ?? '';
@@ -418,13 +508,35 @@ function AlbumManager({
                   <span className="truncate text-sm font-medium text-stone-800">{album.title}</span>
                   <span className="text-xs text-stone-500">{collapsed ? '▸' : '▾'}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onResetAlbum(album.id)}
-                  className="rounded-lg border border-stone-300 px-2 py-1 text-[11px] text-stone-600 transition active:scale-95"
-                >
-                  還原預設
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onMoveUp(album.id)}
+                    disabled={!canMoveUp}
+                    className="grid h-7 w-7 place-items-center rounded-lg border border-stone-300 text-sm text-stone-600 transition active:scale-95 disabled:opacity-35"
+                    title="往上移"
+                    aria-label="往上移"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onMoveDown(album.id)}
+                    disabled={!canMoveDown}
+                    className="grid h-7 w-7 place-items-center rounded-lg border border-stone-300 text-sm text-stone-600 transition active:scale-95 disabled:opacity-35"
+                    title="往下移"
+                    aria-label="往下移"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onResetAlbum(album.id)}
+                    className="rounded-lg border border-stone-300 px-2 py-1 text-[11px] text-stone-600 transition active:scale-95"
+                  >
+                    還原預設
+                  </button>
+                </div>
               </div>
 
               {!collapsed && (
