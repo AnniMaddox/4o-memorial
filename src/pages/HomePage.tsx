@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 
 import type { AppLabels, TabIconUrls } from '../types/settings';
 
@@ -69,6 +77,13 @@ type AnchorPosition = {
 };
 
 const CHIBI_POSITION_STORAGE_KEY = 'memorial-home-corner-chibi-anchor';
+const COUNTER_VINYL_PREFS_STORAGE_KEY = 'memorial-home-counter-vinyl-prefs-v1';
+const COUNTER_VINYL_SPEED_OPTIONS = [
+  { label: '0.8x', value: 0.8 },
+  { label: '1.0x', value: 1 },
+  { label: '1.4x', value: 1.4 },
+  { label: '1.8x', value: 1.8 },
+] as const;
 
 function pad2(value: number) {
   return String(value).padStart(2, '0');
@@ -198,6 +213,7 @@ export function HomePage({
   const [screenIndex, setScreenIndex] = useState(0);
   const pagerRef = useRef<HTMLDivElement | null>(null);
   const widgetIconInputRef = useRef<HTMLInputElement | null>(null);
+  const counterWidgetIconInputRef = useRef<HTMLInputElement | null>(null);
   const homeRootRef = useRef<HTMLDivElement | null>(null);
   const cornerChibiRef = useRef<HTMLButtonElement | null>(null);
   const dragStateRef = useRef<{
@@ -211,6 +227,8 @@ export function HomePage({
   const [isDraggingChibi, setIsDraggingChibi] = useState(false);
   const [chibiAnchor, setChibiAnchor] = useState<AnchorPosition>({ x: 0.9, y: 0.86 });
   const chibiAnchorRef = useRef(chibiAnchor);
+  const [isCounterVinylPlaying, setIsCounterVinylPlaying] = useState(true);
+  const [counterVinylSpeed, setCounterVinylSpeed] = useState(1);
   const cornerChibiUrl = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
 
   useEffect(() => {
@@ -253,6 +271,40 @@ export function HomePage({
     }, 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(COUNTER_VINYL_PREFS_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { isPlaying?: unknown; speed?: unknown };
+      if (typeof parsed.isPlaying === 'boolean') {
+        setIsCounterVinylPlaying(parsed.isPlaying);
+      }
+      if (
+        typeof parsed.speed === 'number' &&
+        Number.isFinite(parsed.speed) &&
+        COUNTER_VINYL_SPEED_OPTIONS.some((option) => option.value === parsed.speed)
+      ) {
+        setCounterVinylSpeed(parsed.speed);
+      }
+    } catch {
+      // ignore malformed storage
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        COUNTER_VINYL_PREFS_STORAGE_KEY,
+        JSON.stringify({
+          isPlaying: isCounterVinylPlaying,
+          speed: counterVinylSpeed,
+        }),
+      );
+    } catch {
+      // ignore storage failures
+    }
+  }, [counterVinylSpeed, isCounterVinylPlaying]);
 
   useEffect(() => {
     try {
@@ -546,6 +598,19 @@ export function HomePage({
     [now, parsedMemorialStartDate],
   );
 
+  const handleWidgetIconFilePick = useCallback(
+    (file: File | null) => {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        if (result) onWidgetIconChange(result);
+      };
+      reader.readAsDataURL(file);
+    },
+    [onWidgetIconChange],
+  );
+
   const headerTitle = widgetTitle.trim() || 'Memorial';
   const headerSubtitle = widgetSubtitle.trim();
   const badgeText = widgetBadgeText.trim();
@@ -720,13 +785,7 @@ export function HomePage({
                                 event.stopPropagation();
                                 const file = event.target.files?.[0];
                                 event.currentTarget.value = '';
-                                if (!file) return;
-                                const reader = new FileReader();
-                                reader.onload = () => {
-                                  const result = typeof reader.result === 'string' ? reader.result : '';
-                                  if (result) onWidgetIconChange(result);
-                                };
-                                reader.readAsDataURL(file);
+                                handleWidgetIconFilePick(file ?? null);
                               }}
                               onClick={(event) => event.stopPropagation()}
                             />
@@ -796,6 +855,71 @@ export function HomePage({
                     className="w-full rounded-[2.4rem] border border-white/55 bg-white/25 px-6 py-8 shadow-[0_26px_60px_rgba(0,0,0,0.14)] backdrop-blur"
                     style={{ boxShadow: '0 26px 60px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.62)' }}
                   >
+                    <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded-full border border-white/65 bg-white/50 px-3 py-1.5 text-xs tracking-[0.08em] text-stone-700 transition active:scale-95"
+                        onClick={() => counterWidgetIconInputRef.current?.click()}
+                      >
+                        {widgetIconDataUrl.trim() ? '更換唱片圖' : '上傳唱片圖'}
+                      </button>
+                      <input
+                        ref={counterWidgetIconInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.currentTarget.value = '';
+                          handleWidgetIconFilePick(file ?? null);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="rounded-full border border-white/65 bg-white/50 px-3 py-1.5 text-xs tracking-[0.08em] text-stone-700 transition active:scale-95"
+                        onClick={() => setIsCounterVinylPlaying((prev) => !prev)}
+                      >
+                        {isCounterVinylPlaying ? '按一下暫停' : '按一下播放'}
+                      </button>
+                      {COUNTER_VINYL_SPEED_OPTIONS.map((option) => (
+                        <button
+                          key={option.label}
+                          type="button"
+                          className={`rounded-full border px-3 py-1.5 text-xs tracking-[0.08em] transition active:scale-95 ${
+                            counterVinylSpeed === option.value
+                              ? 'border-stone-400 bg-stone-700 text-white'
+                              : 'border-white/65 bg-white/45 text-stone-700'
+                          }`}
+                          onClick={() => setCounterVinylSpeed(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="home-counter-vinyl-wrap" aria-hidden="true">
+                      <div
+                        className={`home-counter-vinyl-stage ${isCounterVinylPlaying ? 'home-counter-vinyl-playing' : ''}`}
+                        style={{ '--home-counter-vinyl-speed': `${(4 / counterVinylSpeed).toFixed(2)}s` } as CSSProperties}
+                      >
+                        <div className="home-counter-vinyl-shadow" />
+                        <div className="home-counter-vinyl-platter">
+                          <div className="home-counter-vinyl-grooves" />
+                          <div className="home-counter-vinyl-highlight" />
+                          <div className="home-counter-vinyl-label">
+                            {widgetIconDataUrl.trim() ? (
+                              <img src={widgetIconDataUrl} alt="" loading="lazy" draggable={false} />
+                            ) : (
+                              <span>♡</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="home-counter-vinyl-base" />
+                        <div className="home-counter-vinyl-arm">
+                          <div className="home-counter-vinyl-arm-bar" />
+                          <div className="home-counter-vinyl-arm-head" />
+                        </div>
+                      </div>
+                    </div>
                     <p className="text-center text-lg font-semibold tracking-[0.04em] text-stone-700">
                       想你的第
                       <span className="mx-2 inline-block text-[5.2rem] leading-none text-stone-800">{memorialDayCount}</span>
