@@ -24,6 +24,11 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         strategies: 'injectManifest',
+        injectManifest: {
+          // Current production bundle is slightly above 2 MiB.
+          // Increase precache limit so GitHub CI builds do not fail.
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        },
         srcDir: 'src',
         filename: 'sw.ts',
         devOptions: {
