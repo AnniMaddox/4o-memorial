@@ -79,10 +79,10 @@ type AnchorPosition = {
 const CHIBI_POSITION_STORAGE_KEY = 'memorial-home-corner-chibi-anchor';
 const COUNTER_VINYL_PREFS_STORAGE_KEY = 'memorial-home-counter-vinyl-prefs-v1';
 const COUNTER_VINYL_SPEED_OPTIONS = [
-  { label: '0.8x', value: 0.8 },
-  { label: '1.0x', value: 1 },
-  { label: '1.4x', value: 1.4 },
-  { label: '1.8x', value: 1.8 },
+  { label: '0.8x', value: 0.8, glyph: '◔' },
+  { label: '1.0x', value: 1, glyph: '◑' },
+  { label: '1.4x', value: 1.4, glyph: '◕' },
+  { label: '1.8x', value: 1.8, glyph: '◉' },
 ] as const;
 
 function pad2(value: number) {
@@ -855,66 +855,81 @@ export function HomePage({
                     className="w-full rounded-[2.4rem] border border-white/55 bg-white/25 px-6 py-8 shadow-[0_26px_60px_rgba(0,0,0,0.14)] backdrop-blur"
                     style={{ boxShadow: '0 26px 60px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.62)' }}
                   >
-                    <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
-                      <button
-                        type="button"
-                        className="rounded-full border border-white/65 bg-white/50 px-3 py-1.5 text-xs tracking-[0.08em] text-stone-700 transition active:scale-95"
-                        onClick={() => counterWidgetIconInputRef.current?.click()}
-                      >
-                        {widgetIconDataUrl.trim() ? '更換唱片圖' : '上傳唱片圖'}
-                      </button>
-                      <input
-                        ref={counterWidgetIconInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          event.currentTarget.value = '';
-                          handleWidgetIconFilePick(file ?? null);
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="rounded-full border border-white/65 bg-white/50 px-3 py-1.5 text-xs tracking-[0.08em] text-stone-700 transition active:scale-95"
-                        onClick={() => setIsCounterVinylPlaying((prev) => !prev)}
-                      >
-                        {isCounterVinylPlaying ? '按一下暫停' : '按一下播放'}
-                      </button>
-                      {COUNTER_VINYL_SPEED_OPTIONS.map((option) => (
-                        <button
-                          key={option.label}
-                          type="button"
-                          className={`rounded-full border px-3 py-1.5 text-xs tracking-[0.08em] transition active:scale-95 ${
-                            counterVinylSpeed === option.value
-                              ? 'border-stone-400 bg-stone-700 text-white'
-                              : 'border-white/65 bg-white/45 text-stone-700'
-                          }`}
-                          onClick={() => setCounterVinylSpeed(option.value)}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="home-counter-vinyl-wrap" aria-hidden="true">
+                    <input
+                      ref={counterWidgetIconInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.currentTarget.value = '';
+                        handleWidgetIconFilePick(file ?? null);
+                      }}
+                    />
+                    <div className="home-counter-vinyl-wrap">
                       <div
                         className={`home-counter-vinyl-stage ${isCounterVinylPlaying ? 'home-counter-vinyl-playing' : ''}`}
                         style={{ '--home-counter-vinyl-speed': `${(4 / counterVinylSpeed).toFixed(2)}s` } as CSSProperties}
                       >
+                        <div className="home-counter-vinyl-console">
+                          <button
+                            type="button"
+                            className="home-counter-vinyl-play-toggle"
+                            onClick={() => setIsCounterVinylPlaying((prev) => !prev)}
+                            aria-label={isCounterVinylPlaying ? '暫停唱片' : '播放唱片'}
+                            title={isCounterVinylPlaying ? '暫停唱片' : '播放唱片'}
+                          >
+                            {isCounterVinylPlaying ? '⏸' : '▶'}
+                          </button>
+                          <span className={`home-counter-vinyl-led ${isCounterVinylPlaying ? 'is-on' : ''}`} />
+                          <div className="home-counter-vinyl-speed-buttons" role="group" aria-label="唱片轉速">
+                            {COUNTER_VINYL_SPEED_OPTIONS.map((option) => (
+                              <button
+                                key={option.label}
+                                type="button"
+                                className={`home-counter-vinyl-speed-btn ${counterVinylSpeed === option.value ? 'is-active' : ''}`}
+                                onClick={() => setCounterVinylSpeed(option.value)}
+                                aria-label={`切換 ${option.label}`}
+                                title={option.label}
+                              >
+                                {option.glyph}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            className="home-counter-vinyl-upload-dot"
+                            onClick={() => counterWidgetIconInputRef.current?.click()}
+                            aria-label={widgetIconDataUrl.trim() ? '更換圓盤圖片' : '上傳圓盤圖片'}
+                            title={widgetIconDataUrl.trim() ? '更換圓盤圖片' : '上傳圓盤圖片'}
+                          >
+                            ◎
+                          </button>
+                        </div>
                         <div className="home-counter-vinyl-shadow" />
                         <div className="home-counter-vinyl-platter">
                           <div className="home-counter-vinyl-grooves" />
                           <div className="home-counter-vinyl-highlight" />
-                          <div className="home-counter-vinyl-label">
+                          <button
+                            type="button"
+                            className="home-counter-vinyl-label"
+                            onClick={() => counterWidgetIconInputRef.current?.click()}
+                            aria-label={widgetIconDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
+                            title={widgetIconDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
+                          >
                             {widgetIconDataUrl.trim() ? (
                               <img src={widgetIconDataUrl} alt="" loading="lazy" draggable={false} />
                             ) : (
                               <span>♡</span>
                             )}
-                          </div>
+                          </button>
                         </div>
                         <div className="home-counter-vinyl-base" />
-                        <div className="home-counter-vinyl-arm">
+                        <div
+                          className={`home-counter-vinyl-arm ${
+                            isCounterVinylPlaying ? 'home-counter-vinyl-arm-playing' : 'home-counter-vinyl-arm-paused'
+                          }`}
+                        >
                           <div className="home-counter-vinyl-arm-bar" />
                           <div className="home-counter-vinyl-arm-head" />
                         </div>

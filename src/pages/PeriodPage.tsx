@@ -218,6 +218,21 @@ function randomPick<T>(items: T[]): T | null {
   return items[Math.floor(Math.random() * items.length)]!;
 }
 
+function hashSeed(seed: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function pickBySeed<T>(items: T[], seed: string): T | null {
+  if (!items.length) return null;
+  const index = hashSeed(seed) % items.length;
+  return items[index]!;
+}
+
 function toMonthLabel(date: Date) {
   return `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
 }
@@ -529,23 +544,23 @@ function pickPhraseByDate(
   pool: HoverPhraseMap,
 ): string {
   const date = parseDateKey(dateKey);
-  if (!date) return randomPick(pool.safe) ?? '';
+  if (!date) return pickBySeed(pool.safe, `period-safe:${dateKey}`) ?? '';
 
-  if (actualSet.has(dateKey)) return randomPick(pool.period) ?? '';
+  if (actualSet.has(dateKey)) return pickBySeed(pool.period, `period-actual:${dateKey}`) ?? '';
 
   if (nextStartKey) {
     const nextDate = parseDateKey(nextStartKey);
     if (nextDate) {
       const gap = dayDiff(date, nextDate);
-      if (gap >= 1 && gap <= 3) return randomPick(pool.prePeriod) ?? '';
+      if (gap >= 1 && gap <= 3) return pickBySeed(pool.prePeriod, `period-pre:${dateKey}`) ?? '';
     }
   }
 
   if (ovulStart && ovulEnd && dateKey >= ovulStart && dateKey <= ovulEnd) {
-    return randomPick(pool.ovulation) ?? '';
+    return pickBySeed(pool.ovulation, `period-ovul:${dateKey}`) ?? '';
   }
 
-  return randomPick(pool.safe) ?? '';
+  return pickBySeed(pool.safe, `period-safe:${dateKey}`) ?? '';
 }
 
 // Phase → periodPhrases key mapping
@@ -962,8 +977,6 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   const [postEndPhrases, setPostEndPhrases] = useState<string[]>(DEFAULT_POST_END_PHRASES);
   const [postEndPopup, setPostEndPopup] = useState<PostEndPopupState | null>(null);
   const chibiSources = PERIOD_CHIBI_SOURCES;
-  const [chibiSrc, setChibiSrc] = useState('');
-  const hidePeriodChibi = !store.showChibi || !chibiSrc;
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const panelTheme = PANEL_STYLE_THEME[store.panelStyle];
   const panelFilterFx =
@@ -992,6 +1005,8 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
 
   const today = new Date();
   const todayKey = toDateKey(today);
+  const chibiSrc = useMemo(() => pickBySeed(chibiSources, `period-chibi:${todayKey}`) ?? '', [chibiSources, todayKey]);
+  const hidePeriodChibi = !store.showChibi || !chibiSrc;
   const monthInputValue = toMonthInputValue(viewMonth);
   const monthCells = useMemo(() => buildMonthGrid(viewMonth), [viewMonth]);
 
@@ -1006,12 +1021,6 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   }, [store]);
-
-  useEffect(() => {
-    if (!chibiSrc && chibiSources.length) {
-      setChibiSrc(randomPick(chibiSources) ?? '');
-    }
-  }, [chibiSources, chibiSrc]);
 
   // Load custom hover phrases
   useEffect(() => {
@@ -1129,8 +1138,8 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
   // Chibi bubble content (from periodPhrases.ts)
   const chibiPhrase = useMemo(() => {
     const key = phaseToPhraseKey(todayPhase);
-    return randomPick(chibiPhrases[key]) ?? '';
-  }, [chibiPhrases, todayPhase]);
+    return pickBySeed(chibiPhrases[key], `period-chibi-phrase:${todayKey}:${key}`) ?? '';
+  }, [chibiPhrases, todayKey, todayPhase]);
 
 
   // Trigger one-time popup for each finished period
