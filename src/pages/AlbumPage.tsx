@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import albumsData from '../../public/data/albums.json';
+import { emitActionToast } from '../lib/actionToast';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -90,8 +91,9 @@ function loadAlbumOverrides() {
 function saveAlbumOverrides(overrides: AlbumOverrides) {
   try {
     window.localStorage.setItem(ALBUM_OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+    return true;
   } catch {
-    // ignore storage write failures
+    return false;
   }
 }
 
@@ -108,7 +110,7 @@ function resolveAlbumCoverUrl(value: string | undefined) {
 function buildAlbum(meta: AlbumMeta): Album {
   const images = Object.entries(ALL_PHOTO_MODULES)
     .filter(([path]) => path.includes(`/photos/${meta.id}/`))
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
     .map(([, url]) => url);
   return {
     ...meta,
@@ -196,8 +198,13 @@ export function AlbumPage() {
           }
 
           setAlbumOverrides(next);
-          saveAlbumOverrides(next);
-          setManageMode(false);
+          const saved = saveAlbumOverrides(next);
+          if (saved) {
+            emitActionToast({ kind: 'success', message: '相冊設定已儲存' });
+            setManageMode(false);
+          } else {
+            emitActionToast({ kind: 'error', message: '相冊設定儲存失敗', durationMs: 2600 });
+          }
         }}
         onCancel={() => setManageMode(false)}
       />
@@ -513,9 +520,14 @@ function AlbumManager({
 
 function AlbumReader({ album, onClose }: { album: Album; onClose: () => void }) {
   const [index, setIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'preview' | 'reader'>('preview');
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const swiped = useRef(false);
+  const lightboxTouchStartX = useRef<number | null>(null);
+  const lightboxTouchStartY = useRef<number | null>(null);
+  const lightboxSwiped = useRef(false);
 
   const total = album.images.length;
   const hasPrev = index > 0;
@@ -526,6 +538,14 @@ function AlbumReader({ album, onClose }: { album: Album; onClose: () => void }) 
   }
   function next() {
     if (hasNext) setIndex((i) => i + 1);
+  }
+
+  function prevLightbox() {
+    setLightboxIndex((current) => (current === null ? current : Math.max(0, current - 1)));
+  }
+
+  function nextLightbox() {
+    setLightboxIndex((current) => (current === null ? current : Math.min(total - 1, current + 1)));
   }
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -561,61 +581,213 @@ function AlbumReader({ album, onClose }: { album: Album; onClose: () => void }) 
     else if (x > w * 0.65) next();
   }
 
+  function handleLightboxTouchStart(e: React.TouchEvent) {
+    lightboxTouchStartX.current = e.touches[0]!.clientX;
+    lightboxTouchStartY.current = e.touches[0]!.clientY;
+    lightboxSwiped.current = false;
+  }
+
+  function handleLightboxTouchEnd(e: React.TouchEvent) {
+    if (lightboxTouchStartX.current === null || lightboxTouchStartY.current === null) return;
+    const dx = e.changedTouches[0]!.clientX - lightboxTouchStartX.current;
+    const dy = e.changedTouches[0]!.clientY - lightboxTouchStartY.current;
+    lightboxTouchStartX.current = null;
+    lightboxTouchStartY.current = null;
+
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      lightboxSwiped.current = true;
+      if (dx < 0) nextLightbox();
+      else prevLightbox();
+    }
+  }
+
+  function handleLightboxClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (lightboxSwiped.current) {
+      lightboxSwiped.current = false;
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const w = rect.width;
+    if (x < w * 0.34) {
+      prevLightbox();
+      return;
+    }
+    if (x > w * 0.66) {
+      nextLightbox();
+      return;
+    }
+    if (lightboxIndex !== null) setIndex(lightboxIndex);
+    setLightboxIndex(null);
+  }
+
   const progress = total > 1 ? (index / (total - 1)) * 100 : 100;
 
   return (
     <div
-      className="relative mx-auto flex w-full max-w-xl flex-col overflow-hidden bg-black"
+      className={`relative mx-auto flex w-full max-w-xl flex-col overflow-hidden ${
+        viewMode === 'reader' ? 'bg-black' : 'bg-stone-100'
+      }`}
       style={{ height: 'calc(100dvh - 72px)' }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onClick={handleClick}
     >
       {/* ── Top bar ───────────────────────────────────────────────── */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pb-6 pt-3"
-        style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)' }}
+        className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pb-4 pt-3"
+        style={{
+          background:
+            viewMode === 'reader'
+              ? 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)'
+              : 'linear-gradient(to bottom, rgba(250,248,245,0.96) 0%, rgba(250,248,245,0.74) 70%, transparent 100%)',
+        }}
       >
         <button
           type="button"
-          className="pointer-events-auto rounded-full bg-black/35 px-3 py-1.5 text-sm text-white/80 backdrop-blur-sm transition active:scale-90"
-          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          className={`rounded-full border px-3 py-1.5 text-sm transition active:scale-90 ${
+            viewMode === 'reader'
+              ? 'border-white/30 bg-black/35 text-white/85 backdrop-blur-sm'
+              : 'border-stone-300 bg-white/90 text-stone-700'
+          }`}
+          onClick={onClose}
         >
           ‹ {album.title}
         </button>
-        <span className="text-xs text-white/55 tabular-nums">
-          {index + 1} / {total}
+        <div className="flex items-center gap-1 rounded-full border border-stone-300 bg-white/90 p-1 backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setViewMode('preview')}
+            className={`rounded-full px-2.5 py-1 text-[11px] transition active:scale-95 ${
+              viewMode === 'preview' ? 'bg-stone-800 text-white' : 'text-stone-600'
+            }`}
+          >
+            預覽
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('reader')}
+            className={`rounded-full px-2.5 py-1 text-[11px] transition active:scale-95 ${
+              viewMode === 'reader' ? 'bg-stone-800 text-white' : 'text-stone-600'
+            }`}
+          >
+            翻閱
+          </button>
+        </div>
+        <span className={`text-xs tabular-nums ${viewMode === 'reader' ? 'text-white/55' : 'text-stone-500'}`}>
+          {viewMode === 'reader' ? `${index + 1} / ${total}` : `${total} 張`}
         </span>
       </div>
 
-      {/* ── Image ─────────────────────────────────────────────────── */}
-      <img
-        key={index}
-        src={album.images[index]}
-        alt=""
-        draggable={false}
-        className="absolute inset-0 h-full w-full select-none object-contain"
-      />
-
-      {/* ── Tap-zone chevrons ─────────────────────────────────────── */}
-      {hasPrev && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-12 items-center justify-start pl-2">
-          <span className="text-2xl text-white/25">‹</span>
+      {total === 0 ? (
+        <div className="grid flex-1 place-items-center px-6 text-center">
+          <p className="text-sm text-stone-500">這本相冊還沒有照片</p>
         </div>
-      )}
-      {hasNext && (
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-12 items-center justify-end pr-2">
-          <span className="text-2xl text-white/25">›</span>
-        </div>
-      )}
-
-      {/* ── Progress bar ──────────────────────────────────────────── */}
-      <div className="absolute inset-x-0 bottom-0 z-20 h-0.5 bg-white/10">
+      ) : viewMode === 'reader' ? (
         <div
-          className="h-full bg-white/40 transition-all duration-300"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+          className="relative flex-1"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onClick={handleClick}
+        >
+          {/* ── Image ─────────────────────────────────────────────────── */}
+          <img
+            key={index}
+            src={album.images[index]}
+            alt=""
+            draggable={false}
+            className="absolute inset-0 h-full w-full select-none object-contain"
+          />
+
+          {/* ── Tap-zone chevrons ─────────────────────────────────────── */}
+          {hasPrev && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-12 items-center justify-start pl-2">
+              <span className="text-2xl text-white/25">‹</span>
+            </div>
+          )}
+          {hasNext && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-12 items-center justify-end pr-2">
+              <span className="text-2xl text-white/25">›</span>
+            </div>
+          )}
+
+          {/* ── Progress bar ──────────────────────────────────────────── */}
+          <div className="absolute inset-x-0 bottom-0 z-20 h-0.5 bg-white/10">
+            <div
+              className="h-full bg-white/40 transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto px-3 pb-4 pt-16">
+          <div className="grid grid-cols-3 gap-2">
+            {album.images.map((src, imageIndex) => (
+              <button
+                key={src}
+                type="button"
+                onClick={() => {
+                  setIndex(imageIndex);
+                  setLightboxIndex(imageIndex);
+                }}
+                className="relative overflow-hidden rounded-lg border border-stone-200 bg-stone-100 shadow-sm transition active:scale-[0.98]"
+                style={{ aspectRatio: '1 / 1' }}
+              >
+                <img
+                  src={src}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  draggable={false}
+                  className="h-full w-full select-none object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {lightboxIndex !== null && (
+        <div
+          className="absolute inset-0 z-40 bg-black/95"
+          onTouchStart={handleLightboxTouchStart}
+          onTouchEnd={handleLightboxTouchEnd}
+          onClick={handleLightboxClick}
+        >
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pb-5 pt-3">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIndex(lightboxIndex);
+                setLightboxIndex(null);
+              }}
+              className="pointer-events-auto rounded-full bg-black/45 px-3 py-1.5 text-sm text-white/85 backdrop-blur-sm transition active:scale-90"
+            >
+              × 關閉
+            </button>
+            <span className="text-xs text-white/60 tabular-nums">
+              {lightboxIndex + 1} / {total}
+            </span>
+          </div>
+
+          <img
+            key={lightboxIndex}
+            src={album.images[lightboxIndex]}
+            alt=""
+            draggable={false}
+            className="absolute inset-0 h-full w-full select-none object-contain"
+          />
+
+          {lightboxIndex > 0 && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-12 items-center justify-start pl-2">
+              <span className="text-2xl text-white/25">‹</span>
+            </div>
+          )}
+          {lightboxIndex < total - 1 && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-12 items-center justify-end pr-2">
+              <span className="text-2xl text-white/25">›</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
