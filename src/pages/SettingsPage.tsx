@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { emitActionToast } from '../lib/actionToast';
 import { APP_CUSTOM_FONT_FAMILY, SETTINGS_PREVIEW_FONT_FAMILY, buildFontFaceRule } from '../lib/font';
 import type { ChatProfile } from '../lib/chatDB';
-import type { AppLabelKey, AppLabels, AppSettings, BackgroundMode, TabIconKey, TabIconUrls } from '../types/settings';
+import { DEFAULT_SETTINGS, type AppLabelKey, type AppLabels, type AppSettings, type BackgroundMode, type TabIconKey, type TabIconUrls } from '../types/settings';
 
 type SettingsPageProps = {
   settings: AppSettings;
@@ -78,7 +78,7 @@ type PanelKey =
   | 'maintenance';
 
 type AppearanceGroupKey = 'colorScale' | 'background' | 'calendar' | 'chibi' | 'preset';
-type FontCenterGroupKey = 'preset' | 'scope' | 'usage';
+type FontCenterGroupKey = 'preset' | 'scope' | 'usage' | 'size';
 type FontSlotSettingKey = 'customFontUrlSlots' | 'letterFontUrlSlots' | 'diaryFontUrlSlots' | 'soulmateFontUrlSlots';
 type FontSlotNameSettingKey =
   | 'customFontUrlSlotNames'
@@ -86,15 +86,30 @@ type FontSlotNameSettingKey =
   | 'diaryFontUrlSlotNames'
   | 'soulmateFontUrlSlotNames';
 type FontApplyTargetKey = 'app' | 'letter' | 'diary' | 'soulmate';
+type UiSizeSettingKey =
+  | 'uiHeaderTitleSize'
+  | 'uiTabLabelSize'
+  | 'uiFilterPillSize'
+  | 'uiHintTextSize'
+  | 'chatContactNameSize'
+  | 'chatContactSubtitleSize';
 const FONT_PRESET_KEY: FontSlotSettingKey = 'customFontUrlSlots';
-const FONT_PRESET_LIMIT = 8;
+const FONT_PRESET_LIMIT = 10;
 const FONT_PRESET_INDICES = Array.from({ length: FONT_PRESET_LIMIT }, (_, index) => index);
 
 const FONT_TARGET_OPTIONS: Array<{ key: FontApplyTargetKey; label: string; hint: string }> = [
   { key: 'app', label: '整站', hint: '主標題 / 頁籤等基底字體' },
   { key: 'letter', label: '情書', hint: '情書頁閱讀文字' },
-  { key: 'diary', label: '日記', hint: 'M 日記 / 日記B / 願望' },
+  { key: 'diary', label: '日記', hint: 'M 日記 / Anni 日記 / 願望' },
   { key: 'soulmate', label: '家頁', hint: '家閱讀頁' },
+];
+const UI_SIZE_CONTROLS: Array<{ key: UiSizeSettingKey; label: string; hint: string; min: number; max: number; step: number }> = [
+  { key: 'uiHeaderTitleSize', label: '頁首標題', hint: 'M日記 / Anni日記 / 經期 / 願望 / 對話頁標題', min: 14, max: 24, step: 1 },
+  { key: 'uiTabLabelSize', label: '頁籤文字', hint: '閱讀/月曆/格狀、願望/清單/生日任務 等頁籤', min: 6, max: 24, step: 1 },
+  { key: 'uiFilterPillSize', label: '篩選籤條', hint: '全部/收藏/未知時刻/已完成/未完成', min: 9, max: 16, step: 1 },
+  { key: 'uiHintTextSize', label: '提示小字', hint: '已完成計數、滑動提示、細節小字', min: 8, max: 14, step: 1 },
+  { key: 'chatContactNameSize', label: '對話聯絡人名', hint: '對話首頁卡片上的大名稱（例如 M）', min: 12, max: 38, step: 1 },
+  { key: 'chatContactSubtitleSize', label: '對話聯絡人副標', hint: '對話首頁卡片上的副標（例如 你♡）', min: 12, max: 24, step: 1 },
 ];
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
@@ -189,7 +204,7 @@ const DATA_CONTENT_GUIDE: Array<{ path: string; target: string; note?: string }>
 ];
 
 const ASSET_GUIDE: Array<{ path: string; target: string; note?: string }> = [
-  { path: 'public/diary-covers/', target: 'M日記 / 日記B', note: '日記封面圖池' },
+  { path: 'public/diary-covers/', target: 'M日記 / Anni日記', note: '日記封面圖池' },
   { path: 'public/photos/', target: '相冊', note: '相簿圖片' },
   { path: 'public/tarot/', target: '塔羅', note: '塔羅牌圖檔' },
   { path: 'public/icons/', target: '網站 / PWA', note: '網站圖示與通知 icon' },
@@ -225,6 +240,12 @@ type AppearancePresetPayload = {
     customFontFileUrl: string;
     customFontFamily: string;
     fontScale: number;
+    uiHeaderTitleSize: number;
+    uiTabLabelSize: number;
+    uiFilterPillSize: number;
+    uiHintTextSize: number;
+    chatContactNameSize: number;
+    chatContactSubtitleSize: number;
     tabIconUrls: TabIconUrls;
     tabIconDisplayMode: AppSettings['tabIconDisplayMode'];
     calendarCellRadius: number;
@@ -579,7 +600,7 @@ export function SettingsPage({
 
   function handleSaveCurrentFontPreset() {
     if (fontPresetSelection === null) {
-      emitActionToast({ kind: 'error', message: '請先選擇記憶 1~8 再保存' });
+      emitActionToast({ kind: 'error', message: '請先選擇記憶 1~10 再保存' });
       return;
     }
     saveFontSlot(FONT_PRESET_KEY, fontPresetSelection);
@@ -587,7 +608,7 @@ export function SettingsPage({
 
   function handleDeleteCurrentFontPreset() {
     if (fontPresetSelection === null) {
-      emitActionToast({ kind: 'error', message: '請先選擇要刪除的記憶 1~8' });
+      emitActionToast({ kind: 'error', message: '請先選擇要刪除的記憶 1~10' });
       return;
     }
     clearFontSlot(FONT_PRESET_KEY, fontPresetSelection);
@@ -866,6 +887,12 @@ export function SettingsPage({
         customFontFileUrl: settings.customFontFileUrl,
         customFontFamily: settings.customFontFamily,
         fontScale: settings.fontScale,
+        uiHeaderTitleSize: settings.uiHeaderTitleSize,
+        uiTabLabelSize: settings.uiTabLabelSize,
+        uiFilterPillSize: settings.uiFilterPillSize,
+        uiHintTextSize: settings.uiHintTextSize,
+        chatContactNameSize: settings.chatContactNameSize,
+        chatContactSubtitleSize: settings.chatContactSubtitleSize,
         tabIconUrls: settings.tabIconUrls,
         tabIconDisplayMode: settings.tabIconDisplayMode,
         calendarCellRadius: settings.calendarCellRadius,
@@ -959,6 +986,24 @@ export function SettingsPage({
       }
       if (typeof source.fontScale === 'number' && Number.isFinite(source.fontScale)) {
         next.fontScale = source.fontScale;
+      }
+      if (typeof source.uiHeaderTitleSize === 'number' && Number.isFinite(source.uiHeaderTitleSize)) {
+        next.uiHeaderTitleSize = source.uiHeaderTitleSize;
+      }
+      if (typeof source.uiTabLabelSize === 'number' && Number.isFinite(source.uiTabLabelSize)) {
+        next.uiTabLabelSize = source.uiTabLabelSize;
+      }
+      if (typeof source.uiFilterPillSize === 'number' && Number.isFinite(source.uiFilterPillSize)) {
+        next.uiFilterPillSize = source.uiFilterPillSize;
+      }
+      if (typeof source.uiHintTextSize === 'number' && Number.isFinite(source.uiHintTextSize)) {
+        next.uiHintTextSize = source.uiHintTextSize;
+      }
+      if (typeof source.chatContactNameSize === 'number' && Number.isFinite(source.chatContactNameSize)) {
+        next.chatContactNameSize = source.chatContactNameSize;
+      }
+      if (typeof source.chatContactSubtitleSize === 'number' && Number.isFinite(source.chatContactSubtitleSize)) {
+        next.chatContactSubtitleSize = source.chatContactSubtitleSize;
       }
       if (source.tabIconUrls && typeof source.tabIconUrls === 'object') {
         const input = source.tabIconUrls as Partial<TabIconUrls>;
@@ -1257,7 +1302,7 @@ export function SettingsPage({
               >
                 <span className="min-w-0">
                   <span className="block text-sm text-stone-800">關於我</span>
-                  <span className="mt-0.5 block text-xs text-stone-500">包含：經期日記、打卡、我的日記（B）、便利貼</span>
+                  <span className="mt-0.5 block text-xs text-stone-500">包含：經期日記、打卡、Anni 日記、便利貼</span>
                 </span>
                 <span
                   className={`text-lg leading-none text-stone-500 transition-transform ${openBackupGroup === 'aboutMe' ? 'rotate-180' : ''}`}
@@ -2056,6 +2101,81 @@ export function SettingsPage({
                 <p className="text-xs text-stone-500">{usageTarget.hint}</p>
                 <p className="break-all rounded-md border border-stone-200 bg-white px-2.5 py-2 font-mono text-[11px] text-stone-600">
                   {usageTargetUrl || '（目前為預設字體，沒有字體網址）'}
+                </p>
+              </div>
+            </SettingSubgroup>
+
+            <SettingSubgroup
+              title="字級中心"
+              subtitle="統一常用區塊：標題 / 頁籤 / 篩選籤條 / 提示小字 / 對話聯絡人"
+              isOpen={openFontCenterGroup === 'size'}
+              onToggle={() => toggleFontCenterGroup('size')}
+            >
+              <label className="block space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-stone-800">全域縮放</span>
+                  <span className="text-xs text-stone-500">{settings.fontScale.toFixed(2)}x</span>
+                </div>
+                <p className="text-[11px] text-stone-500">整體 UI 文字比例（含番茄鐘/塔羅/便利貼/家等未細分區塊）</p>
+                <input
+                  type="range"
+                  min={0.9}
+                  max={1.25}
+                  step={0.05}
+                  value={settings.fontScale}
+                  onChange={(event) => onSettingChange({ fontScale: Number(event.target.value) })}
+                  className="w-full accent-stone-700"
+                />
+              </label>
+
+              <div className="space-y-3">
+                {UI_SIZE_CONTROLS.map((control) => (
+                  <label key={`ui-size-${control.key}`} className="block space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-stone-800">{control.label}</span>
+                      <span className="text-xs text-stone-500">{settings[control.key]}px</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500">{control.hint}</p>
+                    <input
+                      type="range"
+                      min={control.min}
+                      max={control.max}
+                      step={control.step}
+                      value={settings[control.key]}
+                      onChange={(event) =>
+                        onSettingChange({
+                          [control.key]: Number(event.target.value),
+                        } as Partial<AppSettings>)
+                      }
+                      className="w-full accent-stone-700"
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onSettingChange({
+                      fontScale: DEFAULT_SETTINGS.fontScale,
+                      uiHeaderTitleSize: DEFAULT_SETTINGS.uiHeaderTitleSize,
+                      uiTabLabelSize: DEFAULT_SETTINGS.uiTabLabelSize,
+                      uiFilterPillSize: DEFAULT_SETTINGS.uiFilterPillSize,
+                      uiHintTextSize: DEFAULT_SETTINGS.uiHintTextSize,
+                      chatContactNameSize: DEFAULT_SETTINGS.chatContactNameSize,
+                      chatContactSubtitleSize: DEFAULT_SETTINGS.chatContactSubtitleSize,
+                    })
+                  }
+                  className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+                >
+                  還原這區預設
+                </button>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                <p className="text-[11px] text-stone-600">
+                  目前已接入：信箱（標題）、願望頁（標題/頁籤/籤條/提示字）、M日記（標題/頁籤/籤條/提示字）、Anni日記（標題/頁籤）、經期（標題/頁籤）、便利貼（標題）、留言月曆（月份標題）、番茄鐘（標題）、塔羅（標題）、家頁（首頁標題）、年度信件（標題）、對話首頁聯絡人名稱/副標。
                 </p>
               </div>
             </SettingSubgroup>
@@ -3276,12 +3396,12 @@ export function SettingsPage({
               <section className="space-y-2">
                 <h4 className="text-sm text-stone-900">字體關聯</h4>
                 <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
-                  <li>字體中心第一欄（字體預設管理）：上傳字體來源、保存成記憶 1~8。</li>
-                  <li>字體中心第二欄（字體套用範圍）：把記憶 1~8 套用到整站/情書/日記/家頁。</li>
+                  <li>字體中心第一欄（字體預設管理）：上傳字體來源、保存成記憶 1~10。</li>
+                  <li>字體中心第二欄（字體套用範圍）：把記憶 1~10 套用到整站/情書/日記/家頁。</li>
                   <li>字體中心第三欄（當前套用檢視）：純預覽目前每個範圍使用中的字體來源。</li>
                   <li>「空白（還原預設字體）」可把勾選頁面恢復為預設字體。</li>
                   <li>整站：大多數頁面的基底字體。</li>
-                  <li>日記：M 日記、日記 B、願望內文。</li>
+                  <li>日記：M 日記、Anni 日記、願望內文。</li>
                   <li>願望標題/頁籤、日記 M/B 標題/頁籤、經期日記標題/頁籤：全站字體。</li>
                   <li>家頁：只影響「家」閱讀頁。</li>
                 </ul>
