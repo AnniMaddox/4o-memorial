@@ -8,7 +8,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: -apple-system, 'Helvetica Neue', system-ui, sans-serif;
+  font-family: var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -39,10 +39,16 @@
   padding: calc(env(safe-area-inset-top, 14px) + 14px) 22px 12px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   opacity: 0;
   transform: translateY(-20px);
   animation: bsl-bar-in 0.5s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.bsl-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .bsl-title {
@@ -50,6 +56,7 @@
   font-size: 20px;
   font-weight: 700;
   letter-spacing: 0.05em;
+  font-family: var(--app-heading-family, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
 }
 
 .bsl-theme-dark .bsl-title {
@@ -60,7 +67,8 @@
   color: rgba(255, 232, 190, 0.88);
 }
 
-.bsl-theme-btn {
+.bsl-theme-btn,
+.bsl-color-btn {
   width: 36px;
   height: 36px;
   border: none;
@@ -73,15 +81,18 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.bsl-theme-dark .bsl-theme-btn {
+.bsl-theme-dark .bsl-theme-btn,
+.bsl-theme-dark .bsl-color-btn {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.bsl-theme-warm .bsl-theme-btn {
+.bsl-theme-warm .bsl-theme-btn,
+.bsl-theme-warm .bsl-color-btn {
   background: rgba(255, 200, 100, 0.1);
 }
 
-.bsl-theme-btn:active {
+.bsl-theme-btn:active,
+.bsl-color-btn:active {
   transform: scale(0.9);
 }
 
@@ -92,6 +103,46 @@
   flex-direction: column;
   justify-content: flex-end;
   overflow: hidden;
+  isolation: isolate;
+}
+
+.bsl-shelf-container::before,
+.bsl-shelf-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+
+.bsl-theme-dark .bsl-shelf-container::before {
+  opacity: 0.9;
+  background-image:
+    radial-gradient(circle at 10% 12%, rgba(255, 255, 255, 0.86) 0 1.2px, transparent 1.7px),
+    radial-gradient(circle at 21% 26%, rgba(255, 255, 255, 0.72) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 33% 10%, rgba(255, 255, 255, 0.9) 0 1.3px, transparent 1.9px),
+    radial-gradient(circle at 46% 22%, rgba(255, 255, 255, 0.75) 0 1.05px, transparent 1.7px),
+    radial-gradient(circle at 57% 8%, rgba(255, 255, 255, 0.88) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 68% 20%, rgba(255, 255, 255, 0.66) 0 0.95px, transparent 1.5px),
+    radial-gradient(circle at 79% 13%, rgba(255, 255, 255, 0.85) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 90% 25%, rgba(255, 255, 255, 0.74) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 14% 38%, rgba(255, 255, 255, 0.68) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 39% 35%, rgba(255, 255, 255, 0.82) 0 1.15px, transparent 1.8px),
+    radial-gradient(circle at 61% 34%, rgba(255, 255, 255, 0.75) 0 1.1px, transparent 1.7px),
+    radial-gradient(circle at 82% 39%, rgba(255, 255, 255, 0.83) 0 1.25px, transparent 1.9px);
+  animation: bsl-stars-drift 28s linear infinite;
+}
+
+.bsl-theme-dark .bsl-shelf-container::after {
+  opacity: 0.48;
+  background-image:
+    radial-gradient(circle at 18% 18%, rgba(191, 210, 255, 0.35) 0 9px, transparent 15px),
+    radial-gradient(circle at 72% 15%, rgba(174, 196, 255, 0.34) 0 10px, transparent 16px),
+    radial-gradient(circle at 54% 31%, rgba(206, 218, 255, 0.3) 0 8px, transparent 13px),
+    radial-gradient(circle at 30% 35%, rgba(182, 198, 255, 0.28) 0 8px, transparent 13px);
+  animation: bsl-stars-twinkle 5.2s ease-in-out infinite;
 }
 
 .bsl-shelf-glow {
@@ -155,14 +206,20 @@
   transform: translateY(0);
 }
 
+.bsl-theme-dark .bsl-books-row:not(.has-selection) .bsl-book.entered {
+  animation: bsl-book-float var(--bsl-float-duration, 6s) ease-in-out var(--bsl-float-delay, 0s) infinite;
+}
+
 .bsl-book.dimmed {
   opacity: 0.1 !important;
   transform: translateY(0) !important;
+  animation: none !important;
 }
 
 .bsl-book.lifted {
   opacity: 1 !important;
   transform: translateY(-28px) scale(1.03) !important;
+  animation: none !important;
 }
 
 .bsl-book::before {
@@ -175,6 +232,50 @@
   border-radius: 3px 0 0 3px;
   background: rgba(0, 0, 0, 0.3);
   z-index: 2;
+}
+
+.bsl-book::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.bsl-book.bsl-spine-pattern-linen::after {
+  opacity: 0.32;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.17) 0 1px,
+      rgba(255, 255, 255, 0) 1px 5px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.14) 0 1px,
+      rgba(0, 0, 0, 0) 1px 7px
+    );
+}
+
+.bsl-book.bsl-spine-pattern-grain::after {
+  opacity: 0.3;
+  background-image:
+    radial-gradient(circle at 15% 8%, rgba(255, 255, 255, 0.2) 0 1.1px, transparent 1.9px),
+    radial-gradient(circle at 42% 31%, rgba(0, 0, 0, 0.2) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 66% 19%, rgba(255, 255, 255, 0.18) 0 0.95px, transparent 1.7px),
+    radial-gradient(circle at 78% 40%, rgba(0, 0, 0, 0.18) 0 1.05px, transparent 1.9px),
+    radial-gradient(circle at 22% 65%, rgba(255, 255, 255, 0.15) 0 0.9px, transparent 1.7px);
+}
+
+.bsl-book.bsl-spine-pattern-dots::after {
+  opacity: 0.28;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.2) 1px, transparent 1.8px);
+  background-size: 8px 8px;
+  background-position: 0 0;
 }
 
 .bsl-pages-edge {
@@ -191,7 +292,7 @@
 .bsl-spine-content {
   writing-mode: vertical-rl;
   position: relative;
-  z-index: 1;
+  z-index: 3;
   width: 100%;
   height: 100%;
   display: flex;
@@ -200,6 +301,7 @@
   justify-content: center;
   gap: 10px;
   padding: 20px 0;
+  transform: translateX(-1px);
 }
 
 .bsl-spine-title {
@@ -209,12 +311,14 @@
   letter-spacing: 0.2em;
   color: rgba(255, 255, 255, 0.92);
   text-align: center;
+  font-family: var(--app-heading-family, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
 }
 
 .bsl-spine-author {
   font-size: 9.5px;
   letter-spacing: 0.12em;
   color: rgba(255, 255, 255, 0.45);
+  font-family: var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif);
 }
 
 .bsl-spine-deco {
@@ -311,10 +415,10 @@
 
 .bsl-shelf-chibi {
   position: absolute;
-  right: 16px;
+  right: 52px;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 70px);
   z-index: 20;
-  width: 88px;
+  width: 126px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -390,6 +494,10 @@
   transition: opacity 0.45s, transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
   position: relative;
   z-index: 2;
+}
+
+.bsl-detail-cover-clickable {
+  cursor: pointer;
 }
 
 .bsl-detail-overlay.active .bsl-detail-cover {
@@ -521,6 +629,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   color: rgba(255, 255, 255, 0.85);
+  font-family: var(--app-heading-family, var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif));
 }
 
 .bsl-detail-sub {
@@ -634,5 +743,37 @@
   }
   50% {
     transform: translateY(-7px);
+  }
+}
+
+@keyframes bsl-book-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(calc(-1 * var(--bsl-float-distance, 8px)));
+  }
+}
+
+@keyframes bsl-stars-drift {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes bsl-stars-twinkle {
+  0%,
+  100% {
+    opacity: 0.44;
+  }
+  50% {
+    opacity: 0.66;
   }
 }
