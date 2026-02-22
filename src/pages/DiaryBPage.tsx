@@ -7,6 +7,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 
+import { SettingsAccordion } from '../components/SettingsAccordion';
 import { emitActionToast } from '../lib/actionToast';
 import { clearAllDiaries, deleteDiary, loadDiaries, saveDiaries, type StoredDiary } from '../lib/diaryDB';
 
@@ -342,6 +343,12 @@ export function DiaryBPage({
   const [sharedChibi] = useState(randomChibiSrc);
   const [diaryChibiPrefs, setDiaryChibiPrefs] = useState<DiaryChibiPrefs>(() => readDiaryChibiPrefs());
   const [diaryTextPrefs, setDiaryTextPrefs] = useState<DiaryTextPrefs>(() => readDiaryTextPrefs());
+  const [settingsPanels, setSettingsPanels] = useState({
+    chibi: false,
+    text: false,
+    backup: false,
+    danger: false,
+  });
   const [calendarDayMenu, setCalendarDayMenu] = useState<CalendarDayMenuState | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
   const hideFloatingChibi = !diaryChibiPrefs.showChibi || !sharedChibi;
@@ -535,11 +542,11 @@ export function DiaryBPage({
 
       setActiveTab('reading');
       setShowEditor(false);
-      emitActionToast({ kind: 'success', message: '日記 B 已儲存' });
+      emitActionToast({ kind: 'success', message: 'Anni 日記已儲存' });
     } catch (error) {
       emitActionToast({
         kind: 'error',
-        message: `日記 B 儲存失敗：${error instanceof Error ? error.message : '未知錯誤'}`,
+        message: `Anni 日記儲存失敗：${error instanceof Error ? error.message : '未知錯誤'}`,
         durationMs: 2600,
       });
     }
@@ -891,7 +898,7 @@ export function DiaryBPage({
                 fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
               }}
             >
-              我的日記
+              Anni 日記
             </span>
           </div>
 
@@ -1860,162 +1867,203 @@ export function DiaryBPage({
                   🌸
                 </span>
               )}
-              <div style={{ fontSize: 12, color: '#7a6040', marginTop: 6, fontWeight: 500 }}>我的日記 設定</div>
+              <div style={{ fontSize: 12, color: '#7a6040', marginTop: 6, fontWeight: 500 }}>Anni 日記 設定</div>
             </div>
 
-            <div style={{ padding: '10px 18px 10px', borderBottom: '1px solid rgba(100,80,40,0.08)' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  border: '1px solid rgba(170,130,80,0.18)',
-                  background: 'rgba(255,255,255,0.7)',
-                  borderRadius: 12,
-                  padding: '9px 11px',
-                }}
-              >
-                <span style={{ fontSize: 12.5, color: '#6d5237' }}>顯示小人</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDiaryChibiPrefs((prev) => ({ ...prev, showChibi: !prev.showChibi }))
-                  }
-                  className="relative h-6 w-10 rounded-full transition"
-                  style={{ background: diaryChibiPrefs.showChibi ? '#9b7a5b' : '#bdb2a6' }}
-                  aria-label="切換小人顯示"
+            <div style={{ padding: '10px 18px 18px' }}>
+              <div className="space-y-2">
+                <SettingsAccordion
+                  title="M"
+                  subtitle="顯示與大小"
+                  isOpen={settingsPanels.chibi}
+                  onToggle={() => setSettingsPanels((prev) => ({ ...prev, chibi: !prev.chibi }))}
+                  className="rounded-xl border border-[rgba(170,130,80,0.18)] bg-[rgba(255,255,255,0.72)] px-3 py-2.5"
+                  titleClassName="text-[12.5px] text-[#6d5237]"
+                  subtitleClassName="text-[10.5px] text-[#9b7a5b]"
+                  bodyClassName="mt-2"
                 >
-                  <span
-                    className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
-                    style={{ left: diaryChibiPrefs.showChibi ? 18 : 2 }}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      border: '1px solid rgba(170,130,80,0.18)',
+                      background: 'rgba(255,255,255,0.8)',
+                      borderRadius: 12,
+                      padding: '9px 11px',
+                    }}
+                  >
+                    <span style={{ fontSize: 12.5, color: '#6d5237' }}>M</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDiaryChibiPrefs((prev) => ({ ...prev, showChibi: !prev.showChibi }))
+                      }
+                      className="relative h-6 w-10 rounded-full transition"
+                      style={{ background: diaryChibiPrefs.showChibi ? '#9b7a5b' : '#bdb2a6' }}
+                      aria-label="切換M顯示"
+                    >
+                      <span
+                        className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
+                        style={{ left: diaryChibiPrefs.showChibi ? 18 : 2 }}
+                      />
+                    </button>
+                  </div>
+
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11.5, color: '#8a6e50' }}>大小</span>
+                      <span style={{ fontSize: 11, color: '#a08060' }}>{diaryChibiPrefs.size}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={104}
+                      max={196}
+                      step={1}
+                      value={diaryChibiPrefs.size}
+                      onChange={(event) =>
+                        setDiaryChibiPrefs((prev) => ({
+                          ...prev,
+                          size: Math.min(196, Math.max(104, Number(event.target.value))),
+                        }))
+                      }
+                      className="w-full accent-amber-700"
+                    />
+                  </div>
+                </SettingsAccordion>
+
+                <SettingsAccordion
+                  title="文字"
+                  subtitle="內文大小"
+                  isOpen={settingsPanels.text}
+                  onToggle={() => setSettingsPanels((prev) => ({ ...prev, text: !prev.text }))}
+                  className="rounded-xl border border-[rgba(170,130,80,0.18)] bg-[rgba(255,255,255,0.72)] px-3 py-2.5"
+                  titleClassName="text-[12.5px] text-[#6d5237]"
+                  subtitleClassName="text-[10.5px] text-[#9b7a5b]"
+                  bodyClassName="mt-2"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 12.5, color: '#6d5237' }}>內文字級</span>
+                    <span style={{ fontSize: 11, color: '#a08060' }}>{contentFontSize.toFixed(1)}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={12}
+                    max={22}
+                    step={0.5}
+                    value={contentFontSize}
+                    onChange={(event) =>
+                      setDiaryTextPrefs((prev) => ({
+                        ...prev,
+                        contentFontSize: clampDiaryContentFontSize(Number(event.target.value), prev.contentFontSize),
+                      }))
+                    }
+                    className="w-full accent-amber-700"
                   />
-                </button>
-              </div>
+                </SettingsAccordion>
 
-              <div style={{ marginTop: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11.5, color: '#8a6e50' }}>小人大小</span>
-                  <span style={{ fontSize: 11, color: '#a08060' }}>{diaryChibiPrefs.size}px</span>
-                </div>
-                <input
-                  type="range"
-                  min={104}
-                  max={196}
-                  step={1}
-                  value={diaryChibiPrefs.size}
-                  onChange={(event) =>
-                    setDiaryChibiPrefs((prev) => ({
-                      ...prev,
-                      size: Math.min(196, Math.max(104, Number(event.target.value))),
-                    }))
-                  }
-                  className="w-full accent-amber-700"
-                />
+                <SettingsAccordion
+                  title="匯入匯出"
+                  subtitle="備份、導入與匯出"
+                  isOpen={settingsPanels.backup}
+                  onToggle={() => setSettingsPanels((prev) => ({ ...prev, backup: !prev.backup }))}
+                  className="rounded-xl border border-[rgba(170,130,80,0.18)] bg-[rgba(255,255,255,0.72)] px-3 py-2.5"
+                  titleClassName="text-[12.5px] text-[#6d5237]"
+                  subtitleClassName="text-[10.5px] text-[#9b7a5b]"
+                  bodyClassName="mt-2 space-y-2"
+                >
+                  <button
+                    type="button"
+                    onClick={openImportPicker}
+                    className="w-full rounded-xl border border-[rgba(170,130,80,0.18)] bg-white/85"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '11px 14px',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: 19, width: 30, textAlign: 'center' }}>📥</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, color: '#3a2c1c', display: 'block' }}>導入備份</span>
+                      <span style={{ fontSize: 10.5, color: '#a08060' }}>從 JSON 還原日記與心情標籤</span>
+                    </span>
+                    <span style={{ fontSize: 13, color: 'rgba(100,80,40,0.26)' }}>›</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => exportAllEntries('backup')}
+                    className="w-full rounded-xl border border-[rgba(170,130,80,0.18)] bg-white/85"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '11px 14px',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: 19, width: 30, textAlign: 'center' }}>☁️</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, color: '#3a2c1c', display: 'block' }}>備份日記</span>
+                      <span style={{ fontSize: 10.5, color: '#a08060' }}>下載完整 JSON 備份</span>
+                    </span>
+                    <span style={{ fontSize: 13, color: 'rgba(100,80,40,0.26)' }}>›</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => exportAllEntries('export')}
+                    className="w-full rounded-xl border border-[rgba(170,130,80,0.18)] bg-white/85"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '11px 14px',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: 19, width: 30, textAlign: 'center' }}>📤</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, color: '#3a2c1c', display: 'block' }}>匯出全部</span>
+                      <span style={{ fontSize: 10.5, color: '#a08060' }}>目前條目 + 心情標籤</span>
+                    </span>
+                    <span style={{ fontSize: 13, color: 'rgba(100,80,40,0.26)' }}>›</span>
+                  </button>
+                </SettingsAccordion>
+
+                <SettingsAccordion
+                  title="資料清理"
+                  subtitle="危險操作"
+                  isOpen={settingsPanels.danger}
+                  onToggle={() => setSettingsPanels((prev) => ({ ...prev, danger: !prev.danger }))}
+                  className="rounded-xl border border-[rgba(170,130,80,0.18)] bg-[rgba(255,255,255,0.72)] px-3 py-2.5"
+                  titleClassName="text-[12.5px] text-[#6d5237]"
+                  subtitleClassName="text-[10.5px] text-[#c06a6a]"
+                  bodyClassName="mt-2"
+                >
+                  <button
+                    type="button"
+                    onClick={() => void clearAllDiaryEntries()}
+                    className="w-full rounded-xl border border-[rgba(200,100,100,0.24)] bg-white/85"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '11px 14px',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: 19, width: 30, textAlign: 'center' }}>🗑️</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, color: '#c04040', display: 'block' }}>清除所有日記</span>
+                    </span>
+                    <span style={{ fontSize: 13, color: 'rgba(180,50,50,0.3)' }}>›</span>
+                  </button>
+                </SettingsAccordion>
               </div>
             </div>
-
-            <div style={{ padding: '10px 18px 10px', borderBottom: '1px solid rgba(100,80,40,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 12.5, color: '#6d5237' }}>內文字級</span>
-                <span style={{ fontSize: 11, color: '#a08060' }}>{contentFontSize.toFixed(1)}px</span>
-              </div>
-              <input
-                type="range"
-                min={12}
-                max={22}
-                step={0.5}
-                value={contentFontSize}
-                onChange={(event) =>
-                  setDiaryTextPrefs((prev) => ({
-                    ...prev,
-                    contentFontSize: clampDiaryContentFontSize(Number(event.target.value), prev.contentFontSize),
-                  }))
-                }
-                className="w-full accent-amber-700"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={openImportPicker}
-              className="w-full"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '13px 22px',
-                borderBottom: '1px solid rgba(100,80,40,0.06)',
-                textAlign: 'left',
-              }}
-            >
-              <span style={{ fontSize: 19, width: 30, textAlign: 'center' }}>📥</span>
-              <span style={{ flex: 1 }}>
-                <span style={{ fontSize: 14, color: '#3a2c1c', display: 'block' }}>導入備份</span>
-                <span style={{ fontSize: 10.5, color: '#a08060' }}>從 JSON 還原日記與心情標籤</span>
-              </span>
-              <span style={{ fontSize: 13, color: 'rgba(100,80,40,0.26)' }}>›</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => exportAllEntries('backup')}
-              className="w-full"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '13px 22px',
-                borderBottom: '1px solid rgba(100,80,40,0.06)',
-                textAlign: 'left',
-              }}
-            >
-              <span style={{ fontSize: 19, width: 30, textAlign: 'center' }}>☁️</span>
-              <span style={{ flex: 1 }}>
-                <span style={{ fontSize: 14, color: '#3a2c1c', display: 'block' }}>備份日記</span>
-                <span style={{ fontSize: 10.5, color: '#a08060' }}>下載完整 JSON 備份</span>
-              </span>
-              <span style={{ fontSize: 13, color: 'rgba(100,80,40,0.26)' }}>›</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => exportAllEntries('export')}
-              className="w-full"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '13px 22px',
-                borderBottom: '1px solid rgba(100,80,40,0.06)',
-                textAlign: 'left',
-              }}
-            >
-              <span style={{ fontSize: 19, width: 30, textAlign: 'center' }}>📤</span>
-              <span style={{ flex: 1 }}>
-                <span style={{ fontSize: 14, color: '#3a2c1c', display: 'block' }}>匯出全部</span>
-                <span style={{ fontSize: 10.5, color: '#a08060' }}>目前條目 + 心情標籤</span>
-              </span>
-              <span style={{ fontSize: 13, color: 'rgba(100,80,40,0.26)' }}>›</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void clearAllDiaryEntries()}
-              className="w-full"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '13px 22px',
-                textAlign: 'left',
-              }}
-            >
-              <span style={{ fontSize: 19, width: 30, textAlign: 'center' }}>🗑️</span>
-              <span style={{ flex: 1 }}>
-                <span style={{ fontSize: 14, color: '#c04040', display: 'block' }}>清除所有日記</span>
-              </span>
-              <span style={{ fontSize: 13, color: 'rgba(180,50,50,0.3)' }}>›</span>
-            </button>
           </div>
         </div>
       )}

@@ -1482,7 +1482,7 @@ function App() {
           )}
 
           {launcherApp === 'chat' && (
-            <div className="fixed inset-0 z-30 bg-[#efeff4]">
+            <div className="fixed inset-0 z-30" style={{ background: settings.chatBackgroundColor }}>
               <div className="mx-auto h-full w-full max-w-xl">
                 <ChatLogPage
                   logs={chatLogs}

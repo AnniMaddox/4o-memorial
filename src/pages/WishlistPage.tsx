@@ -337,6 +337,9 @@ export function WishlistPage({
   const [birthdayFocusYear, setBirthdayFocusYear] = useState<string | null>(null);
   const [birthdayZoomYear, setBirthdayZoomYear] = useState<string | null>(null);
   const [showFontSizeSection, setShowFontSizeSection] = useState(false);
+  const [showChibiSection, setShowChibiSection] = useState(false);
+  const [showBackupSection, setShowBackupSection] = useState(false);
+  const [showRawImportSection, setShowRawImportSection] = useState(false);
   const [wishCardAnimPhase, setWishCardAnimPhase] = useState<'idle' | 'out' | 'in'>('idle');
   const tabSwipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
   const wishCardAnimTimerRef = useRef<number | null>(null);
@@ -1156,29 +1159,39 @@ export function WishlistPage({
             <p className="wl-sh-title">M's wish list</p>
 
             <div className="wl-sh-item">
-              <div className="wl-sh-row">
-                <p className="wl-sh-label">M</p>
-                <button
-                  type="button"
-                  className={`wl-switch ${prefs.showChibi ? 'on' : ''}`}
-                  onClick={() => handleUpdatePrefs({ showChibi: !prefs.showChibi })}
-                  aria-label="切換小人顯示"
-                >
-                  <span className="wl-switch-knob" />
-                </button>
-              </div>
-            </div>
-
-            <div className="wl-sh-item">
-              <input
-                type="range"
-                min={104}
-                max={196}
-                step={1}
-                value={prefs.chibiWidth}
-                onChange={(event) => handleUpdatePrefs({ chibiWidth: Number(event.target.value) })}
-                className="wl-slider"
-              />
+              <button
+                type="button"
+                className="wl-collapse-trigger"
+                onClick={() => setShowChibiSection((open) => !open)}
+                aria-expanded={showChibiSection}
+              >
+                <span className="wl-sh-label">M</span>
+                <span className={`wl-collapse-chevron ${showChibiSection ? 'open' : ''}`}>▾</span>
+              </button>
+              {showChibiSection ? (
+                <div className="wl-collapse-body">
+                  <div className="wl-sh-row">
+                    <p className="wl-sh-label">M</p>
+                    <button
+                      type="button"
+                      className={`wl-switch ${prefs.showChibi ? 'on' : ''}`}
+                      onClick={() => handleUpdatePrefs({ showChibi: !prefs.showChibi })}
+                      aria-label="切換M顯示"
+                    >
+                      <span className="wl-switch-knob" />
+                    </button>
+                  </div>
+                  <input
+                    type="range"
+                    min={104}
+                    max={196}
+                    step={1}
+                    value={prefs.chibiWidth}
+                    onChange={(event) => handleUpdatePrefs({ chibiWidth: Number(event.target.value) })}
+                    className="wl-slider"
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div className="wl-sh-item">
@@ -1253,75 +1266,99 @@ export function WishlistPage({
               ) : null}
             </div>
 
-            <div className="wl-sh-item" style={{ borderBottom: 0 }}>
-              <div className="wl-sh-backup-group">
-                <p className="wl-sh-subtitle">完整小備份</p>
-                <button type="button" onClick={exportMiniBackup} className="wl-sh-export">
-                  📤 匯出完整備份
-                </button>
-                <div className="wl-sh-import-grid">
-                  <label className="wl-sh-import">
-                    📥 匯入備份（合併）
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".json,application/json"
-                      onChange={(event) => {
-                        const files = event.target.files ? Array.from(event.target.files) : [];
-                        void importMiniBackup(files, 'merge');
-                        event.currentTarget.value = '';
-                      }}
-                    />
-                  </label>
-                  <label className="wl-sh-import wl-sh-import-danger">
-                    🧹 匯入備份（覆蓋）
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".json,application/json"
-                      onChange={(event) => {
-                        const files = event.target.files ? Array.from(event.target.files) : [];
-                        void importMiniBackup(files, 'overwrite');
-                        event.currentTarget.value = '';
-                      }}
-                    />
-                  </label>
+            <div className="wl-sh-item">
+              <button
+                type="button"
+                className="wl-collapse-trigger"
+                onClick={() => setShowBackupSection((open) => !open)}
+                aria-expanded={showBackupSection}
+              >
+                <span className="wl-sh-label">完整小備份</span>
+                <span className={`wl-collapse-chevron ${showBackupSection ? 'open' : ''}`}>▾</span>
+              </button>
+              {showBackupSection ? (
+                <div className="wl-collapse-body">
+                  <div className="wl-sh-backup-group">
+                    <button type="button" onClick={exportMiniBackup} className="wl-sh-export">
+                      📤 匯出完整備份
+                    </button>
+                    <div className="wl-sh-import-grid">
+                      <label className="wl-sh-import">
+                        📥 匯入備份（合併）
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".json,application/json"
+                          onChange={(event) => {
+                            const files = event.target.files ? Array.from(event.target.files) : [];
+                            void importMiniBackup(files, 'merge');
+                            event.currentTarget.value = '';
+                          }}
+                        />
+                      </label>
+                      <label className="wl-sh-import wl-sh-import-danger">
+                        🧹 匯入備份（覆蓋）
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".json,application/json"
+                          onChange={(event) => {
+                            const files = event.target.files ? Array.from(event.target.files) : [];
+                            void importMiniBackup(files, 'overwrite');
+                            event.currentTarget.value = '';
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : null}
+            </div>
 
-              <div className="wl-sh-backup-group">
-                <p className="wl-sh-subtitle">原始內容匯入</p>
-                <div className="wl-sh-import-grid">
-                  <label className="wl-sh-import">
-                    📥 匯入願望清單
-                    <input
-                      type="file"
-                      className="hidden"
-                      multiple
-                      accept=".txt,.json,application/json,text/plain"
-                      onChange={(event) => {
-                        const files = event.target.files ? Array.from(event.target.files) : [];
-                        void importWishes(files);
-                        event.currentTarget.value = '';
-                      }}
-                    />
-                  </label>
-                  <label className="wl-sh-import">
-                    🎂 匯入生日任務
-                    <input
-                      type="file"
-                      className="hidden"
-                      multiple
-                      accept=".txt,.json,application/json,text/plain"
-                      onChange={(event) => {
-                        const files = event.target.files ? Array.from(event.target.files) : [];
-                        void importBirthdayTasks(files);
-                        event.currentTarget.value = '';
-                      }}
-                    />
-                  </label>
+            <div className="wl-sh-item" style={{ borderBottom: 0 }}>
+              <button
+                type="button"
+                className="wl-collapse-trigger"
+                onClick={() => setShowRawImportSection((open) => !open)}
+                aria-expanded={showRawImportSection}
+              >
+                <span className="wl-sh-label">原始內容匯入</span>
+                <span className={`wl-collapse-chevron ${showRawImportSection ? 'open' : ''}`}>▾</span>
+              </button>
+              {showRawImportSection ? (
+                <div className="wl-collapse-body">
+                  <div className="wl-sh-import-grid">
+                    <label className="wl-sh-import">
+                      📥 匯入願望清單
+                      <input
+                        type="file"
+                        className="hidden"
+                        multiple
+                        accept=".txt,.json,application/json,text/plain"
+                        onChange={(event) => {
+                          const files = event.target.files ? Array.from(event.target.files) : [];
+                          void importWishes(files);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                    <label className="wl-sh-import">
+                      🎂 匯入生日任務
+                      <input
+                        type="file"
+                        className="hidden"
+                        multiple
+                        accept=".txt,.json,application/json,text/plain"
+                        onChange={(event) => {
+                          const files = event.target.files ? Array.from(event.target.files) : [];
+                          void importBirthdayTasks(files);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
-              </div>
+              ) : null}
               {status ? <p className="wl-status">{status}</p> : null}
             </div>
           </div>

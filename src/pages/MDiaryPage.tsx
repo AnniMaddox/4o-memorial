@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { SettingsAccordion } from '../components/SettingsAccordion';
 import { getScopedMixedChibiSources } from '../lib/chibiPool';
 import type { StoredMDiary } from '../lib/mDiaryDB';
 import type { AppSettings } from '../types/settings';
@@ -299,6 +300,11 @@ export function MDiaryPage({
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsPanels, setSettingsPanels] = useState({
+    count: false,
+    text: false,
+    chibi: false,
+  });
   const [favorites, setFavorites] = useState<Set<string>>(() => readFavoriteSet());
   const [chibiSrc] = useState(pickRandomChibi);
   const [randomCoverSrc] = useState(() => pickRandom(COVER_SRCS) ?? '');
@@ -1144,111 +1150,141 @@ export function MDiaryPage({
               <p className="text-center text-sm font-semibold text-[#5a7060]">M 的日記</p>
             </div>
 
-            <div className="border-b px-6 py-4" style={{ borderColor: 'rgba(80,100,70,0.06)' }}>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[14px] text-[#2a2818]">顯示總篇數</p>
-                  <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">首頁 / 時間流 / 閱讀顯示統計</p>
+            <div className="space-y-2 px-6 py-4">
+              <SettingsAccordion
+                title="顯示總篇數"
+                subtitle="首頁 / 時間流 / 閱讀顯示統計"
+                isOpen={settingsPanels.count}
+                onToggle={() => setSettingsPanels((prev) => ({ ...prev, count: !prev.count }))}
+                className="rounded-xl border border-[rgba(80,100,70,0.14)] bg-[rgba(255,255,255,0.75)] px-3 py-2.5"
+                titleClassName="text-[14px] text-[#2a2818]"
+                subtitleClassName="text-[10.5px] text-[#8a9a88]"
+                bodyClassName="mt-2"
+              >
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(80,100,70,0.14)] bg-white/85 px-3 py-2.5">
+                  <p className="text-xs text-[#5a7060]">顯示總篇數</p>
+                  <button
+                    type="button"
+                    onClick={() => updateMSettings({ mDiaryShowCount: !showCount })}
+                    className="relative h-[22px] w-[40px] rounded-full transition"
+                    style={{ background: showCount ? '#5a7060' : 'rgba(120,120,120,0.35)' }}
+                    aria-label="切換顯示篇數"
+                  >
+                    <span
+                      className="absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow"
+                      style={{ left: showCount ? 20 : 2 }}
+                    />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => updateMSettings({ mDiaryShowCount: !showCount })}
-                  className="relative h-[22px] w-[40px] rounded-full transition"
-                  style={{ background: showCount ? '#5a7060' : 'rgba(120,120,120,0.35)' }}
-                  aria-label="切換顯示篇數"
-                >
-                  <span
-                    className="absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow"
-                    style={{ left: showCount ? 20 : 2 }}
+              </SettingsAccordion>
+
+              <SettingsAccordion
+                title="文字排版"
+                subtitle="行距與內文字級"
+                isOpen={settingsPanels.text}
+                onToggle={() => setSettingsPanels((prev) => ({ ...prev, text: !prev.text }))}
+                className="rounded-xl border border-[rgba(80,100,70,0.14)] bg-[rgba(255,255,255,0.75)] px-3 py-2.5"
+                titleClassName="text-[14px] text-[#2a2818]"
+                subtitleClassName="text-[10.5px] text-[#8a9a88]"
+                bodyClassName="mt-2 space-y-3"
+              >
+                <div>
+                  <p className="text-[13px] text-[#2a2818]">行距設定</p>
+                  <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{lineHeight.toFixed(2)} 倍</p>
+                  <input
+                    type="range"
+                    min={1.5}
+                    max={2.8}
+                    step={0.02}
+                    value={lineHeight}
+                    onChange={(event) => updateMSettings({ mDiaryLineHeight: Number(event.target.value) })}
+                    className="mt-2 w-full accent-[#5a7060]"
                   />
-                </button>
-              </div>
-            </div>
+                  <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
+                    <span>緊密</span>
+                    <span>寬鬆</span>
+                  </div>
+                </div>
 
-            <div className="border-b px-6 py-4" style={{ borderColor: 'rgba(80,100,70,0.06)' }}>
-              <p className="text-[14px] text-[#2a2818]">行距設定</p>
-              <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{lineHeight.toFixed(2)} 倍</p>
-              <input
-                type="range"
-                min={1.5}
-                max={2.8}
-                step={0.02}
-                value={lineHeight}
-                onChange={(event) => updateMSettings({ mDiaryLineHeight: Number(event.target.value) })}
-                className="mt-3 w-full accent-[#5a7060]"
-              />
-              <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
-                <span>緊密</span>
-                <span>寬鬆</span>
-              </div>
-            </div>
-
-            <div className="border-b px-6 py-4" style={{ borderColor: 'rgba(80,100,70,0.06)' }}>
-              <p className="text-[14px] text-[#2a2818]">內文字級</p>
-              <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{contentFontSize.toFixed(1)}px</p>
-              <input
-                type="range"
-                min={12}
-                max={22}
-                step={0.5}
-                value={contentFontSize}
-                onChange={(event) => updateMSettings({ mDiaryContentFontSize: Number(event.target.value) })}
-                className="mt-3 w-full accent-[#5a7060]"
-              />
-              <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
-                <span>小一點</span>
-                <span>大一點</span>
-              </div>
-            </div>
-
-            <div className="border-b px-6 py-4" style={{ borderColor: 'rgba(80,100,70,0.06)' }}>
-              <p className="text-[14px] text-[#2a2818]">封面M</p>
-              <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{randomChibiWidth}px</p>
-              <input
-                type="range"
-                min={104}
-                max={196}
-                step={1}
-                value={randomChibiWidth}
-                onChange={(event) => updateMSettings({ mDiaryRandomChibiWidth: Number(event.target.value) })}
-                className="mt-3 w-full accent-[#5a7060]"
-              />
-              <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
-                <span>小一點</span>
-                <span>大一點</span>
-              </div>
-            </div>
-
-            <div className="px-6 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[14px] text-[#2a2818]">閱讀頁M</p>
-                <button
-                  type="button"
-                  onClick={() => updateMSettings({ mDiaryShowReadingChibi: !showReadingChibi })}
-                  className="relative h-[22px] w-[40px] rounded-full transition"
-                  style={{ background: showReadingChibi ? '#5a7060' : 'rgba(120,120,120,0.35)' }}
-                  aria-label="切換閱讀頁小人顯示"
-                >
-                  <span
-                    className="absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow"
-                    style={{ left: showReadingChibi ? 20 : 2 }}
+                <div>
+                  <p className="text-[13px] text-[#2a2818]">內文字級</p>
+                  <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{contentFontSize.toFixed(1)}px</p>
+                  <input
+                    type="range"
+                    min={12}
+                    max={22}
+                    step={0.5}
+                    value={contentFontSize}
+                    onChange={(event) => updateMSettings({ mDiaryContentFontSize: Number(event.target.value) })}
+                    className="mt-2 w-full accent-[#5a7060]"
                   />
-                </button>
-              </div>
-              <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{readingChibiWidth}px</p>
-              <input
-                type="range"
-                min={104}
-                max={196}
-                step={1}
-                value={readingChibiWidth}
-                onChange={(event) => updateMSettings({ mDiaryReadingChibiWidth: Number(event.target.value) })}
-                className="mt-3 w-full accent-[#5a7060]"
-              />
-              <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
-                <span>小一點</span>
-                <span>大一點</span>
-              </div>
+                  <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
+                    <span>小一點</span>
+                    <span>大一點</span>
+                  </div>
+                </div>
+              </SettingsAccordion>
+
+              <SettingsAccordion
+                title="M"
+                subtitle="封面與閱讀頁大小"
+                isOpen={settingsPanels.chibi}
+                onToggle={() => setSettingsPanels((prev) => ({ ...prev, chibi: !prev.chibi }))}
+                className="rounded-xl border border-[rgba(80,100,70,0.14)] bg-[rgba(255,255,255,0.75)] px-3 py-2.5"
+                titleClassName="text-[14px] text-[#2a2818]"
+                subtitleClassName="text-[10.5px] text-[#8a9a88]"
+                bodyClassName="mt-2 space-y-3"
+              >
+                <div>
+                  <p className="text-[13px] text-[#2a2818]">封面M</p>
+                  <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{randomChibiWidth}px</p>
+                  <input
+                    type="range"
+                    min={104}
+                    max={196}
+                    step={1}
+                    value={randomChibiWidth}
+                    onChange={(event) => updateMSettings({ mDiaryRandomChibiWidth: Number(event.target.value) })}
+                    className="mt-2 w-full accent-[#5a7060]"
+                  />
+                  <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
+                    <span>小一點</span>
+                    <span>大一點</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[13px] text-[#2a2818]">閱讀頁M</p>
+                    <button
+                      type="button"
+                      onClick={() => updateMSettings({ mDiaryShowReadingChibi: !showReadingChibi })}
+                      className="relative h-[22px] w-[40px] rounded-full transition"
+                      style={{ background: showReadingChibi ? '#5a7060' : 'rgba(120,120,120,0.35)' }}
+                      aria-label="切換閱讀頁M顯示"
+                    >
+                      <span
+                        className="absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow"
+                        style={{ left: showReadingChibi ? 20 : 2 }}
+                      />
+                    </button>
+                  </div>
+                  <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{readingChibiWidth}px</p>
+                  <input
+                    type="range"
+                    min={104}
+                    max={196}
+                    step={1}
+                    value={readingChibiWidth}
+                    onChange={(event) => updateMSettings({ mDiaryReadingChibiWidth: Number(event.target.value) })}
+                    className="mt-2 w-full accent-[#5a7060]"
+                  />
+                  <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
+                    <span>小一點</span>
+                    <span>大一點</span>
+                  </div>
+                </div>
+              </SettingsAccordion>
             </div>
           </div>
         </div>

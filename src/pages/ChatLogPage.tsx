@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 import { emitActionToast } from '../lib/actionToast';
 import type { ChatProfile } from '../lib/chatDB';
@@ -24,6 +24,9 @@ type ChatLogPageProps = {
     | 'chatAppMeIcon'
     | 'chatAppShowLabels'
     | 'chatAppDefaultProfileId'
+    | 'chatBackgroundColor'
+    | 'chatBackgroundImageUrl'
+    | 'chatBackgroundOverlay'
   >;
   onSettingChange: (partial: Partial<AppSettings>) => void;
   onImportChatLogFiles: (files: File[]) => void;
@@ -43,7 +46,7 @@ type ChatMessage = {
 };
 
 type ChatHomeTab = 'messages' | 'discover' | 'me';
-type MePanelKey = 'nav' | 'data' | 'defaultProfile' | 'bubble' | 'profiles';
+type MePanelKey = 'nav' | 'data' | 'defaultProfile' | 'bubble' | 'background' | 'profiles';
 type ChatNavIconSettingKey = 'chatAppMessagesIcon' | 'chatAppDiscoverIcon' | 'chatAppMeIcon';
 
 type ProfileDraft = Omit<ChatProfile, 'id'>;
@@ -234,6 +237,24 @@ function primaryAlias(value: string | undefined, fallback: string) {
   return aliases[0] ?? fallback;
 }
 
+const CHAT_BACKGROUND_PRESETS = ['#efeff4', '#f6f1e7', '#eaf1f6', '#f4e9ef', '#eef3e6'] as const;
+
+function buildChatBackgroundStyle(settings: Pick<AppSettings, 'chatBackgroundColor' | 'chatBackgroundImageUrl' | 'chatBackgroundOverlay'>): CSSProperties {
+  const imageUrl = settings.chatBackgroundImageUrl.trim();
+  if (!imageUrl) {
+    return { backgroundColor: settings.chatBackgroundColor };
+  }
+
+  const overlayAlpha = Math.max(0, Math.min(0.9, settings.chatBackgroundOverlay / 100));
+  return {
+    backgroundColor: settings.chatBackgroundColor,
+    backgroundImage: `linear-gradient(rgba(255,255,255,${overlayAlpha}), rgba(255,255,255,${overlayAlpha})), url("${imageUrl}")`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+  };
+}
+
 function resolveIcon(value: string, fallback: string) {
   const icon = value.trim();
   return icon || fallback;
@@ -330,6 +351,7 @@ export function ChatLogPage({
   const [searchInput, setSearchInput] = useState('');
   const [activeTab, setActiveTab] = useState<ChatHomeTab>('messages');
   const [openMePanel, setOpenMePanel] = useState<MePanelKey | null>('data');
+  const [chatBackgroundImageDraft, setChatBackgroundImageDraft] = useState(settings.chatBackgroundImageUrl);
 
   const [showNewProfileEditor, setShowNewProfileEditor] = useState(false);
   const [newProfileDraft, setNewProfileDraft] = useState<ProfileDraft>(emptyProfileDraft);
@@ -360,6 +382,10 @@ export function ChatLogPage({
   useEffect(() => {
     setDefaultProfileId(settings.chatAppDefaultProfileId);
   }, [settings.chatAppDefaultProfileId]);
+
+  useEffect(() => {
+    setChatBackgroundImageDraft(settings.chatBackgroundImageUrl);
+  }, [settings.chatBackgroundImageUrl]);
 
   useEffect(() => {
     if (selectedLog) {
@@ -415,6 +441,10 @@ export function ChatLogPage({
   const contactName = primaryAlias(defaultProfile?.leftNick, 'Michael');
   const contactSubtitle = defaultProfile ? `${primaryAlias(defaultProfile.rightNick, '你')} ♡` : '🥺 ❤️';
   const contactAvatar = defaultProfile?.leftAvatarDataUrl || defaultProfile?.rightAvatarDataUrl;
+  const chatBackgroundStyle = useMemo(
+    () => buildChatBackgroundStyle(settings),
+    [settings.chatBackgroundColor, settings.chatBackgroundImageUrl, settings.chatBackgroundOverlay],
+  );
 
   function updateDefaultProfile(profileId: string) {
     setDefaultProfileId(profileId);
@@ -432,6 +462,18 @@ export function ChatLogPage({
       const dataUrl = typeof reader.result === 'string' ? reader.result : '';
       if (!dataUrl) return;
       updateNavIcon(field, dataUrl);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function uploadChatBackgroundImage(file: File | null | undefined) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (!dataUrl) return;
+      setChatBackgroundImageDraft(dataUrl);
+      onSettingChange({ chatBackgroundImageUrl: dataUrl });
     };
     reader.readAsDataURL(file);
   }
@@ -493,6 +535,7 @@ export function ChatLogPage({
           setSelectedLogProfileId(profileId);
           onBindLogProfile?.(selectedLog.name, profileId);
         }}
+        backgroundStyle={chatBackgroundStyle}
         onBack={() => setSelectedLogName('')}
         onExit={onExit}
       />
@@ -500,7 +543,7 @@ export function ChatLogPage({
   }
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-[#efeff4]">
+    <div className="mx-auto flex h-full w-full max-w-xl flex-col overflow-hidden" style={chatBackgroundStyle}>
       <header className="shrink-0 border-b border-stone-200/70 bg-white/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           {onExit ? (
@@ -891,6 +934,105 @@ export function ChatLogPage({
             </MePanel>
 
             <MePanel
+              panelKey="background"
+              openPanel={openMePanel}
+              onToggle={toggleMePanel}
+              title="閱讀背景"
+              subtitle="色票、圖片、透明度"
+            >
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {CHAT_BACKGROUND_PRESETS.map((color) => {
+                    const active = settings.chatBackgroundColor.toLowerCase() === color.toLowerCase();
+                    return (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => onSettingChange({ chatBackgroundColor: color })}
+                        className={`h-7 w-7 rounded-full border transition active:scale-95 ${
+                          active ? 'border-stone-900 ring-2 ring-stone-300' : 'border-stone-300'
+                        }`}
+                        style={{ background: color }}
+                        aria-label={`背景色 ${color}`}
+                        title={color}
+                      />
+                    );
+                  })}
+                </div>
+
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">自訂底色</span>
+                  <input
+                    type="color"
+                    value={settings.chatBackgroundColor}
+                    onChange={(event) => onSettingChange({ chatBackgroundColor: event.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">背景圖片 URL</span>
+                  <input
+                    type="url"
+                    value={chatBackgroundImageDraft}
+                    onChange={(event) => setChatBackgroundImageDraft(event.target.value)}
+                    placeholder="https://.../chat-bg.jpg"
+                    className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onSettingChange({ chatBackgroundImageUrl: chatBackgroundImageDraft.trim() })}
+                    className="rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-700 transition active:scale-[0.99]"
+                  >
+                    套用圖片 URL
+                  </button>
+                  <label className="cursor-pointer rounded-xl border border-stone-300 bg-white py-2 text-center text-sm text-stone-700 transition active:opacity-80">
+                    上傳圖片
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        uploadChatBackgroundImage(event.target.files?.[0]);
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>圖片遮罩</span>
+                    <span>{settings.chatBackgroundOverlay}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={90}
+                    step={1}
+                    value={settings.chatBackgroundOverlay}
+                    onChange={(event) => onSettingChange({ chatBackgroundOverlay: Number(event.target.value) })}
+                    className="w-full accent-stone-800"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatBackgroundImageDraft('');
+                    onSettingChange({ chatBackgroundImageUrl: '', chatBackgroundOverlay: 0 });
+                  }}
+                  className="w-full rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-700 transition active:scale-[0.99]"
+                >
+                  移除背景圖片
+                </button>
+              </div>
+            </MePanel>
+
+            <MePanel
               panelKey="profiles"
               openPanel={openMePanel}
               onToggle={toggleMePanel}
@@ -1164,6 +1306,7 @@ function ChatReadView({
   selectedProfileId,
   selectedProfile,
   onSelectProfile,
+  backgroundStyle,
   onBack,
   onExit,
 }: {
@@ -1172,6 +1315,7 @@ function ChatReadView({
   selectedProfileId: string;
   selectedProfile: ChatProfile | null;
   onSelectProfile: (id: string) => void;
+  backgroundStyle: CSSProperties;
   onBack: () => void;
   onExit?: () => void;
 }) {
@@ -1187,7 +1331,7 @@ function ChatReadView({
   }, [log.name, selectedProfileId]);
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-[#efeff4]">
+    <div className="mx-auto flex h-full w-full max-w-xl flex-col overflow-hidden" style={backgroundStyle}>
       <div className="shrink-0 border-b border-stone-200 bg-white px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="flex items-center justify-between gap-2">
           <button

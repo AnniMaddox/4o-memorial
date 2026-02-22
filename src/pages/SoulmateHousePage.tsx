@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { SettingsAccordion } from '../components/SettingsAccordion';
+
 import { emitActionToast } from '../lib/actionToast';
 import {
   MANAGE_BOX_ID,
@@ -280,6 +282,10 @@ export default function SoulmateHousePage({ onExit, soulmateFontFamily = '' }: P
     batchImport: false,
     backup: false,
   });
+  const [readerPanels, setReaderPanels] = useState({
+    reading: false,
+    chibi: false,
+  });
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [status, setStatus] = useState('');
@@ -518,121 +524,139 @@ export default function SoulmateHousePage({ onExit, soulmateFontFamily = '' }: P
                 家頁設定
               </p>
 
-              <div className="mt-4 space-y-3">
-                <label className="space-y-1 text-xs text-stone-500">
-                  <span>閱讀文字顏色</span>
-                  <select
-                    value={readerPrefs.textColorKey}
-                    onChange={(event) => patchReaderPrefs({ textColorKey: event.target.value as ReaderTextColorKey })}
-                    className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
-                  >
-                    <option value="ink">墨黑</option>
-                    <option value="brown">深棕</option>
-                    <option value="slate">石板灰</option>
-                    <option value="forest">森林綠</option>
-                    <option value="rose">莓果紫</option>
-                    <option value="navy">深海藍</option>
-                  </select>
-                </label>
+              <div className="mt-4 space-y-2">
+                <SettingsAccordion
+                  title="閱讀"
+                  subtitle="文字顏色、底部樣式、字級與行距"
+                  isOpen={readerPanels.reading}
+                  onToggle={() => setReaderPanels((prev) => ({ ...prev, reading: !prev.reading }))}
+                  className="rounded-xl border border-stone-200 bg-white/72 px-3 py-2.5"
+                  bodyClassName="mt-2 space-y-2"
+                >
+                  <label className="space-y-1 text-xs text-stone-500">
+                    <span>閱讀文字顏色</span>
+                    <select
+                      value={readerPrefs.textColorKey}
+                      onChange={(event) => patchReaderPrefs({ textColorKey: event.target.value as ReaderTextColorKey })}
+                      className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+                    >
+                      <option value="ink">墨黑</option>
+                      <option value="brown">深棕</option>
+                      <option value="slate">石板灰</option>
+                      <option value="forest">森林綠</option>
+                      <option value="rose">莓果紫</option>
+                      <option value="navy">深海藍</option>
+                    </select>
+                  </label>
 
-                <label className="space-y-1 text-xs text-stone-500">
-                  <span>閱讀底部樣式</span>
-                  <select
-                    value={readerPrefs.paperKey}
-                    onChange={(event) => patchReaderPrefs({ paperKey: event.target.value as ReaderPaperKey })}
-                    className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
-                  >
-                    <option value="lined">淺黃筆記線</option>
-                    <option value="soft">柔白紙張</option>
-                    <option value="plain">清爽素底</option>
-                    <option value="petal">杏粉霧紙</option>
-                    <option value="mist">晨霧藍箋</option>
-                  </select>
-                </label>
+                  <label className="space-y-1 text-xs text-stone-500">
+                    <span>閱讀底部樣式</span>
+                    <select
+                      value={readerPrefs.paperKey}
+                      onChange={(event) => patchReaderPrefs({ paperKey: event.target.value as ReaderPaperKey })}
+                      className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+                    >
+                      <option value="lined">淺黃筆記線</option>
+                      <option value="soft">柔白紙張</option>
+                      <option value="plain">清爽素底</option>
+                      <option value="petal">杏粉霧紙</option>
+                      <option value="mist">晨霧藍箋</option>
+                    </select>
+                  </label>
 
-                <label className="space-y-1 text-xs text-stone-500">
-                  <span>閱讀字級：{readerPrefs.fontSize}px</span>
-                  <input
-                    type="range"
-                    min={13}
-                    max={24}
-                    step={1}
-                    value={readerPrefs.fontSize}
-                    onChange={(event) => patchReaderPrefs({ fontSize: Number(event.target.value) })}
-                    className="w-full accent-amber-700"
-                  />
-                </label>
-
-                <label className="space-y-1 text-xs text-stone-500">
-                  <span>閱讀行距：{readerPrefs.lineHeight.toFixed(2)}</span>
-                  <input
-                    type="range"
-                    min={1.45}
-                    max={2.6}
-                    step={0.05}
-                    value={readerPrefs.lineHeight}
-                    onChange={(event) => patchReaderPrefs({ lineHeight: Number(event.target.value) })}
-                    className="w-full accent-amber-700"
-                  />
-                </label>
-
-                <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-                  <span className="text-xs text-stone-600">M</span>
-                  <button
-                    type="button"
-                    onClick={() => patchReaderPrefs({ showChibi: !readerPrefs.showChibi })}
-                    className="relative h-6 w-10 rounded-full transition"
-                    style={{ background: readerPrefs.showChibi ? '#9b7a5b' : '#b7b7b7' }}
-                    aria-label="切換小人顯示"
-                  >
-                    <span
-                      className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
-                      style={{ left: readerPrefs.showChibi ? 18 : 2 }}
+                  <label className="space-y-1 text-xs text-stone-500">
+                    <span>閱讀字級：{readerPrefs.fontSize}px</span>
+                    <input
+                      type="range"
+                      min={13}
+                      max={24}
+                      step={1}
+                      value={readerPrefs.fontSize}
+                      onChange={(event) => patchReaderPrefs({ fontSize: Number(event.target.value) })}
+                      className="w-full accent-amber-700"
                     />
-                  </button>
-                </div>
+                  </label>
 
-                <label className="space-y-1 text-xs text-stone-500">
-                  <div className="flex items-center justify-between">
-                    <span>大小</span>
-                    <span>{readerPrefs.chibiSize}px</span>
+                  <label className="space-y-1 text-xs text-stone-500">
+                    <span>閱讀行距：{readerPrefs.lineHeight.toFixed(2)}</span>
+                    <input
+                      type="range"
+                      min={1.45}
+                      max={2.6}
+                      step={0.05}
+                      value={readerPrefs.lineHeight}
+                      onChange={(event) => patchReaderPrefs({ lineHeight: Number(event.target.value) })}
+                      className="w-full accent-amber-700"
+                    />
+                  </label>
+                </SettingsAccordion>
+
+                <SettingsAccordion
+                  title="M"
+                  subtitle="顯示、大小與位置"
+                  isOpen={readerPanels.chibi}
+                  onToggle={() => setReaderPanels((prev) => ({ ...prev, chibi: !prev.chibi }))}
+                  className="rounded-xl border border-stone-200 bg-white/72 px-3 py-2.5"
+                  bodyClassName="mt-2 space-y-2"
+                >
+                  <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-3 py-2.5">
+                    <span className="text-xs text-stone-600">M</span>
+                    <button
+                      type="button"
+                      onClick={() => patchReaderPrefs({ showChibi: !readerPrefs.showChibi })}
+                      className="relative h-6 w-10 rounded-full transition"
+                      style={{ background: readerPrefs.showChibi ? '#9b7a5b' : '#b7b7b7' }}
+                      aria-label="切換M顯示"
+                    >
+                      <span
+                        className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
+                        style={{ left: readerPrefs.showChibi ? 18 : 2 }}
+                      />
+                    </button>
                   </div>
-                  <input
-                    type="range"
-                    min={104}
-                    max={196}
-                    step={1}
-                    value={readerPrefs.chibiSize}
-                    onChange={(event) => patchReaderPrefs({ chibiSize: Number(event.target.value) })}
-                    className="w-full accent-amber-700"
-                  />
-                </label>
 
-                <label className="space-y-1 text-xs text-stone-500">
-                  <span>左右位置：{readerPrefs.chibiX > 0 ? '+' : ''}{readerPrefs.chibiX}</span>
-                  <input
-                    type="range"
-                    min={-96}
-                    max={96}
-                    step={1}
-                    value={readerPrefs.chibiX}
-                    onChange={(event) => patchReaderPrefs({ chibiX: Number(event.target.value) })}
-                    className="w-full accent-amber-700"
-                  />
-                </label>
+                  <label className="space-y-1 text-xs text-stone-500">
+                    <div className="flex items-center justify-between">
+                      <span>大小</span>
+                      <span>{readerPrefs.chibiSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={104}
+                      max={196}
+                      step={1}
+                      value={readerPrefs.chibiSize}
+                      onChange={(event) => patchReaderPrefs({ chibiSize: Number(event.target.value) })}
+                      className="w-full accent-amber-700"
+                    />
+                  </label>
 
-                <label className="space-y-1 text-xs text-stone-500">
-                  <span>上下位置：{readerPrefs.chibiY > 0 ? '+' : ''}{readerPrefs.chibiY}</span>
-                  <input
-                    type="range"
-                    min={-96}
-                    max={96}
-                    step={1}
-                    value={readerPrefs.chibiY}
-                    onChange={(event) => patchReaderPrefs({ chibiY: Number(event.target.value) })}
-                    className="w-full accent-amber-700"
-                  />
-                </label>
+                  <label className="space-y-1 text-xs text-stone-500">
+                    <span>左右位置：{readerPrefs.chibiX > 0 ? '+' : ''}{readerPrefs.chibiX}</span>
+                    <input
+                      type="range"
+                      min={-96}
+                      max={96}
+                      step={1}
+                      value={readerPrefs.chibiX}
+                      onChange={(event) => patchReaderPrefs({ chibiX: Number(event.target.value) })}
+                      className="w-full accent-amber-700"
+                    />
+                  </label>
+
+                  <label className="space-y-1 text-xs text-stone-500">
+                    <span>上下位置：{readerPrefs.chibiY > 0 ? '+' : ''}{readerPrefs.chibiY}</span>
+                    <input
+                      type="range"
+                      min={-96}
+                      max={96}
+                      step={1}
+                      value={readerPrefs.chibiY}
+                      onChange={(event) => patchReaderPrefs({ chibiY: Number(event.target.value) })}
+                      className="w-full accent-amber-700"
+                    />
+                  </label>
+                </SettingsAccordion>
               </div>
             </div>
           </div>

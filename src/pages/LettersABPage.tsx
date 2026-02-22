@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { SettingsAccordion } from '../components/SettingsAccordion';
 import { getScopedMixedChibiSources } from '../lib/chibiPool';
 
 import './LettersABPage.css';
@@ -236,6 +237,13 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
   const [contentById, setContentById] = useState<Record<string, string>>({});
   const [prefs, setPrefs] = useState<LettersABPrefs>(() => readPrefs());
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsPanels, setSettingsPanels] = useState({
+    theme: false,
+    typography: false,
+    font: false,
+    chibi: false,
+    related: false,
+  });
   const [chibiSrc] = useState(() => {
     const scoped = getScopedMixedChibiSources('lettersAB');
     return pickRandom(scoped) ?? FALLBACK_CHIBI;
@@ -662,8 +670,15 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
           <div className="la-settings-sheet" onClick={(event) => event.stopPropagation()}>
             <div className="la-sheet-handle" />
 
-            <section className="la-sheet-section">
-              <p className="la-sheet-label">主題</p>
+            <SettingsAccordion
+              title="主題"
+              isOpen={settingsPanels.theme}
+              onToggle={() => setSettingsPanels((prev) => ({ ...prev, theme: !prev.theme }))}
+              className="la-sheet-section"
+              titleClassName="la-sheet-label"
+              chevronClassName="text-[#9a7d5a]"
+              bodyClassName="mt-2"
+            >
               <div className="la-pill-group">
                 {THEME_OPTIONS.map((option) => (
                   <button
@@ -676,10 +691,19 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
                   </button>
                 ))}
               </div>
-            </section>
+            </SettingsAccordion>
 
-            <section className="la-sheet-section">
-              <p className="la-sheet-label">行距</p>
+            <SettingsAccordion
+              title="排版"
+              subtitle="行距與字級"
+              isOpen={settingsPanels.typography}
+              onToggle={() => setSettingsPanels((prev) => ({ ...prev, typography: !prev.typography }))}
+              className="la-sheet-section"
+              titleClassName="la-sheet-label"
+              subtitleClassName="text-[11px] text-[#9a7d5a]"
+              chevronClassName="text-[#9a7d5a]"
+              bodyClassName="mt-2"
+            >
               <div className="la-pill-group">
                 {LINE_HEIGHT_LABELS.map((option) => (
                   <button
@@ -708,10 +732,17 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
                   }
                 />
               </label>
-            </section>
+            </SettingsAccordion>
 
-            <section className="la-sheet-section">
-              <p className="la-sheet-label">字體</p>
+            <SettingsAccordion
+              title="字體"
+              isOpen={settingsPanels.font}
+              onToggle={() => setSettingsPanels((prev) => ({ ...prev, font: !prev.font }))}
+              className="la-sheet-section"
+              titleClassName="la-sheet-label"
+              chevronClassName="text-[#9a7d5a]"
+              bodyClassName="mt-2"
+            >
               <div className="la-pill-group">
                 {READING_FONT_OPTIONS.map((option) => (
                   <button
@@ -726,16 +757,26 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
                   </button>
                 ))}
               </div>
-            </section>
+            </SettingsAccordion>
 
-            <section className="la-sheet-section">
+            <SettingsAccordion
+              title="M"
+              subtitle="顯示與大小"
+              isOpen={settingsPanels.chibi}
+              onToggle={() => setSettingsPanels((prev) => ({ ...prev, chibi: !prev.chibi }))}
+              className="la-sheet-section"
+              titleClassName="la-sheet-label"
+              subtitleClassName="text-[11px] text-[#9a7d5a]"
+              chevronClassName="text-[#9a7d5a]"
+              bodyClassName="mt-2"
+            >
               <div className="la-toggle-row">
                 <span>M</span>
                 <button
                   type="button"
                   className={`la-switch ${prefs.showChibi ? 'on' : ''}`}
                   onClick={() => setPrefs((prev) => ({ ...prev, showChibi: !prev.showChibi }))}
-                  aria-label="切換小人顯示"
+                  aria-label="切換M顯示"
                 >
                   <span />
                 </button>
@@ -752,10 +793,19 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
                   }
                 />
               </label>
-            </section>
+            </SettingsAccordion>
 
-            <section className="la-sheet-section">
-              <p className="la-sheet-label">相關閱讀</p>
+            <SettingsAccordion
+              title="相關閱讀"
+              subtitle="同系列前後年份"
+              isOpen={settingsPanels.related}
+              onToggle={() => setSettingsPanels((prev) => ({ ...prev, related: !prev.related }))}
+              className="la-sheet-section"
+              titleClassName="la-sheet-label"
+              subtitleClassName="text-[11px] text-[#9a7d5a]"
+              chevronClassName="text-[#9a7d5a]"
+              bodyClassName="mt-2"
+            >
               <div className="la-related-list">
                 {!relatedItems.length ? (
                   <p className="la-empty-related">目前沒有可跳轉的項目</p>
@@ -771,7 +821,7 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
                   ))
                 )}
               </div>
-            </section>
+            </SettingsAccordion>
           </div>
         </div>
       ) : null}

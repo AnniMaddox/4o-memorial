@@ -96,6 +96,9 @@ export type AppSettings = {
   chatAiBubbleBorderColor: string;
   chatAiBubbleTextColor: string;
   chatBubbleRadius: number;
+  chatBackgroundColor: string;
+  chatBackgroundImageUrl: string;
+  chatBackgroundOverlay: number;
   chatAppMessagesIcon: string;
   chatAppDiscoverIcon: string;
   chatAppMeIcon: string;
@@ -184,6 +187,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   chatAiBubbleBorderColor: '#A8C0CC',
   chatAiBubbleTextColor: '#000000',
   chatBubbleRadius: 24,
+  chatBackgroundColor: '#efeff4',
+  chatBackgroundImageUrl: '',
+  chatBackgroundOverlay: 0,
   chatAppMessagesIcon: '💬',
   chatAppDiscoverIcon: '✨',
   chatAppMeIcon: '👤',

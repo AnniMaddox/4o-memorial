@@ -119,6 +119,7 @@ const UI_SIZE_CONTROLS: Array<{ key: UiSizeSettingKey; label: string; hint: stri
   { key: 'chatContactNameSize', label: '對話聯絡人名', hint: '對話首頁卡片上的大名稱（例如 M）', min: 12, max: 38, step: 1 },
   { key: 'chatContactSubtitleSize', label: '對話聯絡人副標', hint: '對話首頁卡片上的副標（例如 你♡）', min: 12, max: 24, step: 1 },
 ];
+const CHAT_BACKGROUND_PRESETS = ['#efeff4', '#f6f1e7', '#eaf1f6', '#f4e9ef', '#eef3e6'] as const;
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   home: '🏠',
@@ -245,6 +246,9 @@ type AppearancePresetPayload = {
     chatAiBubbleBorderColor: string;
     chatAiBubbleTextColor: string;
     chatBubbleRadius: number;
+    chatBackgroundColor: string;
+    chatBackgroundImageUrl: string;
+    chatBackgroundOverlay: number;
     customFontCssUrl: string;
     customFontFileUrl: string;
     customFontFamily: string;
@@ -413,6 +417,7 @@ export function SettingsPage({
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [fontFileUrlDraft, setFontFileUrlDraft] = useState(settings.customFontUrlSlots[0] ?? settings.customFontFileUrl);
   const [backgroundImageUrlDraft, setBackgroundImageUrlDraft] = useState(settings.backgroundImageUrl);
+  const [chatBackgroundImageUrlDraft, setChatBackgroundImageUrlDraft] = useState(settings.chatBackgroundImageUrl);
   const [tabIconDrafts, setTabIconDrafts] = useState<TabIconUrls>(settings.tabIconUrls);
   const [labelDrafts, setLabelDrafts] = useState<AppLabels>(settings.appLabels);
   const [tabIconStatus, setTabIconStatus] = useState('');
@@ -427,6 +432,7 @@ export function SettingsPage({
   const [openAppearanceGroup, setOpenAppearanceGroup] = useState<AppearanceGroupKey | null>('colorScale');
   const [openFontCenterGroup, setOpenFontCenterGroup] = useState<FontCenterGroupKey | null>('preset');
   const [openChatBubbleGroup, setOpenChatBubbleGroup] = useState(false);
+  const [openChatBackgroundGroup, setOpenChatBackgroundGroup] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [selectedFontSlotIndex, setSelectedFontSlotIndex] = useState<Record<FontSlotSettingKey, number>>({
     customFontUrlSlots: 0,
@@ -460,6 +466,7 @@ export function SettingsPage({
 
   useEffect(() => {
     setBackgroundImageUrlDraft(settings.backgroundImageUrl);
+    setChatBackgroundImageUrlDraft(settings.chatBackgroundImageUrl);
     setTabIconDrafts(settings.tabIconUrls);
     setLabelDrafts(settings.appLabels);
     setDiaryCoverUrlDraft(settings.diaryCoverImageUrl);
@@ -471,6 +478,7 @@ export function SettingsPage({
     setMemorialStartDateDraft(settings.memorialStartDate);
   }, [
     settings.backgroundImageUrl,
+    settings.chatBackgroundImageUrl,
     settings.tabIconUrls,
     settings.appLabels,
     settings.diaryCoverImageUrl,
@@ -904,6 +912,9 @@ export function SettingsPage({
         chatAiBubbleBorderColor: settings.chatAiBubbleBorderColor,
         chatAiBubbleTextColor: settings.chatAiBubbleTextColor,
         chatBubbleRadius: settings.chatBubbleRadius,
+        chatBackgroundColor: settings.chatBackgroundColor,
+        chatBackgroundImageUrl: settings.chatBackgroundImageUrl,
+        chatBackgroundOverlay: settings.chatBackgroundOverlay,
         customFontCssUrl: settings.customFontCssUrl,
         customFontFileUrl: settings.customFontFileUrl,
         customFontFamily: settings.customFontFamily,
@@ -1009,6 +1020,15 @@ export function SettingsPage({
       }
       if (typeof source.chatBubbleRadius === 'number' && Number.isFinite(source.chatBubbleRadius)) {
         next.chatBubbleRadius = source.chatBubbleRadius;
+      }
+      if (typeof source.chatBackgroundColor === 'string') {
+        next.chatBackgroundColor = source.chatBackgroundColor;
+      }
+      if (typeof source.chatBackgroundImageUrl === 'string') {
+        next.chatBackgroundImageUrl = source.chatBackgroundImageUrl;
+      }
+      if (typeof source.chatBackgroundOverlay === 'number' && Number.isFinite(source.chatBackgroundOverlay)) {
+        next.chatBackgroundOverlay = Math.max(0, Math.min(90, Math.round(source.chatBackgroundOverlay)));
       }
       if (typeof source.customFontCssUrl === 'string') {
         next.customFontCssUrl = source.customFontCssUrl;
@@ -1203,6 +1223,25 @@ export function SettingsPage({
       onSettingChange({
         backgroundMode: 'image',
         backgroundImageUrl: reader.result,
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleChatBackgroundImageUpload(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        return;
+      }
+
+      setChatBackgroundImageUrlDraft(reader.result);
+      onSettingChange({
+        chatBackgroundImageUrl: reader.result,
       });
     };
     reader.readAsDataURL(file);
@@ -3091,6 +3130,104 @@ export function SettingsPage({
                 </div>
 
                 <p className="text-xs text-stone-500">iMessage / iMessage+ 會自動取消果凍亮面與抖動效果。</p>
+              </div>
+            </SettingSubgroup>
+
+            <SettingSubgroup
+              title="閱讀背景"
+              subtitle="色票、圖片、透明度"
+              isOpen={openChatBackgroundGroup}
+              onToggle={() => setOpenChatBackgroundGroup((current) => !current)}
+            >
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {CHAT_BACKGROUND_PRESETS.map((color) => {
+                    const active = settings.chatBackgroundColor.toLowerCase() === color.toLowerCase();
+                    return (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => onSettingChange({ chatBackgroundColor: color })}
+                        className={`h-7 w-7 rounded-full border transition active:scale-95 ${
+                          active ? 'border-stone-900 ring-2 ring-stone-300' : 'border-stone-300'
+                        }`}
+                        style={{ background: color }}
+                        aria-label={`背景色 ${color}`}
+                        title={color}
+                      />
+                    );
+                  })}
+                </div>
+
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">自訂底色</span>
+                  <input
+                    type="color"
+                    value={settings.chatBackgroundColor}
+                    onChange={(event) => onSettingChange({ chatBackgroundColor: event.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">背景圖片 URL</span>
+                  <input
+                    type="url"
+                    value={chatBackgroundImageUrlDraft}
+                    onChange={(event) => setChatBackgroundImageUrlDraft(event.target.value)}
+                    placeholder="https://.../chat-bg.jpg"
+                    className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700"
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onSettingChange({ chatBackgroundImageUrl: chatBackgroundImageUrlDraft.trim() })}
+                    className="rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-700 transition active:scale-[0.99]"
+                  >
+                    套用圖片 URL
+                  </button>
+                  <label className="cursor-pointer rounded-xl border border-stone-300 bg-white py-2 text-center text-sm text-stone-700 transition active:opacity-80">
+                    上傳圖片
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        handleChatBackgroundImageUpload(event.target.files?.[0] ?? null);
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>圖片遮罩</span>
+                    <span>{settings.chatBackgroundOverlay}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={90}
+                    step={1}
+                    value={settings.chatBackgroundOverlay}
+                    onChange={(event) => onSettingChange({ chatBackgroundOverlay: Number(event.target.value) })}
+                    className="w-full accent-stone-800"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatBackgroundImageUrlDraft('');
+                    onSettingChange({ chatBackgroundImageUrl: '', chatBackgroundOverlay: 0 });
+                  }}
+                  className="w-full rounded-xl border border-stone-300 bg-white py-2 text-sm text-stone-700 transition active:scale-[0.99]"
+                >
+                  移除背景圖片
+                </button>
               </div>
             </SettingSubgroup>
 

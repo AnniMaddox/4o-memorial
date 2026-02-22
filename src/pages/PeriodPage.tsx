@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
+import { SettingsAccordion } from '../components/SettingsAccordion';
 import { emitActionToast } from '../lib/actionToast';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -759,6 +760,13 @@ function PeriodSettingsSheet({
   onClearAll: () => void;
   onClose: () => void;
 }) {
+  const [openPanels, setOpenPanels] = useState({
+    style: false,
+    chibi: false,
+    backup: false,
+    danger: false,
+  });
+
   return (
     <>
       <div
@@ -773,131 +781,157 @@ function PeriodSettingsSheet({
         <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-stone-300" />
         <p className="mb-5 text-center text-base font-semibold text-stone-800">面板風格</p>
 
-        <div className="mb-4 rounded-2xl bg-stone-50 p-4">
-          <p className="mb-2 text-xs text-stone-500">面板風格</p>
-          <div className="grid grid-cols-3 gap-2">
-            {PANEL_STYLE_OPTIONS.map((option) => {
-              const active = option.id === panelStyle;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => onPanelStyleChange(option.id)}
-                  className="rounded-xl border px-2 py-2 text-xs transition active:scale-95"
-                  style={{
-                    background: active ? '#fde4ec' : '#fff',
-                    color: active ? C.accent : '#57534e',
-                    borderColor: active ? 'rgba(212,96,122,0.24)' : '#e7e5e4',
-                    fontWeight: active ? 600 : 400,
-                  }}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-2 text-[10px] text-stone-400">統計資訊在「總覽」頁查看。</p>
-        </div>
+        <div className="space-y-2">
+          <SettingsAccordion
+            title="面板風格"
+            subtitle="總覽卡片視覺"
+            isOpen={openPanels.style}
+            onToggle={() => setOpenPanels((prev) => ({ ...prev, style: !prev.style }))}
+            className="rounded-2xl bg-stone-50 p-4"
+          >
+            <div className="grid grid-cols-3 gap-2">
+              {PANEL_STYLE_OPTIONS.map((option) => {
+                const active = option.id === panelStyle;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => onPanelStyleChange(option.id)}
+                    className="rounded-xl border px-2 py-2 text-xs transition active:scale-95"
+                    style={{
+                      background: active ? '#fde4ec' : '#fff',
+                      color: active ? C.accent : '#57534e',
+                      borderColor: active ? 'rgba(212,96,122,0.24)' : '#e7e5e4',
+                      fontWeight: active ? 600 : 400,
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[10px] text-stone-400">統計資訊在「總覽」頁查看。</p>
+          </SettingsAccordion>
 
-        <div className="mb-4 rounded-2xl bg-stone-50 p-4">
-          <div className="mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-            <p className="text-xs text-stone-600">M</p>
+          <SettingsAccordion
+            title="M"
+            subtitle="顯示與大小"
+            isOpen={openPanels.chibi}
+            onToggle={() => setOpenPanels((prev) => ({ ...prev, chibi: !prev.chibi }))}
+            className="rounded-2xl bg-stone-50 p-4"
+          >
+            <div className="mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
+              <p className="text-xs text-stone-600">M</p>
+              <button
+                type="button"
+                onClick={onToggleChibi}
+                className="relative h-6 w-10 rounded-full transition"
+                style={{ background: showChibi ? '#8a6a4e' : '#bcb7b0' }}
+                aria-label="切換M顯示"
+              >
+                <span
+                  className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
+                  style={{ left: showChibi ? 18 : 2 }}
+                />
+              </button>
+            </div>
+
+            <input
+              type="range"
+              min={120}
+              max={220}
+              step={1}
+              value={chibiSize}
+              onChange={(event) => onChibiSizeChange(Number(event.target.value))}
+              className="w-full accent-stone-700"
+            />
+          </SettingsAccordion>
+
+          <SettingsAccordion
+            title="資料備份"
+            subtitle="匯出、合併匯入、覆蓋匯入"
+            isOpen={openPanels.backup}
+            onToggle={() => setOpenPanels((prev) => ({ ...prev, backup: !prev.backup }))}
+            className="rounded-2xl bg-stone-50 p-4"
+          >
             <button
               type="button"
-              onClick={onToggleChibi}
-              className="relative h-6 w-10 rounded-full transition"
-              style={{ background: showChibi ? '#8a6a4e' : '#bcb7b0' }}
-              aria-label="切換小人顯示"
+              onClick={onExportBackup}
+              disabled={backupBusy}
+              className="mb-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-left transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span
-                className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
-                style={{ left: showChibi ? 18 : 2 }}
-              />
+              <span className="flex items-center gap-3">
+                <span className="w-6 text-center text-lg">📤</span>
+                <span className="flex-1">
+                  <span className="block text-sm text-stone-700">匯出備份</span>
+                  <span className="block text-[10.5px] text-stone-400">下載 JSON（可回復）</span>
+                </span>
+              </span>
             </button>
-          </div>
 
-          <input
-            type="range"
-            min={120}
-            max={220}
-            step={1}
-            value={chibiSize}
-            onChange={(event) => onChibiSizeChange(Number(event.target.value))}
-            className="w-full accent-stone-700"
-          />
-        </div>
+            <label className="mb-2 block w-full cursor-pointer rounded-xl border border-stone-200 bg-white px-4 py-3 transition active:scale-[0.98]">
+              <span className="flex items-center gap-3">
+                <span className="w-6 text-center text-lg">📥</span>
+                <span className="flex-1">
+                  <span className="block text-sm text-stone-700">匯入備份（合併）</span>
+                  <span className="block text-[10.5px] text-stone-400">保留現有資料，加入新資料</span>
+                </span>
+              </span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                disabled={backupBusy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.currentTarget.value = '';
+                  if (file) onImportBackup('merge', file);
+                }}
+              />
+            </label>
 
-        <div className="mb-4 rounded-2xl bg-stone-50 p-4">
-          <p className="mb-2 text-xs text-stone-500">資料備份</p>
+            <label className="block w-full cursor-pointer rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 transition active:scale-[0.98]">
+              <span className="flex items-center gap-3">
+                <span className="w-6 text-center text-lg">♻️</span>
+                <span className="flex-1">
+                  <span className="block text-sm text-rose-700">匯入備份（覆蓋）</span>
+                  <span className="block text-[10.5px] text-rose-400">用備份內容直接取代目前資料</span>
+                </span>
+              </span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                disabled={backupBusy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.currentTarget.value = '';
+                  if (file) onImportBackup('overwrite', file);
+                }}
+              />
+            </label>
 
-          <button
-            type="button"
-            onClick={onExportBackup}
-            disabled={backupBusy}
-            className="mb-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-left transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            {backupStatus && <p className="mt-2 text-xs text-stone-500">{backupStatus}</p>}
+          </SettingsAccordion>
+
+          <SettingsAccordion
+            title="資料清理"
+            subtitle="危險操作"
+            isOpen={openPanels.danger}
+            onToggle={() => setOpenPanels((prev) => ({ ...prev, danger: !prev.danger }))}
+            className="rounded-2xl bg-stone-50 p-4"
           >
-            <span className="flex items-center gap-3">
-              <span className="w-6 text-center text-lg">📤</span>
-              <span className="flex-1">
-                <span className="block text-sm text-stone-700">匯出備份</span>
-                <span className="block text-[10.5px] text-stone-400">下載 JSON（可回復）</span>
-              </span>
-            </span>
-          </button>
-
-          <label className="mb-2 block w-full cursor-pointer rounded-xl border border-stone-200 bg-white px-4 py-3 transition active:scale-[0.98]">
-            <span className="flex items-center gap-3">
-              <span className="w-6 text-center text-lg">📥</span>
-              <span className="flex-1">
-                <span className="block text-sm text-stone-700">匯入備份（合併）</span>
-                <span className="block text-[10.5px] text-stone-400">保留現有資料，加入新資料</span>
-              </span>
-            </span>
-            <input
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              disabled={backupBusy}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.currentTarget.value = '';
-                if (file) onImportBackup('merge', file);
-              }}
-            />
-          </label>
-
-          <label className="block w-full cursor-pointer rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 transition active:scale-[0.98]">
-            <span className="flex items-center gap-3">
-              <span className="w-6 text-center text-lg">♻️</span>
-              <span className="flex-1">
-                <span className="block text-sm text-rose-700">匯入備份（覆蓋）</span>
-                <span className="block text-[10.5px] text-rose-400">用備份內容直接取代目前資料</span>
-              </span>
-            </span>
-            <input
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              disabled={backupBusy}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.currentTarget.value = '';
-                if (file) onImportBackup('overwrite', file);
-              }}
-            />
-          </label>
-
-          {backupStatus && <p className="mt-2 text-xs text-stone-500">{backupStatus}</p>}
+            <button
+              type="button"
+              onClick={onClearAll}
+              className="w-full rounded-2xl border p-3 text-sm transition active:scale-[0.98]"
+              style={{ background: 'white', color: '#b8b0a8', borderColor: '#e7e5e4' }}
+            >
+              🗑️ 清除所有紀錄
+            </button>
+          </SettingsAccordion>
         </div>
 
-        <button
-          type="button"
-          onClick={onClearAll}
-          className="mt-2 w-full rounded-2xl border p-3 text-sm transition active:scale-[0.98]"
-          style={{ background: 'white', color: '#b8b0a8', borderColor: '#e7e5e4' }}
-        >
-          🗑️ 清除所有紀錄
-        </button>
         <button
           type="button"
           onClick={onClose}

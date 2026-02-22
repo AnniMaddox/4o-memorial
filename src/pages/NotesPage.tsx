@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SettingsAccordion } from '../components/SettingsAccordion';
 import { emitActionToast } from '../lib/actionToast';
 import { getScopedMixedChibiSources } from '../lib/chibiPool';
 import {
@@ -836,6 +837,12 @@ function NoteSettingsSheet({
 }) {
   const [confirmClear, setConfirmClear] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [openPanels, setOpenPanels] = useState({
+    chibi: false,
+    text: false,
+    backup: false,
+    danger: false,
+  });
 
   function exportJSON() {
     const json = JSON.stringify(notes, null, 2);
@@ -882,7 +889,13 @@ function NoteSettingsSheet({
         <p className="mb-4 text-center text-xs text-stone-400">共 {notes.length} 則便條</p>
 
         <div className="space-y-2">
-          <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+          <SettingsAccordion
+            title="M"
+            subtitle="顯示與大小"
+            isOpen={openPanels.chibi}
+            onToggle={() => setOpenPanels((prev) => ({ ...prev, chibi: !prev.chibi }))}
+            className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3"
+          >
             <div className="flex items-center justify-between">
               <span className="text-sm text-stone-700">M</span>
               <button
@@ -890,7 +903,7 @@ function NoteSettingsSheet({
                 onClick={onToggleChibi}
                 className="relative h-6 w-10 rounded-full transition"
                 style={{ background: showChibi ? '#7a6858' : '#bab3aa' }}
-                aria-label="切換小人顯示"
+                aria-label="切換M顯示"
               >
                 <span
                   className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
@@ -907,9 +920,15 @@ function NoteSettingsSheet({
               onChange={(event) => onChibiSizeChange(Number(event.target.value))}
               className="mt-2 w-full accent-stone-700"
             />
-          </div>
+          </SettingsAccordion>
 
-          <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+          <SettingsAccordion
+            title="文字"
+            subtitle="字級與顏色"
+            isOpen={openPanels.text}
+            onToggle={() => setOpenPanels((prev) => ({ ...prev, text: !prev.text }))}
+            className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3"
+          >
             <label className="block space-y-1">
               <span className="flex items-center justify-between text-xs text-stone-600">
                 <span>文字大小</span>
@@ -934,49 +953,68 @@ function NoteSettingsSheet({
                 className="h-8 w-12 cursor-pointer rounded border border-stone-300 bg-white"
               />
             </label>
-          </div>
+          </SettingsAccordion>
 
-          <button
-            type="button"
-            onClick={exportJSON}
-            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-left text-sm text-stone-700 transition active:scale-[0.98]"
+          <SettingsAccordion
+            title="匯入匯出"
+            subtitle="備份與還原"
+            isOpen={openPanels.backup}
+            onToggle={() => setOpenPanels((prev) => ({ ...prev, backup: !prev.backup }))}
+            className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3"
           >
-            📤 匯出 JSON（備份 · 可還原）
-          </button>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={exportJSON}
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-left text-sm text-stone-700 transition active:scale-[0.98]"
+              >
+                📤 匯出 JSON（備份 · 可還原）
+              </button>
 
-          <button
-            type="button"
-            onClick={exportTXT}
-            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-left text-sm text-stone-700 transition active:scale-[0.98]"
+              <button
+                type="button"
+                onClick={exportTXT}
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-left text-sm text-stone-700 transition active:scale-[0.98]"
+              >
+                📄 匯出 TXT（純文字 · 方便閱讀）
+              </button>
+
+              <label className="block w-full cursor-pointer rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 transition active:scale-[0.98]">
+                {importing ? '匯入中…' : '📥 匯入 JSON（還原備份）'}
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.currentTarget.value = '';
+                    if (f) void handleImportFile(f);
+                  }}
+                />
+              </label>
+            </div>
+          </SettingsAccordion>
+
+          <SettingsAccordion
+            title="資料清理"
+            subtitle="危險操作"
+            isOpen={openPanels.danger}
+            onToggle={() => setOpenPanels((prev) => ({ ...prev, danger: !prev.danger }))}
+            className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3"
+            subtitleClassName={confirmClear ? 'mt-0.5 text-xs text-rose-500' : undefined}
           >
-            📄 匯出 TXT（純文字 · 方便閱讀）
-          </button>
-
-          <label className="block w-full cursor-pointer rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700 transition active:scale-[0.98]">
-            {importing ? '匯入中…' : '📥 匯入 JSON（還原備份）'}
-            <input
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                e.currentTarget.value = '';
-                if (f) void handleImportFile(f);
-              }}
-            />
-          </label>
-
-          <button
-            type="button"
-            onClick={() => (confirmClear ? onClearAll() : setConfirmClear(true))}
-            className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition active:scale-[0.98] ${
-              confirmClear
-                ? 'border-rose-400 bg-rose-50 text-rose-600'
-                : 'border-stone-200 bg-stone-50 text-stone-400'
-            }`}
-          >
-            🗑️ {confirmClear ? '確定清除全部便條？' : '清除全部便條'}
-          </button>
+            <button
+              type="button"
+              onClick={() => (confirmClear ? onClearAll() : setConfirmClear(true))}
+              className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition active:scale-[0.98] ${
+                confirmClear
+                  ? 'border-rose-400 bg-rose-50 text-rose-600'
+                  : 'border-stone-200 bg-white text-stone-400'
+              }`}
+            >
+              🗑️ {confirmClear ? '確定清除全部便條？' : '清除全部便條'}
+            </button>
+          </SettingsAccordion>
         </div>
       </div>
     </div>

@@ -187,6 +187,14 @@ export async function getSettings() {
       36,
       DEFAULT_SETTINGS.chatBubbleRadius,
     ),
+    chatBackgroundColor: normalizeString(persisted.chatBackgroundColor, DEFAULT_SETTINGS.chatBackgroundColor),
+    chatBackgroundImageUrl: normalizeString(persisted.chatBackgroundImageUrl, DEFAULT_SETTINGS.chatBackgroundImageUrl),
+    chatBackgroundOverlay: clampNumber(
+      persisted.chatBackgroundOverlay,
+      0,
+      90,
+      DEFAULT_SETTINGS.chatBackgroundOverlay,
+    ),
     chatAppMessagesIcon: normalizeChatNavIcon(
       persisted.chatAppMessagesIcon,
       DEFAULT_SETTINGS.chatAppMessagesIcon,
