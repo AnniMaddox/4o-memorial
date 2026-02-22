@@ -656,10 +656,25 @@ export function HomePage({
                     <>
                       <div className="mb-6">
                         <div className="flex items-end justify-between gap-4">
-                          <div className="text-[4.25rem] font-semibold leading-none tracking-tight text-stone-800">{timeText}</div>
+                          <div
+                            className="font-semibold leading-none tracking-tight text-stone-800"
+                            style={{ fontSize: 'calc(var(--ui-header-title-size, 17px) * 3.9)' }}
+                          >
+                            {timeText}
+                          </div>
                           <div className="pb-2 text-right">
-                            <div className="text-2xl font-semibold tracking-[0.18em] text-stone-700">{weekdayText}</div>
-                            <div className="mt-1 text-sm tracking-[0.2em] text-stone-600">{monthDayText}</div>
+                            <div
+                              className="font-semibold tracking-[0.18em] text-stone-700"
+                              style={{ fontSize: 'calc(var(--ui-header-title-size, 17px) + 7px)' }}
+                            >
+                              {weekdayText}
+                            </div>
+                            <div
+                              className="mt-1 tracking-[0.2em] text-stone-600"
+                              style={{ fontSize: 'calc(var(--ui-hint-text-size, 10px) + 3px)' }}
+                            >
+                              {monthDayText}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -722,15 +737,28 @@ export function HomePage({
                           </button>
                           <div className="min-w-0">
                             <div className="flex items-center gap-3">
-                              <p className="truncate text-2xl font-semibold tracking-wide text-stone-800">{headerTitle}</p>
+                              <p
+                                className="truncate font-semibold tracking-wide text-stone-800"
+                                style={{ fontSize: 'calc(var(--ui-header-title-size, 17px) + 7px)' }}
+                              >
+                                {headerTitle}
+                              </p>
                               {badgeText && (
-                                <span className="rounded-full border border-white/60 bg-white/35 px-2 py-0.5 text-[11px] tracking-[0.14em] text-stone-700">
+                                <span
+                                  className="rounded-full border border-white/60 bg-white/35 px-2 py-0.5 tracking-[0.14em] text-stone-700"
+                                  style={{ fontSize: 'calc(var(--ui-hint-text-size, 10px) + 1px)' }}
+                                >
                                   {badgeText}
                                 </span>
                               )}
                             </div>
                             {headerSubtitle && (
-                              <p className="mt-1 truncate text-sm text-stone-600">{headerSubtitle}</p>
+                              <p
+                                className="mt-1 truncate text-stone-600"
+                                style={{ fontSize: 'calc(var(--ui-hint-text-size, 10px) + 4px)' }}
+                              >
+                                {headerSubtitle}
+                              </p>
                             )}
                           </div>
                         </div>

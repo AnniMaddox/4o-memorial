@@ -647,7 +647,12 @@ export function CheckinPage() {
         <header className={`rounded-2xl border p-4 shadow-sm ${variant.card}`}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl text-stone-900">打卡簽到</h1>
+              <h1
+                className="text-stone-900"
+                style={{ fontSize: 'calc(var(--ui-header-title-size, 17px) + 7px)' }}
+              >
+                打卡簽到
+              </h1>
             </div>
             <button
               type="button"
