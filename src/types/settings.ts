@@ -121,6 +121,12 @@ export type AppSettings = {
   tabIconUrls: TabIconUrls;
   appLabels: AppLabels;
   fontScale: number;
+  uiHeaderTitleSize: number;
+  uiTabLabelSize: number;
+  uiFilterPillSize: number;
+  uiHintTextSize: number;
+  chatContactNameSize: number;
+  chatContactSubtitleSize: number;
   swipeEnabled: boolean;
   localNotificationsEnabled: boolean;
   lastSyncAt: string | null;
@@ -145,6 +151,7 @@ export type AppSettings = {
   soulmateFontUrlSlotNames: string[];
   diaryCoverFitMode: DiaryCoverFitMode;
   mDiaryLineHeight: number;
+  mDiaryContentFontSize: number;
   mDiaryShowCount: boolean;
   mDiaryRandomChibiWidth: number;
   mDiaryReadingChibiWidth: number;
@@ -202,6 +209,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   tabIconUrls: DEFAULT_TAB_ICON_URLS,
   appLabels: DEFAULT_APP_LABELS,
   fontScale: 1,
+  uiHeaderTitleSize: 17,
+  uiTabLabelSize: 17,
+  uiFilterPillSize: 10,
+  uiHintTextSize: 9,
+  chatContactNameSize: 30,
+  chatContactSubtitleSize: 18,
   swipeEnabled: true,
   localNotificationsEnabled: true,
   lastSyncAt: null,
@@ -226,6 +239,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   soulmateFontUrlSlotNames: ['', '', '', '', '', '', '', ''],
   diaryCoverFitMode: 'cover',
   mDiaryLineHeight: 2.16,
+  mDiaryContentFontSize: 14,
   mDiaryShowCount: true,
   mDiaryRandomChibiWidth: 144,
   mDiaryReadingChibiWidth: 144,

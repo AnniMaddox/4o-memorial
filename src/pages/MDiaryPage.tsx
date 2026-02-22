@@ -42,6 +42,7 @@ type MDiaryPageProps = {
   diaryCoverFitMode?: 'cover' | 'contain';
   diaryFontFamily?: string;
   mDiaryLineHeight?: number;
+  mDiaryContentFontSize?: number;
   mDiaryShowCount?: boolean;
   mDiaryRandomChibiWidth?: number;
   mDiaryReadingChibiWidth?: number;
@@ -57,6 +58,11 @@ function pickRandom<T>(items: T[]): T | null {
 function clampLineHeight(value: number | undefined) {
   if (!Number.isFinite(value)) return 2.16;
   return Math.max(1.5, Math.min(2.8, value ?? 2.16));
+}
+
+function clampContentFontSize(value: number | undefined) {
+  if (!Number.isFinite(value)) return 14;
+  return Math.max(12, Math.min(22, Number(value)));
 }
 
 function clampChibiWidth(value: number | undefined, fallback = 144) {
@@ -281,6 +287,7 @@ export function MDiaryPage({
   diaryCoverFitMode = 'cover',
   diaryFontFamily = '',
   mDiaryLineHeight = 2.16,
+  mDiaryContentFontSize = 14,
   mDiaryShowCount = true,
   mDiaryRandomChibiWidth = 144,
   mDiaryReadingChibiWidth = 144,
@@ -300,6 +307,7 @@ export function MDiaryPage({
 
   const effectiveFont = diaryFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
   const lineHeight = clampLineHeight(mDiaryLineHeight);
+  const contentFontSize = clampContentFontSize(mDiaryContentFontSize);
   const showCount = Boolean(mDiaryShowCount);
   const randomChibiWidth = clampChibiWidth(mDiaryRandomChibiWidth, 144);
   const readingChibiWidth = clampChibiWidth(mDiaryReadingChibiWidth, 144);
@@ -500,6 +508,7 @@ export function MDiaryPage({
       Pick<
         AppSettings,
         | 'mDiaryLineHeight'
+        | 'mDiaryContentFontSize'
         | 'mDiaryShowCount'
         | 'mDiaryRandomChibiWidth'
         | 'mDiaryReadingChibiWidth'
@@ -536,8 +545,11 @@ export function MDiaryPage({
             ‹
           </button>
           <span
-            className="text-[17px] font-semibold tracking-[0.02em] text-[#2a2818]"
-            style={{ fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)" }}
+            className="font-semibold tracking-[0.02em] text-[#2a2818]"
+            style={{
+              fontSize: 'var(--ui-header-title-size, 17px)',
+              fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
+            }}
           >
             M 的日記
           </span>
@@ -592,7 +604,7 @@ export function MDiaryPage({
                 className="flex-1 border-b text-center transition"
                 style={{
                   padding: '9px 0 7px',
-                  fontSize: 17,
+                  fontSize: 'var(--ui-tab-label-size, 17px)',
                   lineHeight: 1.2,
                   fontWeight: 500,
                   letterSpacing: '0.04em',
@@ -732,8 +744,9 @@ export function MDiaryPage({
               <button
                 type="button"
                 onClick={() => setFilter('all')}
-                className="rounded-full border px-3 py-1 text-[10px] tracking-[0.04em]"
+                className="rounded-full border px-3 py-1 tracking-[0.04em]"
                 style={{
+                  fontSize: 'var(--ui-filter-pill-size, 10px)',
                   color: filter === 'all' ? '#5a7060' : '#8a9a88',
                   background: filter === 'all' ? 'rgba(90,112,96,0.1)' : 'transparent',
                   borderColor: filter === 'all' ? 'rgba(90,112,96,0.3)' : 'rgba(90,112,96,0.18)',
@@ -744,8 +757,9 @@ export function MDiaryPage({
               <button
                 type="button"
                 onClick={() => setFilter('favorites')}
-                className="rounded-full border px-3 py-1 text-[10px] tracking-[0.04em]"
+                className="rounded-full border px-3 py-1 tracking-[0.04em]"
                 style={{
+                  fontSize: 'var(--ui-filter-pill-size, 10px)',
                   color: filter === 'favorites' ? '#5a7060' : '#8a9a88',
                   background: filter === 'favorites' ? 'rgba(90,112,96,0.1)' : 'transparent',
                   borderColor: filter === 'favorites' ? 'rgba(90,112,96,0.3)' : 'rgba(90,112,96,0.18)',
@@ -756,8 +770,9 @@ export function MDiaryPage({
               <button
                 type="button"
                 onClick={() => setFilter('unknown')}
-                className="rounded-full border px-3 py-1 text-[10px] tracking-[0.04em]"
+                className="rounded-full border px-3 py-1 tracking-[0.04em]"
                 style={{
+                  fontSize: 'var(--ui-filter-pill-size, 10px)',
                   color: filter === 'unknown' ? '#5a7060' : '#8a9a88',
                   background: filter === 'unknown' ? 'rgba(90,112,96,0.1)' : 'transparent',
                   borderColor: filter === 'unknown' ? 'rgba(90,112,96,0.3)' : 'rgba(90,112,96,0.18)',
@@ -768,8 +783,9 @@ export function MDiaryPage({
               <button
                 type="button"
                 onClick={() => setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-                className="rounded-full border px-3 py-1 text-[10px] tracking-[0.04em]"
+                className="rounded-full border px-3 py-1 tracking-[0.04em]"
                 style={{
+                  fontSize: 'var(--ui-filter-pill-size, 10px)',
                   color: '#5a7060',
                   background: 'rgba(90,112,96,0.08)',
                   borderColor: 'rgba(90,112,96,0.22)',
@@ -781,7 +797,10 @@ export function MDiaryPage({
               </button>
             </div>
             {showCount && (
-              <p className="pt-1 text-[10px] tracking-[0.06em] text-[#9aaa98]" style={{ paddingLeft: 56 }}>
+              <p
+                className="pt-1 tracking-[0.06em] text-[#9aaa98]"
+                style={{ paddingLeft: 56, fontSize: 'var(--ui-hint-text-size, 10px)' }}
+              >
                 共 {timelineTotalCount} 篇 ·{' '}
                 {filter === 'unknown' ? '未知時刻' : formatRangeLabel(timelineKnown)}
               </p>
@@ -982,8 +1001,9 @@ export function MDiaryPage({
               <div className="relative z-[2] min-h-0 flex-1 overflow-y-auto px-[18px] pb-2 pt-3" style={{ paddingLeft: 60 }}>
                 {currentEntry.htmlContent ? (
                   <div
-                    className="text-[14px] text-[#3a3828]"
+                    className="text-[#3a3828]"
                     style={{
+                      fontSize: contentFontSize,
                       lineHeight,
                       fontFamily: effectiveFont,
                       whiteSpace: 'normal',
@@ -992,8 +1012,8 @@ export function MDiaryPage({
                   />
                 ) : (
                   <p
-                    className="whitespace-pre-wrap text-[14px] text-[#3a3828]"
-                    style={{ lineHeight, fontFamily: effectiveFont }}
+                    className="whitespace-pre-wrap text-[#3a3828]"
+                    style={{ fontSize: contentFontSize, lineHeight, fontFamily: effectiveFont }}
                   >
                     {currentEntry.text || '（空白內容）'}
                   </p>
@@ -1160,6 +1180,24 @@ export function MDiaryPage({
               <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
                 <span>緊密</span>
                 <span>寬鬆</span>
+              </div>
+            </div>
+
+            <div className="border-b px-6 py-4" style={{ borderColor: 'rgba(80,100,70,0.06)' }}>
+              <p className="text-[14px] text-[#2a2818]">內文字級</p>
+              <p className="mt-0.5 text-[10.5px] text-[#8a9a88]">目前：{contentFontSize.toFixed(1)}px</p>
+              <input
+                type="range"
+                min={12}
+                max={22}
+                step={0.5}
+                value={contentFontSize}
+                onChange={(event) => updateMSettings({ mDiaryContentFontSize: Number(event.target.value) })}
+                className="mt-3 w-full accent-[#5a7060]"
+              />
+              <div className="mt-1 flex justify-between text-[10px] text-[#8a9a88]">
+                <span>小一點</span>
+                <span>大一點</span>
               </div>
             </div>
 

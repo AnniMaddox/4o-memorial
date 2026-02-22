@@ -1360,6 +1360,12 @@ function App() {
         ['--app-font-scale' as string]: settings.fontScale,
         ['--app-font-family' as string]: appFontFamily,
         ['--app-heading-family' as string]: appHeadingFamily,
+        ['--ui-header-title-size' as string]: `${settings.uiHeaderTitleSize}px`,
+        ['--ui-tab-label-size' as string]: `${settings.uiTabLabelSize}px`,
+        ['--ui-filter-pill-size' as string]: `${settings.uiFilterPillSize}px`,
+        ['--ui-hint-text-size' as string]: `${settings.uiHintTextSize}px`,
+        ['--chat-contact-title-size' as string]: `${settings.chatContactNameSize}px`,
+        ['--chat-contact-subtitle-size' as string]: `${settings.chatContactSubtitleSize}px`,
         ['--calendar-cell-radius' as string]: `${settings.calendarCellRadius}px`,
         ['--calendar-cell-shadow' as string]: settings.calendarCellShadow,
         ['--calendar-cell-depth' as string]: settings.calendarCellDepth,
@@ -1610,6 +1616,7 @@ function App() {
                   diaryFontFamily={diaryFontFamily}
                   diaryCoverFitMode={settings.diaryCoverFitMode}
                   mDiaryLineHeight={settings.mDiaryLineHeight}
+                  mDiaryContentFontSize={settings.mDiaryContentFontSize}
                   mDiaryShowCount={settings.mDiaryShowCount}
                   mDiaryRandomChibiWidth={settings.mDiaryRandomChibiWidth}
                   mDiaryReadingChibiWidth={settings.mDiaryReadingChibiWidth}

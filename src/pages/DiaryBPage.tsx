@@ -7,6 +7,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 
+import { emitActionToast } from '../lib/actionToast';
 import { clearAllDiaries, deleteDiary, loadDiaries, saveDiaries, type StoredDiary } from '../lib/diaryDB';
 
 type DiaryBPageProps = {
@@ -32,6 +33,10 @@ type DiaryChibiPrefs = {
   size: number;
 };
 
+type DiaryTextPrefs = {
+  contentFontSize: number;
+};
+
 type CalendarCell = {
   key: string;
   date: Date;
@@ -55,9 +60,13 @@ const BASE_URL = import.meta.env.BASE_URL as string;
 const CHIBI_COUNT = 35;
 const DIARY_META_STORAGE_KEY = 'memorial-diary-b-meta-v1';
 const DIARY_CHIBI_PREFS_STORAGE_KEY = 'memorial-diary-b-chibi-prefs-v1';
+const DIARY_TEXT_PREFS_STORAGE_KEY = 'memorial-diary-b-text-prefs-v1';
 const DEFAULT_DIARY_CHIBI_PREFS: DiaryChibiPrefs = {
   showChibi: true,
   size: 144,
+};
+const DEFAULT_DIARY_TEXT_PREFS: DiaryTextPrefs = {
+  contentFontSize: 14,
 };
 const MOOD_ORDER: DiaryMood[] = ['love', 'happy', 'calm', 'miss', 'tired'];
 
@@ -147,6 +156,32 @@ function readDiaryChibiPrefs(): DiaryChibiPrefs {
 function persistDiaryChibiPrefs(prefs: DiaryChibiPrefs) {
   try {
     window.localStorage.setItem(DIARY_CHIBI_PREFS_STORAGE_KEY, JSON.stringify(prefs));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function clampDiaryContentFontSize(value: number | undefined, fallback = 14) {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(12, Math.min(22, Number(value)));
+}
+
+function readDiaryTextPrefs(): DiaryTextPrefs {
+  try {
+    const raw = window.localStorage.getItem(DIARY_TEXT_PREFS_STORAGE_KEY);
+    if (!raw) return DEFAULT_DIARY_TEXT_PREFS;
+    const parsed = JSON.parse(raw) as Partial<DiaryTextPrefs>;
+    return {
+      contentFontSize: clampDiaryContentFontSize(parsed.contentFontSize, DEFAULT_DIARY_TEXT_PREFS.contentFontSize),
+    };
+  } catch {
+    return DEFAULT_DIARY_TEXT_PREFS;
+  }
+}
+
+function persistDiaryTextPrefs(prefs: DiaryTextPrefs) {
+  try {
+    window.localStorage.setItem(DIARY_TEXT_PREFS_STORAGE_KEY, JSON.stringify(prefs));
   } catch {
     // ignore storage errors
   }
@@ -306,11 +341,13 @@ export function DiaryBPage({
   const [draftFavorite, setDraftFavorite] = useState(false);
   const [sharedChibi] = useState(randomChibiSrc);
   const [diaryChibiPrefs, setDiaryChibiPrefs] = useState<DiaryChibiPrefs>(() => readDiaryChibiPrefs());
+  const [diaryTextPrefs, setDiaryTextPrefs] = useState<DiaryTextPrefs>(() => readDiaryTextPrefs());
   const [calendarDayMenu, setCalendarDayMenu] = useState<CalendarDayMenuState | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
   const hideFloatingChibi = !diaryChibiPrefs.showChibi || !sharedChibi;
 
   const effectiveFont = diaryFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
+  const contentFontSize = clampDiaryContentFontSize(diaryTextPrefs.contentFontSize, DEFAULT_DIARY_TEXT_PREFS.contentFontSize);
 
   useEffect(() => {
     let mounted = true;
@@ -358,6 +395,11 @@ export function DiaryBPage({
     if (typeof window === 'undefined') return;
     persistDiaryChibiPrefs(diaryChibiPrefs);
   }, [diaryChibiPrefs]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    persistDiaryTextPrefs(diaryTextPrefs);
+  }, [diaryTextPrefs]);
 
   useEffect(() => {
     if (activeTab !== 'calendar') {
@@ -444,54 +486,63 @@ export function DiaryBPage({
       return;
     }
 
-    if (editingName) {
-      const updated = entries.map((entry) =>
-        entry.name === editingName
-          ? {
-              ...entry,
-              title: title || entry.title,
-              content,
-              htmlContent: '',
-            }
-          : entry,
-      );
-      await saveDiaries(updated);
-      setEntries(normalizeEntries(updated));
-      setMetaMap((current) => ({
-        ...current,
-        [editingName]: {
-          mood: draftMood,
-          favorite: draftFavorite,
-        },
-      }));
-      syncEntryIndex(editingName, currentIndex);
-    } else {
-      const name = buildNewEntryName(entries);
-      const createdAt = Date.now();
-      const created: StoredDiary = {
-        name,
-        title: title || `日記 ${new Date(createdAt).toLocaleDateString('zh-TW')}`,
-        content,
-        htmlContent: '',
-        importedAt: createdAt,
-      };
-      const updated = normalizeEntries([...entries, created]);
-      await saveDiaries([created]);
-      setEntries(updated);
-      setMetaMap((current) => ({
-        ...current,
-        [name]: {
-          mood: draftMood,
-          favorite: draftFavorite,
-        },
-      }));
-      const nextIndex = updated.findIndex((entry) => entry.name === name);
-      setCurrentIndex(nextIndex >= 0 ? nextIndex : updated.length - 1);
-      setCalendarMonth(new Date(createdAt));
-    }
+    try {
+      if (editingName) {
+        const updated = entries.map((entry) =>
+          entry.name === editingName
+            ? {
+                ...entry,
+                title: title || entry.title,
+                content,
+                htmlContent: '',
+              }
+            : entry,
+        );
+        await saveDiaries(updated);
+        setEntries(normalizeEntries(updated));
+        setMetaMap((current) => ({
+          ...current,
+          [editingName]: {
+            mood: draftMood,
+            favorite: draftFavorite,
+          },
+        }));
+        syncEntryIndex(editingName, currentIndex);
+      } else {
+        const name = buildNewEntryName(entries);
+        const createdAt = Date.now();
+        const created: StoredDiary = {
+          name,
+          title: title || `日記 ${new Date(createdAt).toLocaleDateString('zh-TW')}`,
+          content,
+          htmlContent: '',
+          importedAt: createdAt,
+        };
+        const updated = normalizeEntries([...entries, created]);
+        await saveDiaries([created]);
+        setEntries(updated);
+        setMetaMap((current) => ({
+          ...current,
+          [name]: {
+            mood: draftMood,
+            favorite: draftFavorite,
+          },
+        }));
+        const nextIndex = updated.findIndex((entry) => entry.name === name);
+        setCurrentIndex(nextIndex >= 0 ? nextIndex : updated.length - 1);
+        setCalendarMonth(new Date(createdAt));
+      }
 
-    setActiveTab('reading');
-    setShowEditor(false);
+      setActiveTab('reading');
+      setShowEditor(false);
+      emitActionToast({ kind: 'success', message: '日記 B 已儲存' });
+    } catch (error) {
+      emitActionToast({
+        kind: 'error',
+        message: `日記 B 儲存失敗：${error instanceof Error ? error.message : '未知錯誤'}`,
+        durationMs: 2600,
+      });
+    }
   }
 
   async function deleteEntryByName(name: string) {
@@ -833,7 +884,7 @@ export function DiaryBPage({
             </button>
             <span
               style={{
-                fontSize: 17,
+                fontSize: 'var(--ui-header-title-size, 17px)',
                 fontWeight: 600,
                 color: '#2c2218',
                 letterSpacing: '0.02em',
@@ -899,7 +950,7 @@ export function DiaryBPage({
                   style={{
                     textAlign: 'center',
                     padding: '9px 0 7px',
-                    fontSize: 17,
+                    fontSize: 'var(--ui-tab-label-size, 17px)',
                     fontWeight: 500,
                     letterSpacing: '0.04em',
                     fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
@@ -1024,11 +1075,11 @@ export function DiaryBPage({
                 >
                   {currentEntry.htmlContent ? (
                     <div
-                      style={{ fontSize: 14, lineHeight: 2.16, color: '#3a2c1c', fontFamily: effectiveFont }}
+                      style={{ fontSize: contentFontSize, lineHeight: 2.16, color: '#3a2c1c', fontFamily: effectiveFont }}
                       dangerouslySetInnerHTML={{ __html: currentEntry.htmlContent }}
                     />
                   ) : (
-                    <p style={{ fontSize: 14, lineHeight: 2.16, color: '#3a2c1c', whiteSpace: 'pre-wrap', fontFamily: effectiveFont }}>
+                    <p style={{ fontSize: contentFontSize, lineHeight: 2.16, color: '#3a2c1c', whiteSpace: 'pre-wrap', fontFamily: effectiveFont }}>
                       {currentEntry.content}
                     </p>
                   )}
@@ -1710,7 +1761,7 @@ export function DiaryBPage({
                   background: 'transparent',
                   border: 'none',
                   outline: 'none',
-                  fontSize: 14,
+                  fontSize: contentFontSize,
                   lineHeight: 2.16,
                   color: '#3a2c1c',
                   fontFamily: effectiveFont,
@@ -1861,6 +1912,27 @@ export function DiaryBPage({
                   className="w-full accent-amber-700"
                 />
               </div>
+            </div>
+
+            <div style={{ padding: '10px 18px 10px', borderBottom: '1px solid rgba(100,80,40,0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 12.5, color: '#6d5237' }}>內文字級</span>
+                <span style={{ fontSize: 11, color: '#a08060' }}>{contentFontSize.toFixed(1)}px</span>
+              </div>
+              <input
+                type="range"
+                min={12}
+                max={22}
+                step={0.5}
+                value={contentFontSize}
+                onChange={(event) =>
+                  setDiaryTextPrefs((prev) => ({
+                    ...prev,
+                    contentFontSize: clampDiaryContentFontSize(Number(event.target.value), prev.contentFontSize),
+                  }))
+                }
+                className="w-full accent-amber-700"
+              />
             </div>
 
             <button

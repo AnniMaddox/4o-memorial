@@ -38,6 +38,7 @@ type LettersABPrefs = {
   theme: ThemeKey;
   lineHeight: LineHeightKey;
   readingFont: ReadingFontKey;
+  readingFontSize: number;
   showChibi: boolean;
   chibiWidth: number;
 };
@@ -87,6 +88,11 @@ function clampChibiWidth(value: unknown, fallback = 136) {
   return Math.max(96, Math.min(186, Math.round(value)));
 }
 
+function clampReadingFontSize(value: unknown, fallback = 12.5) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return fallback;
+  return Math.max(11, Math.min(20, Number(value)));
+}
+
 function normalizeTheme(value: unknown): ThemeKey {
   return value === 'd' ? 'd' : 'a';
 }
@@ -106,6 +112,7 @@ function readPrefs(): LettersABPrefs {
       theme: 'a',
       lineHeight: 'normal',
       readingFont: 'default',
+      readingFontSize: 12.5,
       showChibi: true,
       chibiWidth: 136,
     };
@@ -117,6 +124,7 @@ function readPrefs(): LettersABPrefs {
         theme: 'a',
         lineHeight: 'normal',
         readingFont: 'default',
+        readingFontSize: 12.5,
         showChibi: true,
         chibiWidth: 136,
       };
@@ -126,6 +134,7 @@ function readPrefs(): LettersABPrefs {
       theme: normalizeTheme(parsed.theme),
       lineHeight: normalizeLineHeightKey(parsed.lineHeight),
       readingFont: normalizeReadingFontKey(parsed.readingFont),
+      readingFontSize: clampReadingFontSize(parsed.readingFontSize, 12.5),
       showChibi: parsed.showChibi !== false,
       chibiWidth: clampChibiWidth(parsed.chibiWidth, 136),
     };
@@ -134,6 +143,7 @@ function readPrefs(): LettersABPrefs {
       theme: 'a',
       lineHeight: 'normal',
       readingFont: 'default',
+      readingFontSize: 12.5,
       showChibi: true,
       chibiWidth: 136,
     };
@@ -625,7 +635,9 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
           >
             <div className="la-paper" style={{ lineHeight: lineHeightValue, fontFamily: readingFontFamily }}>
               <h3 className="la-paper-title">{currentEntry?.title ?? '未命名信件'}</h3>
-              <p className="la-paper-content">{currentContent || '讀取內容中...'}</p>
+              <p className="la-paper-content" style={{ fontSize: `${prefs.readingFontSize}px` }}>
+                {currentContent || '讀取內容中...'}
+              </p>
             </div>
           </section>
         </>
@@ -680,6 +692,22 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
                   </button>
                 ))}
               </div>
+              <label className="la-range-row">
+                <span>內文字級：{prefs.readingFontSize.toFixed(1)}px</span>
+                <input
+                  type="range"
+                  min={11}
+                  max={20}
+                  step={0.5}
+                  value={prefs.readingFontSize}
+                  onChange={(event) =>
+                    setPrefs((prev) => ({
+                      ...prev,
+                      readingFontSize: clampReadingFontSize(Number(event.target.value), prev.readingFontSize),
+                    }))
+                  }
+                />
+              </label>
             </section>
 
             <section className="la-sheet-section">

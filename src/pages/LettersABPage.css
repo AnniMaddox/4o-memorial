@@ -61,9 +61,10 @@
 }
 
 .la-title {
-  font-size: 15px;
+  font-size: var(--ui-header-title-size, 17px);
   font-weight: 600;
   letter-spacing: 0.02em;
+  font-family: var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif);
 }
 
 .la-ghost-btn {
