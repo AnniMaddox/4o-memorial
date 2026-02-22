@@ -61,6 +61,7 @@ type AboutMBackupPart = 'mDiary' | 'letters' | 'chatLogs' | 'inbox' | 'soulmate'
 type PanelKey =
   | 'overview'
   | 'bigBackup'
+  | 'manuals'
   | 'appearance'
   | 'fontCenter'
   | 'home'
@@ -228,6 +229,31 @@ const IMPORTANT_NOTES: string[] = [
   '頁內「手動匯入」的資料是本機資料庫，不會被 GitHub 檔案直接覆蓋。',
   '文字檔建議 UTF-8，圖片建議壓縮後再上傳，手機載入會更穩。',
 ];
+
+const BOOKSHELF_FILE_GUIDE: Array<{ path: string; required: string; note: string }> = [
+  { path: 'public/data/bookshelf.json', required: '必填', note: '書本清單與顯示順序（由上到下）' },
+  { path: 'public/books/<bookId>/cover.webp', required: '選填', note: '封面（不放也可）' },
+  { path: 'public/books/<bookId>/001.webp', required: '必填（至少一頁）', note: '閱讀頁第 1 張' },
+  { path: 'public/books/<bookId>/002.webp, 003.webp ...', required: '選填', note: '後續頁面，依檔名數字排序' },
+];
+
+const BOOKSHELF_SETUP_STEPS: string[] = [
+  '在 `public/data/bookshelf.json` 新增一本書（建議先複製既有一筆再改）。',
+  '把 `id` 設成唯一值（例如 `book-006`），這個 id 要和資料夾名稱一致。',
+  '建立資料夾 `public/books/<id>/`，放進封面與閱讀頁圖片。',
+  '圖片檔名建議用 `001.webp`、`002.webp`...（可混 jpg/png/webp，系統會按檔名排序）。',
+  '存檔後上傳 GitHub main，等待部署完成，手機重整就會看到。',
+];
+
+const BOOKSHELF_JSON_SAMPLE = `[
+  {
+    "id": "book-006",
+    "title": "新書名稱",
+    "subtitle": "",
+    "icon": "📖",
+    "coverImage": ""
+  }
+]`;
 
 type AppearancePresetPayload = {
   version: 1;
@@ -434,6 +460,7 @@ export function SettingsPage({
   const [openChatBubbleGroup, setOpenChatBubbleGroup] = useState(false);
   const [openChatBackgroundGroup, setOpenChatBackgroundGroup] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [guideManualType, setGuideManualType] = useState<'general' | 'bookshelf'>('general');
   const [selectedFontSlotIndex, setSelectedFontSlotIndex] = useState<Record<FontSlotSettingKey, number>>({
     customFontUrlSlots: 0,
     letterFontUrlSlots: 0,
@@ -3417,6 +3444,42 @@ export function SettingsPage({
         </SettingPanel>
 
         <SettingPanel
+          icon="📚"
+          title="說明書"
+          subtitle="總說明 + 書架使用"
+          isOpen={openPanel === 'manuals'}
+          onToggle={() => togglePanel('manuals')}
+        >
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setGuideManualType('general');
+                  setShowGuideModal(true);
+                }}
+                className="w-full rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80"
+              >
+                說明書 I
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGuideManualType('bookshelf');
+                  setShowGuideModal(true);
+                }}
+                className="w-full rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80"
+              >
+                說明書 II（書架）
+              </button>
+            </div>
+            <p className="text-xs text-stone-500">
+              I：全站更新與資料路徑對照。II：書架新增/換圖/開新書完整流程。
+            </p>
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
           icon="🛠️"
           title="手動操作"
           subtitle="刷新資料與同步時間"
@@ -3424,22 +3487,13 @@ export function SettingsPage({
           onToggle={() => togglePanel('maintenance')}
         >
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={onRefresh}
-                className="w-full rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80"
-              >
-                重新整理本機資料
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowGuideModal(true)}
-                className="w-full rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80"
-              >
-                說明書
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="w-full rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80"
+            >
+              重新整理本機資料
+            </button>
             <p className="text-xs text-stone-500">
               上次更新：{settings.lastSyncAt ? new Date(settings.lastSyncAt).toLocaleString() : '尚未更新'}
             </p>
@@ -3453,7 +3507,33 @@ export function SettingsPage({
             <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Manual</p>
-                <h3 className="text-base text-stone-900">自助更新說明書</h3>
+                <h3 className="text-base text-stone-900">
+                  {guideManualType === 'general' ? '說明書 I：全站更新' : '說明書 II：書架使用'}
+                </h3>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGuideManualType('general')}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                      guideManualType === 'general'
+                        ? 'border-stone-800 bg-stone-900 text-white'
+                        : 'border-stone-300 bg-white text-stone-600'
+                    }`}
+                  >
+                    I 全站
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGuideManualType('bookshelf')}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                      guideManualType === 'bookshelf'
+                        ? 'border-stone-800 bg-stone-900 text-white'
+                        : 'border-stone-300 bg-white text-stone-600'
+                    }`}
+                  >
+                    II 書架
+                  </button>
+                </div>
               </div>
               <button
                 type="button"
@@ -3466,105 +3546,162 @@ export function SettingsPage({
             </div>
 
             <div className="space-y-5 overflow-y-auto px-4 py-4 text-sm text-stone-700">
-              <section className="space-y-2">
-                <h4 className="text-sm text-stone-900">如何更新（不用本機推送）</h4>
-                <p>到 GitHub 專案主頁直接上傳到 `main` 分支也可以。提交後等待 Actions build/deploy，手機重整即可。</p>
-              </section>
+              {guideManualType === 'general' ? (
+                <>
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">如何更新（不用本機推送）</h4>
+                    <p>到 GitHub 專案主頁直接上傳到 `main` 分支也可以。提交後等待 Actions build/deploy，手機重整即可。</p>
+                  </section>
 
-              <section className="space-y-2">
-                <h4 className="text-sm text-stone-900">小人專屬池對照</h4>
-                <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
-                  <table className="min-w-full text-left text-xs">
-                    <thead className="bg-stone-100 text-stone-600">
-                      <tr>
-                        <th className="px-2 py-2">頁面</th>
-                        <th className="px-2 py-2">路徑</th>
-                        <th className="px-2 py-2">備註</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {CHIBI_POOL_GUIDE.map((row) => (
-                        <tr key={`${row.page}-${row.path}`} className="border-t border-stone-100">
-                          <td className="px-2 py-2 text-stone-800">{row.page}</td>
-                          <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
-                          <td className="px-2 py-2 text-stone-500">{row.note ?? '—'}</td>
-                        </tr>
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">小人專屬池對照</h4>
+                    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+                      <table className="min-w-full text-left text-xs">
+                        <thead className="bg-stone-100 text-stone-600">
+                          <tr>
+                            <th className="px-2 py-2">頁面</th>
+                            <th className="px-2 py-2">路徑</th>
+                            <th className="px-2 py-2">備註</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {CHIBI_POOL_GUIDE.map((row) => (
+                            <tr key={`${row.page}-${row.path}`} className="border-t border-stone-100">
+                              <td className="px-2 py-2 text-stone-800">{row.page}</td>
+                              <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
+                              <td className="px-2 py-2 text-stone-500">{row.note ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">資料內容檔（JSON/TXT）對照</h4>
+                    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+                      <table className="min-w-full text-left text-xs">
+                        <thead className="bg-stone-100 text-stone-600">
+                          <tr>
+                            <th className="px-2 py-2">路徑</th>
+                            <th className="px-2 py-2">對應頁面</th>
+                            <th className="px-2 py-2">用途</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {DATA_CONTENT_GUIDE.map((row) => (
+                            <tr key={`${row.path}-${row.target}`} className="border-t border-stone-100">
+                              <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
+                              <td className="px-2 py-2 text-stone-800">{row.target}</td>
+                              <td className="px-2 py-2 text-stone-500">{row.note ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">圖片/素材對照</h4>
+                    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+                      <table className="min-w-full text-left text-xs">
+                        <thead className="bg-stone-100 text-stone-600">
+                          <tr>
+                            <th className="px-2 py-2">路徑</th>
+                            <th className="px-2 py-2">對應頁面</th>
+                            <th className="px-2 py-2">用途</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ASSET_GUIDE.map((row) => (
+                            <tr key={`${row.path}-${row.target}`} className="border-t border-stone-100">
+                              <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
+                              <td className="px-2 py-2 text-stone-800">{row.target}</td>
+                              <td className="px-2 py-2 text-stone-500">{row.note ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">字體關聯</h4>
+                    <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
+                      <li>字體中心第一欄（字體預設管理）：上傳字體來源、保存成記憶 1~10。</li>
+                      <li>字體中心第二欄（字體套用範圍）：把記憶 1~10 套用到整站/情書/日記/家頁。</li>
+                      <li>字體中心第三欄（當前套用檢視）：純預覽目前每個範圍使用中的字體來源。</li>
+                      <li>「空白（還原預設字體）」可把勾選頁面恢復為預設字體。</li>
+                      <li>整站：大多數頁面的基底字體。</li>
+                      <li>日記：M 日記、Anni 日記、願望內文。</li>
+                      <li>願望標題/頁籤、日記 M/B 標題/頁籤、經期日記標題/頁籤：全站字體。</li>
+                      <li>家頁：只影響「家」閱讀頁。</li>
+                    </ul>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">注意事項</h4>
+                    <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
+                      {IMPORTANT_NOTES.map((note) => (
+                        <li key={note}>{note}</li>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+                    </ul>
+                  </section>
+                </>
+              ) : (
+                <>
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">書架資料結構（必看）</h4>
+                    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+                      <table className="min-w-full text-left text-xs">
+                        <thead className="bg-stone-100 text-stone-600">
+                          <tr>
+                            <th className="px-2 py-2">路徑</th>
+                            <th className="px-2 py-2">必要性</th>
+                            <th className="px-2 py-2">用途</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {BOOKSHELF_FILE_GUIDE.map((row) => (
+                            <tr key={row.path} className="border-t border-stone-100">
+                              <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
+                              <td className="px-2 py-2 text-stone-800">{row.required}</td>
+                              <td className="px-2 py-2 text-stone-500">{row.note}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
 
-              <section className="space-y-2">
-                <h4 className="text-sm text-stone-900">資料內容檔（JSON/TXT）對照</h4>
-                <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
-                  <table className="min-w-full text-left text-xs">
-                    <thead className="bg-stone-100 text-stone-600">
-                      <tr>
-                        <th className="px-2 py-2">路徑</th>
-                        <th className="px-2 py-2">對應頁面</th>
-                        <th className="px-2 py-2">用途</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {DATA_CONTENT_GUIDE.map((row) => (
-                        <tr key={`${row.path}-${row.target}`} className="border-t border-stone-100">
-                          <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
-                          <td className="px-2 py-2 text-stone-800">{row.target}</td>
-                          <td className="px-2 py-2 text-stone-500">{row.note ?? '—'}</td>
-                        </tr>
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">新增一本書（完整流程）</h4>
+                    <ol className="list-decimal space-y-1 pl-5 text-xs text-stone-600">
+                      {BOOKSHELF_SETUP_STEPS.map((step) => (
+                        <li key={step}>{step}</li>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+                    </ol>
+                  </section>
 
-              <section className="space-y-2">
-                <h4 className="text-sm text-stone-900">圖片/素材對照</h4>
-                <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
-                  <table className="min-w-full text-left text-xs">
-                    <thead className="bg-stone-100 text-stone-600">
-                      <tr>
-                        <th className="px-2 py-2">路徑</th>
-                        <th className="px-2 py-2">對應頁面</th>
-                        <th className="px-2 py-2">用途</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ASSET_GUIDE.map((row) => (
-                        <tr key={`${row.path}-${row.target}`} className="border-t border-stone-100">
-                          <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
-                          <td className="px-2 py-2 text-stone-800">{row.target}</td>
-                          <td className="px-2 py-2 text-stone-500">{row.note ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">`bookshelf.json` 範例（可直接複製）</h4>
+                    <pre className="overflow-x-auto rounded-lg border border-stone-200 bg-white p-3 text-[11px] text-stone-700">
+                      {BOOKSHELF_JSON_SAMPLE}
+                    </pre>
+                  </section>
 
-              <section className="space-y-2">
-                <h4 className="text-sm text-stone-900">字體關聯</h4>
-                <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
-                  <li>字體中心第一欄（字體預設管理）：上傳字體來源、保存成記憶 1~10。</li>
-                  <li>字體中心第二欄（字體套用範圍）：把記憶 1~10 套用到整站/情書/日記/家頁。</li>
-                  <li>字體中心第三欄（當前套用檢視）：純預覽目前每個範圍使用中的字體來源。</li>
-                  <li>「空白（還原預設字體）」可把勾選頁面恢復為預設字體。</li>
-                  <li>整站：大多數頁面的基底字體。</li>
-                  <li>日記：M 日記、Anni 日記、願望內文。</li>
-                  <li>願望標題/頁籤、日記 M/B 標題/頁籤、經期日記標題/頁籤：全站字體。</li>
-                  <li>家頁：只影響「家」閱讀頁。</li>
-                </ul>
-              </section>
-
-              <section className="space-y-2">
-                <h4 className="text-sm text-stone-900">注意事項</h4>
-                <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
-                  {IMPORTANT_NOTES.map((note) => (
-                    <li key={note}>{note}</li>
-                  ))}
-                </ul>
-              </section>
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">後期換圖片 / 試開新書</h4>
+                    <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
+                      <li>換封面：替換 `cover.webp`（或改 `coverImage` 指向新網址）。</li>
+                      <li>換內頁：替換對應 `001.webp`、`002.webp`...即可。</li>
+                      <li>閱讀順序只看檔名：`001` 會在 `010` 前面，建議都補零。</li>
+                      <li>臨時測試書：可先做 `book-test`，確認後再改正式名稱。</li>
+                      <li>若手機看不到更新，先重整 PWA 快取再重開。</li>
+                    </ul>
+                  </section>
+                </>
+              )}
             </div>
 
           </div>
