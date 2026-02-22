@@ -369,7 +369,7 @@ export function HomePage({
     const dailyTaskPlaceholder: HomeAppSlot = {
       id: 'wishlist',
       label: '願望',
-      icon: '✅',
+      icon: '🌠',
       launch: 'wishlist',
     };
     const soulmateSlot: HomeAppSlot = {
