@@ -283,7 +283,6 @@
   touch-action: manipulation;
   transition: opacity 0.22s ease;
   z-index: 5;
-  animation: ml-orb-drift var(--float-dur, 5.4s) ease-in-out var(--float-delay, 0s) infinite alternate;
 }
 
 .ml-orb.hidden {
@@ -315,12 +314,37 @@
   transform: scale(0.92);
 }
 
-@keyframes ml-orb-drift {
+.ml-orb-zone.mode-bounce .ml-orb,
+.ml-orb-zone.mode-rise .ml-orb {
+  animation: none;
+}
+
+.ml-orb-zone.mode-pulse .ml-orb {
+  animation: ml-orb-pulse-float var(--pulse-dur, 2.1s) ease-in-out var(--pulse-delay, 0s) infinite;
+}
+
+.ml-orb-zone.mode-pulse .ml-orb-core {
+  animation: ml-orb-core-breathe var(--pulse-dur, 2.1s) ease-in-out var(--pulse-delay, 0s) infinite;
+}
+
+@keyframes ml-orb-pulse-float {
   0% {
     transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translate3d(var(--float-x, 0px), var(--float-y, 0px), 0);
+    transform: translate3d(0, -7px, 0);
+  }
+}
+
+@keyframes ml-orb-core-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: saturate(1.1);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: saturate(1.25);
   }
 }
 
@@ -875,6 +899,33 @@
   transform: scale(0.97);
 }
 
+.ml-orb-mode-options {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.ml-orb-mode-btn {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(245, 240, 255, 0.9);
+  font-size: 0.69rem;
+  letter-spacing: 0.03em;
+  padding: 0.34rem 0.62rem;
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+.ml-orb-mode-btn.active {
+  border-color: rgba(206, 226, 255, 0.85);
+  background: rgba(169, 206, 255, 0.34);
+  color: #fff;
+}
+
+.ml-orb-mode-btn:active {
+  transform: scale(0.96);
+}
+
 .ml-flying-orb {
   position: fixed;
   z-index: 9999;
@@ -917,6 +968,7 @@
   .ml-star,
   .ml-shooting,
   .ml-orb,
+  .ml-orb-core,
   .ml-flying-orb {
     animation: none !important;
     transition: none !important;

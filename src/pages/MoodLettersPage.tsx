@@ -52,14 +52,27 @@ type OrbPhysics = {
   vx: number;
   vy: number;
   size: number;
+  pulseAnchorX?: number;
+  pulseAnchorY?: number;
+  pulseRadius?: number;
+  basePulseRadius?: number;
+  pulseAngle?: number;
+  pulseSpin?: number;
+  burstFrames?: number;
+  burstBoost?: number;
+  swirlFrames?: number;
+  swirlDirection?: number;
 };
 
 type MoodListTab = 'all' | 'favorites';
 type PaperThemeKey = 'moon' | 'cream' | 'mint' | 'lavender' | 'peach';
+type OrbMotionMode = 'bounce' | 'rise' | 'pulse';
 
 type MoodLettersPrefs = {
   showChibi: boolean;
   chibiWidth: number;
+  orbCount: number;
+  orbMode: OrbMotionMode;
   orbSpeed: number;
   contentFontSize: number;
   contentLineHeight: number;
@@ -77,8 +90,10 @@ const FALLBACK_CHIBI = `${BASE}chibi/chibi-00.webp`;
 const ALL_MOODS_KEY = 'all';
 const PREFS_KEY = 'memorial-mood-letters-prefs-v1';
 const FAVORITES_KEY = 'memorial-mood-letters-favorites-v1';
+const ORB_COUNT_MIN = 11;
+const ORB_COUNT_MAX = 15;
 
-const ORB_COLORS = [
+const BASE_ORB_COLORS = [
   '255,182,162',
   '255,170,145',
   '255,156,186',
@@ -94,7 +109,7 @@ const ORB_COLORS = [
   '243,186,222',
 ] as const;
 
-const ORB_SIZES = [72, 68, 65, 63, 61, 60, 65, 62, 64, 68, 61, 63, 67] as const;
+const BASE_ORB_SIZES = [72, 68, 65, 63, 61, 60, 65, 62, 64, 68, 61, 63, 67] as const;
 
 const PAPER_THEMES: Record<
   PaperThemeKey,
@@ -164,11 +179,19 @@ const PAPER_THEMES: Record<
 const DEFAULT_PREFS: MoodLettersPrefs = {
   showChibi: true,
   chibiWidth: 144,
+  orbCount: 13,
+  orbMode: 'bounce',
   orbSpeed: 1.25,
   contentFontSize: 15,
   contentLineHeight: 2.02,
   paperTheme: 'moon',
 };
+
+const ORB_MODE_OPTIONS: Array<{ id: OrbMotionMode; label: string }> = [
+  { id: 'bounce', label: '碰撞' },
+  { id: 'rise', label: '上浮' },
+  { id: 'pulse', label: '脈動漂流' },
+];
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
@@ -187,9 +210,14 @@ function loadPrefs() {
     const parsed = JSON.parse(raw) as Partial<MoodLettersPrefs>;
     const theme = parsed.paperTheme;
     const paperTheme: PaperThemeKey = theme && theme in PAPER_THEMES ? theme : DEFAULT_PREFS.paperTheme;
+    const orbMode = parsed.orbMode;
+    const normalizedOrbMode: OrbMotionMode =
+      orbMode === 'bounce' || orbMode === 'rise' || orbMode === 'pulse' ? orbMode : DEFAULT_PREFS.orbMode;
     return {
       showChibi: parsed.showChibi !== false,
       chibiWidth: clampInt(parsed.chibiWidth, 104, 196, DEFAULT_PREFS.chibiWidth),
+      orbCount: clampInt(parsed.orbCount, ORB_COUNT_MIN, ORB_COUNT_MAX, DEFAULT_PREFS.orbCount),
+      orbMode: normalizedOrbMode,
       orbSpeed: clampNumber(parsed.orbSpeed, 0.7, 2.4, DEFAULT_PREFS.orbSpeed),
       contentFontSize: clampNumber(parsed.contentFontSize, 12, 24, DEFAULT_PREFS.contentFontSize),
       contentLineHeight: clampNumber(parsed.contentLineHeight, 1.35, 2.9, DEFAULT_PREFS.contentLineHeight),
@@ -294,6 +322,18 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
   const chibiPressStartRef = useRef<{ x: number; y: number } | null>(null);
   const chibiLongPressedRef = useRef(false);
 
+  const orbColors = useMemo(
+    () =>
+      Array.from({ length: prefs.orbCount }, (_, indexValue) => BASE_ORB_COLORS[indexValue % BASE_ORB_COLORS.length]!),
+    [prefs.orbCount],
+  );
+
+  const orbSizes = useMemo(
+    () =>
+      Array.from({ length: prefs.orbCount }, (_, indexValue) => BASE_ORB_SIZES[indexValue % BASE_ORB_SIZES.length] ?? 62),
+    [prefs.orbCount],
+  );
+
   const stars = useMemo(
     () =>
       Array.from({ length: 92 }, () => ({
@@ -319,8 +359,8 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
 
   const orbSeeds = useMemo(
     () =>
-      ORB_COLORS.map((_, indexValue) => {
-        const size = ORB_SIZES[indexValue] ?? 60;
+      orbColors.map((_, indexValue) => {
+        const size = orbSizes[indexValue] ?? 60;
         return {
           size,
           xPercent: 11 + Math.random() * 78,
@@ -331,7 +371,7 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
           delay: -Math.random() * 1.8,
         };
       }),
-    [],
+    [orbColors, orbSizes],
   );
 
   const lettersById = useMemo(() => {
@@ -530,7 +570,7 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
     flyer.style.top = `${rect.top}px`;
     flyer.style.width = `${rect.width}px`;
     flyer.style.height = `${rect.height}px`;
-    flyer.style.setProperty('--orb-rgb', ORB_COLORS[orbIndex % ORB_COLORS.length] ?? ORB_COLORS[0]!);
+    flyer.style.setProperty('--orb-rgb', orbColors[orbIndex % orbColors.length] ?? orbColors[0] ?? '255,182,162');
     document.body.appendChild(flyer);
 
     const centerX = window.innerWidth / 2;
@@ -544,7 +584,7 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
     window.setTimeout(() => {
       flyer.remove();
     }, 1050);
-  }, []);
+  }, [orbColors]);
 
   const openLetter = useCallback(
     async ({
@@ -638,9 +678,9 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
   );
 
   const drawByFate = useCallback(() => {
-    const orbIndex = Math.floor(Math.random() * ORB_COLORS.length);
+    const orbIndex = Math.floor(Math.random() * orbColors.length);
     void drawWithOrb(orbIndex);
-  }, [drawWithOrb]);
+  }, [drawWithOrb, orbColors.length]);
 
   const drawAgain = useCallback(() => {
     if (isAnimating) return;
@@ -741,6 +781,8 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
     const host = orbZoneRef.current;
     if (!host) return;
 
+    const mode = prefs.orbMode;
+
     const applyStateToOrb = (indexValue: number, state: OrbPhysics) => {
       const orb = orbRefs.current[indexValue];
       if (!orb) return;
@@ -755,10 +797,48 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
         return false;
       }
       const speed = prefs.orbSpeed;
-      orbPhysicsRef.current = ORB_COLORS.map((_, indexValue) => {
-        const size = ORB_SIZES[indexValue] ?? 60;
+      orbPhysicsRef.current = orbColors.map((_, indexValue) => {
+        const size = orbSizes[indexValue] ?? 60;
         const maxX = Math.max(1, width - size);
         const maxY = Math.max(1, height - size);
+        if (mode === 'pulse') {
+          const pulseRadius = 10 + Math.random() * 18;
+          const minAnchorX = pulseRadius;
+          const minAnchorY = pulseRadius;
+          const maxAnchorX = Math.max(minAnchorX, maxX - pulseRadius);
+          const maxAnchorY = Math.max(minAnchorY, maxY - pulseRadius);
+          const anchorX = minAnchorX + Math.random() * Math.max(0, maxAnchorX - minAnchorX);
+          const anchorY = minAnchorY + Math.random() * Math.max(0, maxAnchorY - minAnchorY);
+          const driftAbs = (0.28 + Math.random() * 0.58) * speed;
+          return {
+            size,
+            x: Math.min(maxX, Math.max(0, anchorX)),
+            y: Math.min(maxY, Math.max(0, anchorY)),
+            vx: Math.random() < 0.5 ? -driftAbs : driftAbs,
+            vy: Math.random() < 0.5 ? -driftAbs : driftAbs,
+            pulseAnchorX: anchorX,
+            pulseAnchorY: anchorY,
+            pulseRadius,
+            basePulseRadius: pulseRadius,
+            pulseAngle: Math.random() * Math.PI * 2,
+            pulseSpin: (0.02 + Math.random() * 0.04) * (Math.random() < 0.5 ? -1 : 1),
+            burstFrames: 0,
+            burstBoost: 1,
+            swirlFrames: 0,
+            swirlDirection: Math.random() < 0.5 ? -1 : 1,
+          };
+        }
+        if (mode === 'rise') {
+          const driftAbs = (0.55 + Math.random() * 1.15) * speed;
+          const riseAbs = (2.4 + Math.random() * 3.4) * speed;
+          return {
+            size,
+            x: Math.random() * maxX,
+            y: Math.random() * maxY,
+            vx: Math.random() < 0.5 ? -driftAbs : driftAbs,
+            vy: -riseAbs,
+          };
+        }
         const vxAbs = (3.0 + Math.random() * 5.4) * speed;
         const vyAbs = (2.8 + Math.random() * 4.8) * speed;
         return {
@@ -785,7 +865,7 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
         return;
       }
       const states = orbPhysicsRef.current;
-      if (states.length !== ORB_COLORS.length) {
+      if (states.length !== orbColors.length) {
         initPhysics();
       }
       for (let indexValue = 0; indexValue < states.length; indexValue += 1) {
@@ -794,16 +874,104 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
 
         const maxX = Math.max(1, width - state.size);
         const maxY = Math.max(1, height - state.size);
-        state.x += state.vx;
-        state.y += state.vy;
+        if (mode === 'pulse') {
+          let pulseRadius = state.pulseRadius ?? 12;
+          const basePulseRadius = state.basePulseRadius ?? pulseRadius;
+          const spin = state.pulseSpin ?? 0.03;
+          let anchorX = state.pulseAnchorX ?? maxX / 2;
+          let anchorY = state.pulseAnchorY ?? maxY / 2;
+          const minAnchorX = pulseRadius;
+          const minAnchorY = pulseRadius;
+          const maxAnchorX = Math.max(minAnchorX, maxX - pulseRadius);
+          const maxAnchorY = Math.max(minAnchorY, maxY - pulseRadius);
+          const centerX = maxX / 2;
+          const centerY = maxY / 2;
 
-        if (state.x <= 0 || state.x >= maxX) {
-          state.vx *= -1;
-          state.x = Math.min(maxX, Math.max(0, state.x));
-        }
-        if (state.y <= 0 || state.y >= maxY) {
-          state.vy *= -1;
-          state.y = Math.min(maxY, Math.max(0, state.y));
+          let burstFrames = state.burstFrames ?? 0;
+          let burstBoost = state.burstBoost ?? 1;
+          let swirlFrames = state.swirlFrames ?? 0;
+          let swirlDirection = state.swirlDirection ?? 1;
+
+          if (swirlFrames <= 0 && Math.random() < 0.00055) {
+            swirlFrames = 120 + Math.floor(Math.random() * 84);
+            swirlDirection = Math.random() < 0.5 ? -1 : 1;
+            burstFrames = 0;
+            burstBoost = 1;
+          }
+
+          if (swirlFrames <= 0 && burstFrames <= 0 && Math.random() < 0.0008) {
+            burstFrames = 34 + Math.floor(Math.random() * 26);
+            burstBoost = 1.45 + Math.random() * 0.9;
+          }
+
+          if (swirlFrames > 0) {
+            swirlFrames -= 1;
+            anchorX += (centerX - anchorX) * 0.072;
+            anchorY += (centerY - anchorY) * 0.072;
+            pulseRadius += (22 + ((indexValue * 7) % 16) - pulseRadius) * 0.09;
+          } else {
+            const driftFactor = burstFrames > 0 ? burstBoost : 1;
+            anchorX += state.vx * driftFactor;
+            anchorY += state.vy * driftFactor;
+            if (anchorX <= minAnchorX || anchorX >= maxAnchorX) {
+              state.vx *= -1;
+              anchorX = Math.min(maxAnchorX, Math.max(minAnchorX, anchorX));
+            }
+            if (anchorY <= minAnchorY || anchorY >= maxAnchorY) {
+              state.vy *= -1;
+              anchorY = Math.min(maxAnchorY, Math.max(minAnchorY, anchorY));
+            }
+            pulseRadius += (basePulseRadius - pulseRadius) * 0.12;
+            if (burstFrames > 0) {
+              burstFrames -= 1;
+              burstBoost = Math.max(1.02, burstBoost * 0.982);
+            } else {
+              burstBoost = 1;
+            }
+          }
+
+          const nextAngle =
+            (state.pulseAngle ?? 0) +
+            (swirlFrames > 0 ? swirlDirection * (0.16 + Math.abs(spin) * 2.2) : spin * (burstFrames > 0 ? 1.7 : 1.1));
+          state.pulseAngle = nextAngle;
+          state.pulseAnchorX = anchorX;
+          state.pulseAnchorY = anchorY;
+          state.pulseRadius = pulseRadius;
+          state.basePulseRadius = basePulseRadius;
+          state.burstFrames = burstFrames;
+          state.burstBoost = burstBoost;
+          state.swirlFrames = swirlFrames;
+          state.swirlDirection = swirlDirection;
+          state.x = Math.min(maxX, Math.max(0, anchorX + Math.cos(nextAngle) * pulseRadius));
+          state.y = Math.min(maxY, Math.max(0, anchorY + Math.sin(nextAngle * 0.9) * pulseRadius * 0.72));
+        } else if (mode === 'rise') {
+          state.x += state.vx;
+          state.y += state.vy;
+          if (state.x <= 0 || state.x >= maxX) {
+            state.vx *= -1;
+            state.x = Math.min(maxX, Math.max(0, state.x));
+          }
+          if (state.y <= -state.size * 0.45) {
+            const speed = prefs.orbSpeed;
+            const driftAbs = (0.55 + Math.random() * 1.15) * speed;
+            const riseAbs = (2.4 + Math.random() * 3.4) * speed;
+            state.x = Math.random() * maxX;
+            state.y = maxY + Math.random() * (state.size * 0.8 + 26);
+            state.vx = Math.random() < 0.5 ? -driftAbs : driftAbs;
+            state.vy = -riseAbs;
+          }
+        } else {
+          state.x += state.vx;
+          state.y += state.vy;
+
+          if (state.x <= 0 || state.x >= maxX) {
+            state.vx *= -1;
+            state.x = Math.min(maxX, Math.max(0, state.x));
+          }
+          if (state.y <= 0 || state.y >= maxY) {
+            state.vy *= -1;
+            state.y = Math.min(maxY, Math.max(0, state.y));
+          }
         }
         applyStateToOrb(indexValue, state);
       }
@@ -845,7 +1013,7 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
         rafRef.current = null;
       }
     };
-  }, [prefs.orbSpeed]);
+  }, [orbColors, orbSizes, prefs.orbMode, prefs.orbSpeed]);
 
   if (loading) {
     return <div className="ml-loading grid h-full place-items-center text-sm text-white/70">讀取星辰心情信中...</div>;
@@ -937,8 +1105,8 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
             <div className="ml-jar-lid" />
             <div className="ml-jar-neck" />
             <div className="ml-jar">
-              <div ref={orbZoneRef} className="ml-orb-zone">
-                {ORB_COLORS.map((rgb, indexValue) => (
+              <div ref={orbZoneRef} className={`ml-orb-zone mode-${prefs.orbMode}`}>
+                {orbColors.map((rgb, indexValue) => (
                   <button
                     key={`orb-${rgb}-${indexValue}`}
                     ref={(node) => {
@@ -948,14 +1116,16 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
                     aria-label="抽一封心情信"
                     className={`ml-orb ${hiddenOrbIndex === indexValue ? 'hidden' : ''}`}
                     style={{
-                      width: `${orbSeeds[indexValue]?.size ?? ORB_SIZES[indexValue] ?? 60}px`,
-                      height: `${orbSeeds[indexValue]?.size ?? ORB_SIZES[indexValue] ?? 60}px`,
+                      width: `${orbSeeds[indexValue]?.size ?? orbSizes[indexValue] ?? 60}px`,
+                      height: `${orbSeeds[indexValue]?.size ?? orbSizes[indexValue] ?? 60}px`,
                       left: `calc(${orbSeeds[indexValue]?.xPercent ?? 50}% - ${(orbSeeds[indexValue]?.size ?? 60) / 2}px)`,
                       top: `calc(${orbSeeds[indexValue]?.yPercent ?? 50}% - ${(orbSeeds[indexValue]?.size ?? 60) / 2}px)`,
                       ['--float-x' as string]: `${orbSeeds[indexValue]?.driftX ?? 0}px`,
                       ['--float-y' as string]: `${orbSeeds[indexValue]?.driftY ?? 0}px`,
                       ['--float-dur' as string]: `${orbSeeds[indexValue]?.duration ?? 1.9}s`,
                       ['--float-delay' as string]: `${orbSeeds[indexValue]?.delay ?? 0}s`,
+                      ['--pulse-dur' as string]: `${1.6 + ((orbSeeds[indexValue]?.duration ?? 1.9) % 1.25)}s`,
+                      ['--pulse-delay' as string]: `${orbSeeds[indexValue]?.delay ?? 0}s`,
                     }}
                     onClick={() => {
                       void drawWithOrb(indexValue);
@@ -1156,6 +1326,17 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
               />
             </label>
             <label className="ml-setting-label">
+              球數（{prefs.orbCount} 顆）
+              <input
+                type="range"
+                min={ORB_COUNT_MIN}
+                max={ORB_COUNT_MAX}
+                step={1}
+                value={prefs.orbCount}
+                onChange={(event) => setPrefs((prev) => ({ ...prev, orbCount: Number(event.target.value) }))}
+              />
+            </label>
+            <label className="ml-setting-label">
               球速（{prefs.orbSpeed.toFixed(2)}x）
               <input
                 type="range"
@@ -1166,6 +1347,23 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
                 onChange={(event) => setPrefs((prev) => ({ ...prev, orbSpeed: Number(event.target.value) }))}
               />
             </label>
+            <div className="ml-setting-label">
+              <span>球球模式</span>
+              <div className="ml-orb-mode-options" role="radiogroup" aria-label="球球模式">
+                {ORB_MODE_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={prefs.orbMode === option.id}
+                    className={`ml-orb-mode-btn ${prefs.orbMode === option.id ? 'active' : ''}`}
+                    onClick={() => setPrefs((prev) => ({ ...prev, orbMode: option.id }))}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </section>
 
           <section className="ml-setting-block">
