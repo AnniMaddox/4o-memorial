@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
+import { emitActionToast } from '../lib/actionToast';
 import type { ChatProfile } from '../lib/chatDB';
 import type { StoredChatLog } from '../lib/chatLogDB';
 import { splitNickAliases } from '../lib/chatProfileMatcher';
@@ -29,7 +30,7 @@ type ChatLogPageProps = {
   onImportChatLogFolderFiles: (files: File[]) => void;
   onClearAllChatLogs: () => void;
   onDeleteChatLog: (name: string) => void;
-  onSaveChatProfile: (profile: ChatProfile) => void;
+  onSaveChatProfile: (profile: ChatProfile) => Promise<boolean> | boolean;
   onDeleteChatProfile: (id: string) => void;
   onBindLogProfile?: (logName: string, profileId: string) => void;
   onExit?: () => void;
@@ -457,24 +458,28 @@ export function ChatLogPage({
     reader.readAsDataURL(file);
   }
 
-  function saveNewProfile() {
+  async function saveNewProfile() {
     if (!newProfileDraft.name.trim()) return;
-    onSaveChatProfile({
+    const ok = await onSaveChatProfile({
       ...newProfileDraft,
       id: `profile-${Date.now()}`,
     });
+    if (!ok) return;
     setShowNewProfileEditor(false);
     setNewProfileDraft(emptyProfileDraft());
+    emitActionToast({ kind: 'success', message: '角色設定已儲存' });
   }
 
-  function saveEditingProfile() {
+  async function saveEditingProfile() {
     if (!editingProfileId || !editingProfileDraft || !editingProfileDraft.name.trim()) return;
-    onSaveChatProfile({
+    const ok = await onSaveChatProfile({
       ...editingProfileDraft,
       id: editingProfileId,
     });
+    if (!ok) return;
     setEditingProfileId('');
     setEditingProfileDraft(null);
+    emitActionToast({ kind: 'success', message: '角色設定已儲存' });
   }
 
   if (selectedLog) {
@@ -511,7 +516,7 @@ export function ChatLogPage({
           ) : (
             <span className="h-9 w-9" />
           )}
-          <h1 className="text-2xl font-normal tracking-wide text-stone-900">
+          <h1 className="font-normal tracking-wide text-stone-900" style={{ fontSize: 'var(--ui-header-title-size, 17px)' }}>
             {activeTab === 'messages' ? '消息' : activeTab === 'discover' ? '發現' : '我'}
           </h1>
           <button
@@ -548,8 +553,18 @@ export function ChatLogPage({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-3xl text-stone-900">{contactName}</p>
-                <p className="mt-1 text-lg text-stone-500">{contactSubtitle}</p>
+                <p
+                  className="truncate text-stone-900"
+                  style={{ fontSize: 'var(--chat-contact-title-size, 30px)', lineHeight: 1.1 }}
+                >
+                  {contactName}
+                </p>
+                <p
+                  className="mt-1 text-stone-500"
+                  style={{ fontSize: 'var(--chat-contact-subtitle-size, 18px)', lineHeight: 1.2 }}
+                >
+                  {contactSubtitle}
+                </p>
               </div>
               <span className="text-2xl text-stone-400">›</span>
             </button>
@@ -622,9 +637,9 @@ export function ChatLogPage({
             >
               <div className="space-y-2">
                 {[
-                  { label: '消息', field: 'chatAppMessagesIcon' as const, value: settings.chatAppMessagesIcon, fallback: '◉' },
-                  { label: '發現', field: 'chatAppDiscoverIcon' as const, value: settings.chatAppDiscoverIcon, fallback: '◎' },
-                  { label: '我', field: 'chatAppMeIcon' as const, value: settings.chatAppMeIcon, fallback: '◯' },
+                  { label: '消息', field: 'chatAppMessagesIcon' as const, value: settings.chatAppMessagesIcon, fallback: '💬' },
+                  { label: '發現', field: 'chatAppDiscoverIcon' as const, value: settings.chatAppDiscoverIcon, fallback: '✨' },
+                  { label: '我', field: 'chatAppMeIcon' as const, value: settings.chatAppMeIcon, fallback: '👤' },
                 ].map((item) => (
                   <div key={item.field} className="space-y-1.5 rounded-xl border border-stone-200 bg-stone-50 p-2.5">
                     <p className="text-xs text-stone-600">{item.label}</p>
@@ -984,7 +999,7 @@ export function ChatLogPage({
                             <div className="flex gap-2">
                               <button
                                 type="button"
-                                onClick={saveEditingProfile}
+                                onClick={() => void saveEditingProfile()}
                                 className="flex-1 rounded-xl bg-stone-900 py-2 text-sm text-white"
                               >
                                 儲存
@@ -1055,7 +1070,7 @@ export function ChatLogPage({
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={saveNewProfile}
+                        onClick={() => void saveNewProfile()}
                         className="flex-1 rounded-xl bg-stone-900 py-2 text-sm text-white"
                       >
                         儲存
@@ -1099,7 +1114,7 @@ export function ChatLogPage({
           >
             <IconPreview
               icon={settings.chatAppMessagesIcon}
-              fallback="◉"
+              fallback="💬"
               imageClassName="h-6 w-6"
               textClassName="text-2xl leading-none"
             />
@@ -1115,7 +1130,7 @@ export function ChatLogPage({
           >
             <IconPreview
               icon={settings.chatAppDiscoverIcon}
-              fallback="◎"
+              fallback="✨"
               imageClassName="h-6 w-6"
               textClassName="text-2xl leading-none"
             />
@@ -1131,7 +1146,7 @@ export function ChatLogPage({
           >
             <IconPreview
               icon={settings.chatAppMeIcon}
-              fallback="◯"
+              fallback="👤"
               imageClassName="h-6 w-6"
               textClassName="text-2xl leading-none"
             />

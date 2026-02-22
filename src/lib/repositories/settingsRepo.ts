@@ -26,6 +26,12 @@ function normalizeString(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
 
+function normalizeChatNavIcon(value: unknown, fallback: string, legacy: string) {
+  const normalized = normalizeString(value, fallback);
+  // Migrate old default circle icons to the new emoji defaults.
+  return normalized === legacy ? fallback : normalized;
+}
+
 function normalizeStringSlots(value: unknown, fallback: string[], length = fallback.length) {
   const input = Array.isArray(value) ? value : [];
   const normalized: string[] = [];
@@ -181,9 +187,21 @@ export async function getSettings() {
       36,
       DEFAULT_SETTINGS.chatBubbleRadius,
     ),
-    chatAppMessagesIcon: normalizeString(persisted.chatAppMessagesIcon, DEFAULT_SETTINGS.chatAppMessagesIcon),
-    chatAppDiscoverIcon: normalizeString(persisted.chatAppDiscoverIcon, DEFAULT_SETTINGS.chatAppDiscoverIcon),
-    chatAppMeIcon: normalizeString(persisted.chatAppMeIcon, DEFAULT_SETTINGS.chatAppMeIcon),
+    chatAppMessagesIcon: normalizeChatNavIcon(
+      persisted.chatAppMessagesIcon,
+      DEFAULT_SETTINGS.chatAppMessagesIcon,
+      '◉',
+    ),
+    chatAppDiscoverIcon: normalizeChatNavIcon(
+      persisted.chatAppDiscoverIcon,
+      DEFAULT_SETTINGS.chatAppDiscoverIcon,
+      '◎',
+    ),
+    chatAppMeIcon: normalizeChatNavIcon(
+      persisted.chatAppMeIcon,
+      DEFAULT_SETTINGS.chatAppMeIcon,
+      '◯',
+    ),
     chatAppShowLabels: normalizeBoolean(persisted.chatAppShowLabels, DEFAULT_SETTINGS.chatAppShowLabels),
     chatAppDefaultProfileId: normalizeString(persisted.chatAppDefaultProfileId, DEFAULT_SETTINGS.chatAppDefaultProfileId),
     calendarHoverBubbleTextColor: normalizeString(
