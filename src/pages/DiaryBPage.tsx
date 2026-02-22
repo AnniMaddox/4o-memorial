@@ -833,7 +833,7 @@ export function DiaryBPage({
             </button>
             <span
               style={{
-                fontSize: 15,
+                fontSize: 17,
                 fontWeight: 600,
                 color: '#2c2218',
                 letterSpacing: '0.02em',
@@ -898,8 +898,8 @@ export function DiaryBPage({
                   className="flex-1"
                   style={{
                     textAlign: 'center',
-                    padding: '8px 0 6px',
-                    fontSize: 12,
+                    padding: '9px 0 7px',
+                    fontSize: 17,
                     fontWeight: 500,
                     letterSpacing: '0.04em',
                     fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",

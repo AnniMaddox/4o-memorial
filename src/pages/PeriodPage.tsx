@@ -1370,7 +1370,7 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
           <div className="flex-1 text-center">
             <p className="text-[9px] uppercase tracking-[0.28em] text-stone-400">PERIOD</p>
             <h1
-              className="mt-0.5 text-base leading-tight text-stone-800"
+              className="mt-0.5 text-[17px] leading-tight text-stone-800"
               style={{ fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)" }}
             >
               經期追蹤
@@ -1399,8 +1399,8 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
               onClick={() => setActiveTab(t.id)}
               className="flex-1 border-b-2 transition"
               style={{
-                padding: '8px 0 6px',
-                fontSize: 12,
+                padding: '9px 0 7px',
+                fontSize: 17,
                 lineHeight: 1.2,
                 fontWeight: 500,
                 letterSpacing: '0.04em',

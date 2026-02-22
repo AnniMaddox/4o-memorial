@@ -509,7 +509,7 @@ export function MDiaryPage({
             ‹
           </button>
           <span
-            className="text-[15px] font-semibold tracking-[0.02em] text-[#2a2818]"
+            className="text-[17px] font-semibold tracking-[0.02em] text-[#2a2818]"
             style={{ fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)" }}
           >
             M 的日記
@@ -564,8 +564,8 @@ export function MDiaryPage({
                 }}
                 className="flex-1 border-b text-center transition"
                 style={{
-                  padding: '8px 0 6px',
-                  fontSize: 12,
+                  padding: '9px 0 7px',
+                  fontSize: 17,
                   lineHeight: 1.2,
                   fontWeight: 500,
                   letterSpacing: '0.04em',

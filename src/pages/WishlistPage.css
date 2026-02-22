@@ -41,7 +41,7 @@
 }
 
 .wl-tb-title {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   color: #2c2010;
   letter-spacing: 0.02em;
@@ -68,8 +68,8 @@
 .wl-tab {
   flex: 1;
   text-align: center;
-  padding: 8px 0 6px;
-  font-size: 12px;
+  padding: 9px 0 7px;
+  font-size: 17px;
   font-weight: 500;
   color: #b8a878;
   border: 0;
