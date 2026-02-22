@@ -1397,13 +1397,15 @@ export function PeriodPage({ onExit = () => {} }: { onExit?: () => void }) {
               key={t.id}
               type="button"
               onClick={() => setActiveTab(t.id)}
-              className="flex-1 border-b-2 text-[11px] transition"
+              className="flex-1 border-b-2 transition"
               style={{
                 padding: '8px 0 6px',
+                fontSize: 12,
+                lineHeight: 1.2,
+                fontWeight: 500,
                 letterSpacing: '0.04em',
                 color: activeTab === t.id ? C.accent : '#a8a29e',
                 borderBottomColor: activeTab === t.id ? C.accent : 'transparent',
-                fontWeight: 500,
                 fontFamily: "var(--app-font-family, -apple-system, 'Helvetica Neue', system-ui, sans-serif)",
               }}
             >

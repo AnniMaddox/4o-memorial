@@ -562,9 +562,13 @@ export function MDiaryPage({
                   setActiveTab(tab);
                   setShowSettings(false);
                 }}
-                className="flex-1 border-b text-center text-[11px] font-medium tracking-[0.04em] transition"
+                className="flex-1 border-b text-center transition"
                 style={{
                   padding: '8px 0 6px',
+                  fontSize: 12,
+                  lineHeight: 1.2,
+                  fontWeight: 500,
+                  letterSpacing: '0.04em',
                   color: active ? '#5a7060' : '#9aaa98',
                   borderBottomColor: active ? '#5a7060' : 'rgba(80,100,70,0.09)',
                   borderBottomWidth: 2,
