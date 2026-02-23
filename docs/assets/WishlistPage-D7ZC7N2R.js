@@ -1,4 +1,4 @@
-import{fp as $t,r as m,j as e,g as Dt}from"./index-XySuRSi_.js";const Et="wishlist-db",It=1,O="wishes",K="birthdayTasks",V="prefs",it="wishlist-prefs",ve="memorial-wishlist-mini-backup";function oe(t){return typeof crypto<"u"&&typeof crypto.randomUUID=="function"?`${t}-${crypto.randomUUID()}`:`${t}-${Date.now()}-${Math.random().toString(36).slice(2,9)}`}function X(t){return t.trim().replace(/\s+/g," ")}function F(t){return String(t??"").replace(/\r\n?/g,`
+import{fp as $t,r as m,j as e,g as Dt}from"./index-BxZ6hScr.js";const Et="wishlist-db",It=1,O="wishes",K="birthdayTasks",V="prefs",it="wishlist-prefs",ve="memorial-wishlist-mini-backup";function oe(t){return typeof crypto<"u"&&typeof crypto.randomUUID=="function"?`${t}-${crypto.randomUUID()}`:`${t}-${Date.now()}-${Math.random().toString(36).slice(2,9)}`}function X(t){return t.trim().replace(/\s+/g," ")}function F(t){return String(t??"").replace(/\r\n?/g,`
 `).split(`
 `).map(i=>i.trim()).join(`
 `).replace(/\n{3,}/g,`
