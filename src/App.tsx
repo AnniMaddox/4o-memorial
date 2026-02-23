@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { BottomTabs } from './components/BottomTabs';
 import { SwipePager } from './components/SwipePager';
@@ -17,16 +17,7 @@ import {
   setStarredEmailIds as persistStarredEmailIds,
 } from './lib/repositories/metaRepo';
 import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
-import { CalendarPage } from './pages/CalendarPage';
-import { CheckinPage } from './pages/CheckinPage';
-import { ChatLogPage } from './pages/ChatLogPage';
-import { MDiaryPage } from './pages/MDiaryPage';
-import { DiaryBPage } from './pages/DiaryBPage';
 import { HomePage } from './pages/HomePage';
-import { InboxPage } from './pages/InboxPage';
-import { LetterPage } from './pages/LetterPage';
-import { PomodoroPage } from './pages/PomodoroPage';
-import { PeriodPage } from './pages/PeriodPage';
 import { clearAllChatLogs, deleteChatLog, loadChatLogs, saveChatLogs } from './lib/chatLogDB';
 import type { StoredChatLog } from './lib/chatLogDB';
 import { clearAllMDiaries, loadMDiaries, parseMDiaryFile, saveMDiaries } from './lib/mDiaryDB';
@@ -62,18 +53,6 @@ import {
 } from './lib/bigBackup';
 import { emitActionToast, subscribeActionToast, type ActionToastKind } from './lib/actionToast';
 import type { ChatProfile } from './lib/chatDB';
-import { AlbumPage } from './pages/AlbumPage';
-import { BookshelfPage } from './pages/BookshelfPage';
-import { NotesPage } from './pages/NotesPage';
-import SoulmateHousePage from './pages/SoulmateHousePage';
-import { HeartWallPage } from './pages/HeartWallPage';
-import { ListPage } from './pages/ListPage';
-import { WishlistPage } from './pages/WishlistPage';
-import { LettersABPage } from './pages/LettersABPage';
-import { FitnessPage } from './pages/FitnessPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { TarotPage } from './pages/TarotPage';
-import { MoodLettersPage } from './pages/MoodLettersPage';
 import type { CalendarMonth, EmailViewRecord } from './types/content';
 import type { AppSettings, CalendarColorMode, TabIconKey } from './types/settings';
 import { DEFAULT_SETTINGS } from './types/settings';
@@ -142,6 +121,28 @@ const DEFAULT_TAB_ICONS: Record<TabIconKey, string> = {
   notes: '📝',
   settings: '⚙️',
 };
+
+const CalendarPage = lazy(() => import('./pages/CalendarPage').then((m) => ({ default: m.CalendarPage })));
+const CheckinPage = lazy(() => import('./pages/CheckinPage').then((m) => ({ default: m.CheckinPage })));
+const ChatLogPage = lazy(() => import('./pages/ChatLogPage').then((m) => ({ default: m.ChatLogPage })));
+const MDiaryPage = lazy(() => import('./pages/MDiaryPage').then((m) => ({ default: m.MDiaryPage })));
+const DiaryBPage = lazy(() => import('./pages/DiaryBPage').then((m) => ({ default: m.DiaryBPage })));
+const InboxPage = lazy(() => import('./pages/InboxPage').then((m) => ({ default: m.InboxPage })));
+const LetterPage = lazy(() => import('./pages/LetterPage').then((m) => ({ default: m.LetterPage })));
+const PomodoroPage = lazy(() => import('./pages/PomodoroPage').then((m) => ({ default: m.PomodoroPage })));
+const PeriodPage = lazy(() => import('./pages/PeriodPage').then((m) => ({ default: m.PeriodPage })));
+const AlbumPage = lazy(() => import('./pages/AlbumPage').then((m) => ({ default: m.AlbumPage })));
+const BookshelfPage = lazy(() => import('./pages/BookshelfPage').then((m) => ({ default: m.BookshelfPage })));
+const NotesPage = lazy(() => import('./pages/NotesPage').then((m) => ({ default: m.NotesPage })));
+const SoulmateHousePage = lazy(() => import('./pages/SoulmateHousePage'));
+const HeartWallPage = lazy(() => import('./pages/HeartWallPage').then((m) => ({ default: m.HeartWallPage })));
+const ListPage = lazy(() => import('./pages/ListPage').then((m) => ({ default: m.ListPage })));
+const WishlistPage = lazy(() => import('./pages/WishlistPage').then((m) => ({ default: m.WishlistPage })));
+const LettersABPage = lazy(() => import('./pages/LettersABPage').then((m) => ({ default: m.LettersABPage })));
+const FitnessPage = lazy(() => import('./pages/FitnessPage').then((m) => ({ default: m.FitnessPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const TarotPage = lazy(() => import('./pages/TarotPage').then((m) => ({ default: m.TarotPage })));
+const MoodLettersPage = lazy(() => import('./pages/MoodLettersPage').then((m) => ({ default: m.MoodLettersPage })));
 
 function toRgbTriplet(hex: string) {
   const matched = hex.trim().match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
@@ -1109,6 +1110,12 @@ function App() {
     setLauncherApp('lettersAB');
   }, []);
 
+  const lazyPageFallback = (
+    <div className="grid h-full min-h-[220px] place-items-center text-sm text-stone-500">
+      <span className="rounded-full border border-stone-300 bg-white/85 px-3 py-1 shadow-sm">載入中…</span>
+    </div>
+  );
+
   const pages = useMemo(
     () => [
       {
@@ -1138,80 +1145,86 @@ function App() {
         id: 'inbox',
         label: appLabels.inbox,
         node: (
-          <InboxPage
-            emails={emails}
-            unreadEmailIds={unreadEmailIds}
-            starredEmailIds={starredEmailIds}
-            inboxTitle={settings.inboxTitle}
-            onOpenEmail={onOpenEmail}
-            onToggleEmailStar={onToggleEmailStar}
-          />
+          <Suspense fallback={lazyPageFallback}>
+            <InboxPage
+              emails={emails}
+              unreadEmailIds={unreadEmailIds}
+              starredEmailIds={starredEmailIds}
+              inboxTitle={settings.inboxTitle}
+              onOpenEmail={onOpenEmail}
+              onToggleEmailStar={onToggleEmailStar}
+            />
+          </Suspense>
         ),
       },
       {
         id: 'calendar',
         label: appLabels.calendar,
         node: (
-          <CalendarPage
-            monthKey={calendarMonthKey}
-            monthKeys={calendarMonthKeys}
-            data={calendarData}
-            hoverToneWeights={settings.hoverToneWeights}
-            hoverResetSeed={hoverResetSeed}
-            calendarColorMode={settings.calendarColorMode}
-            monthAccentColor={monthAccentColor}
-            onMonthChange={onMonthChange}
-            onCalendarColorModeChange={onCalendarColorModeChange}
-          />
+          <Suspense fallback={lazyPageFallback}>
+            <CalendarPage
+              monthKey={calendarMonthKey}
+              monthKeys={calendarMonthKeys}
+              data={calendarData}
+              hoverToneWeights={settings.hoverToneWeights}
+              hoverResetSeed={hoverResetSeed}
+              calendarColorMode={settings.calendarColorMode}
+              monthAccentColor={monthAccentColor}
+              onMonthChange={onMonthChange}
+              onCalendarColorModeChange={onCalendarColorModeChange}
+            />
+          </Suspense>
         ),
       },
       {
         id: 'settings',
         label: appLabels.settings,
         node: (
-          <SettingsPage
-            settings={settings}
-            visibleEmailCount={visibleEmailCount}
-            totalEmailCount={totalEmailCount}
-            monthCount={monthCount}
-            notificationPermission={notificationPermission}
-            importStatus={importStatus}
-            letterCount={letters.length}
-            diaryCount={diaries.length}
-            chatLogCount={chatLogs.length}
-            chatProfiles={chatProfiles}
-            chibiPoolInfo={chibiPoolInfo}
-            onSettingChange={onSettingChange}
-            onRequestNotificationPermission={onRequestNotificationPermission}
-            onImportEmlFiles={onImportEmlFiles}
-            onImportCalendarFiles={onImportCalendarFiles}
-            onImportLetterFiles={(files) => void handleImportLetterFiles(files)}
-            onImportLetterFolderFiles={(files) => void handleImportLetterFolderFiles(files)}
-            onClearAllLetters={() => void handleClearAllLetters()}
-            onImportDiaryFiles={(files) => void handleImportDiaryFiles(files)}
-            onImportDiaryFolderFiles={(files) => void handleImportDiaryFolderFiles(files)}
-            onClearAllDiaries={() => void handleClearAllDiaries()}
-            onImportChatLogFiles={(files) => void handleImportChatLogFiles(files)}
-            onImportChatLogFolderFiles={(files) => void handleImportChatLogFolderFiles(files)}
-            onClearAllChatLogs={() => void handleClearAllChatLogs()}
-            onExportAboutMeBackup={() => handleExportAboutMeBackup()}
-            onExportAboutMBackup={() => handleExportAboutMBackup()}
-            onExportAboutMBackupPart={(part) => handleExportAboutMBackupPart(part)}
-            onImportAboutMeBackup={(files, mode) => handleImportAboutMeBackup(files, mode)}
-            onImportAboutMBackup={(files, mode) => handleImportAboutMBackup(files, mode)}
-            onImportAboutMBackupPart={(part, files, mode) => handleImportAboutMBackupPart(part, files, mode)}
-            onSaveChatProfile={(profile) => handleSaveChatProfile(profile)}
-            onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
-            onHoverToneWeightChange={onHoverToneWeightChange}
-            onReshuffleHoverPhrases={onReshuffleHoverPhrases}
-            onReshuffleChibiPool={onReshuffleChibiPool}
-            onRefresh={() => {
-              void saveSettings({ lastSyncAt: new Date().toISOString() }).then((next) => {
-                setSettings(next);
-                return refreshData();
-              });
-            }}
-          />
+          <Suspense fallback={lazyPageFallback}>
+            <SettingsPage
+              settings={settings}
+              visibleEmailCount={visibleEmailCount}
+              totalEmailCount={totalEmailCount}
+              monthCount={monthCount}
+              notificationPermission={notificationPermission}
+              importStatus={importStatus}
+              letterCount={letters.length}
+              diaryCount={diaries.length}
+              chatLogCount={chatLogs.length}
+              chatProfiles={chatProfiles}
+              chibiPoolInfo={chibiPoolInfo}
+              onSettingChange={onSettingChange}
+              onRequestNotificationPermission={onRequestNotificationPermission}
+              onImportEmlFiles={onImportEmlFiles}
+              onImportCalendarFiles={onImportCalendarFiles}
+              onImportLetterFiles={(files) => void handleImportLetterFiles(files)}
+              onImportLetterFolderFiles={(files) => void handleImportLetterFolderFiles(files)}
+              onClearAllLetters={() => void handleClearAllLetters()}
+              onImportDiaryFiles={(files) => void handleImportDiaryFiles(files)}
+              onImportDiaryFolderFiles={(files) => void handleImportDiaryFolderFiles(files)}
+              onClearAllDiaries={() => void handleClearAllDiaries()}
+              onImportChatLogFiles={(files) => void handleImportChatLogFiles(files)}
+              onImportChatLogFolderFiles={(files) => void handleImportChatLogFolderFiles(files)}
+              onClearAllChatLogs={() => void handleClearAllChatLogs()}
+              onExportAboutMeBackup={() => handleExportAboutMeBackup()}
+              onExportAboutMBackup={() => handleExportAboutMBackup()}
+              onExportAboutMBackupPart={(part) => handleExportAboutMBackupPart(part)}
+              onImportAboutMeBackup={(files, mode) => handleImportAboutMeBackup(files, mode)}
+              onImportAboutMBackup={(files, mode) => handleImportAboutMBackup(files, mode)}
+              onImportAboutMBackupPart={(part, files, mode) => handleImportAboutMBackupPart(part, files, mode)}
+              onSaveChatProfile={(profile) => handleSaveChatProfile(profile)}
+              onDeleteChatProfile={(id) => void handleDeleteChatProfile(id)}
+              onHoverToneWeightChange={onHoverToneWeightChange}
+              onReshuffleHoverPhrases={onReshuffleHoverPhrases}
+              onReshuffleChibiPool={onReshuffleChibiPool}
+              onRefresh={() => {
+                void saveSettings({ lastSyncAt: new Date().toISOString() }).then((next) => {
+                  setSettings(next);
+                  return refreshData();
+                });
+              }}
+            />
+          </Suspense>
         ),
       },
     ],
@@ -1404,7 +1417,16 @@ function App() {
       )}
 
       {loadState === 'ready' && (
-        <>
+        <Suspense
+          fallback={
+            <main className="grid h-full place-items-center px-6 text-center">
+              <div className="rounded-full border border-stone-300 bg-white/85 px-4 py-2 text-sm text-stone-600 shadow-sm">
+                載入中…
+              </div>
+            </main>
+          }
+        >
+          <>
           <SwipePager
             activeIndex={activeTab}
             onIndexChange={setActiveTab}
@@ -1700,7 +1722,8 @@ function App() {
               </div>
             </div>
           )}
-        </>
+          </>
+        </Suspense>
       )}
 
       {actionToast && (

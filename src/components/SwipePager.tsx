@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type SwipePagerProps = {
   activeIndex: number;
@@ -15,6 +15,18 @@ export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: 
   const isProgrammaticScrollRef = useRef(false);
   const fromScrollRef = useRef(false);
   const releaseProgrammaticRef = useRef<number | null>(null);
+  const [visitedPageIndexes, setVisitedPageIndexes] = useState<Set<number>>(() => new Set([activeIndex]));
+
+  useEffect(() => {
+    setVisitedPageIndexes((prev) => {
+      if (prev.has(activeIndex)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(activeIndex);
+      return next;
+    });
+  }, [activeIndex]);
 
   useEffect(() => {
     if (fromScrollRef.current) {
@@ -100,9 +112,13 @@ export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: 
       }}
     >
       <div className="flex h-full w-full">
-        {pages.map((page) => (
+        {pages.map((page, pageIndex) => (
           <section key={page.id} className="h-full w-full shrink-0 snap-center overflow-y-auto px-4 pb-28 pt-4">
-            {page.node}
+            {visitedPageIndexes.has(pageIndex) ? (
+              page.node
+            ) : (
+              <div className="h-full w-full" aria-hidden="true" />
+            )}
           </section>
         ))}
       </div>
