@@ -145,7 +145,11 @@ const HOME_DYNAMIC_EFFECT_OPTIONS: Array<{
   { value: 'none', label: '無特效', hint: '只留背景，先專心看換色節奏' },
   { value: 'orbs', label: '光暈圓斑', hint: '柔焦漂浮光斑，存在感中等' },
   { value: 'snow', label: '雪花', hint: '前後景層次飄雪，立體感最強' },
+  { value: 'lantern', label: '天燈上飄', hint: '暖色天燈慢慢往上，帶輕微搖晃' },
+  { value: 'heart', label: '愛心飄浮', hint: '柔和愛心緩慢上飄，微微搖晃' },
+  { value: 'ribbon', label: '柔光帶', hint: '流動光束像絲帶一樣漂移' },
   { value: 'stardust', label: '星塵流星', hint: '細亮點 + 流星掠過，動感較強' },
+  { value: 'bubbles', label: '上飄泡泡', hint: '參考手札 C：小泡泡由下往上慢慢飄移' },
 ];
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
@@ -1309,10 +1313,16 @@ export function SettingsPage({
       if (
         source.homeWallpaperEffectPreset === 'orbs' ||
         source.homeWallpaperEffectPreset === 'snow' ||
+        source.homeWallpaperEffectPreset === 'heart' ||
+        source.homeWallpaperEffectPreset === 'lantern' ||
+        source.homeWallpaperEffectPreset === 'ribbon' ||
         source.homeWallpaperEffectPreset === 'stardust' ||
+        source.homeWallpaperEffectPreset === 'bubbles' ||
         source.homeWallpaperEffectPreset === 'none'
       ) {
         next.homeWallpaperEffectPreset = source.homeWallpaperEffectPreset;
+      } else if (source.homeWallpaperEffectPreset === 'firefly') {
+        next.homeWallpaperEffectPreset = 'heart';
       }
       if (typeof source.backgroundImageUrl === 'string') {
         next.backgroundImageUrl = source.backgroundImageUrl;

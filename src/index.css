@@ -865,6 +865,9 @@ textarea {
 .home-wallpaper-stardust-layer,
 .home-wallpaper-bokeh-layer,
 .home-wallpaper-lantern-layer,
+.home-wallpaper-heart-layer,
+.home-wallpaper-ribbon-layer,
+.home-wallpaper-bubble-layer,
 .home-wallpaper-haze-layer {
   position: absolute;
   inset: 0;
@@ -876,6 +879,18 @@ textarea {
 
 .home-wallpaper-snow-layer-near {
   z-index: 3;
+}
+
+.home-wallpaper-bubble-layer-far {
+  z-index: 1;
+}
+
+.home-wallpaper-bubble-layer-near {
+  z-index: 3;
+}
+
+.home-wallpaper-bubble-layer-hero {
+  z-index: 4;
 }
 
 .home-wallpaper-snow-particle {
@@ -930,13 +945,69 @@ textarea {
   width: 68px;
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0));
+  background: linear-gradient(90deg, rgb(255 255 255 / 0), rgb(255 255 255 / 0.95));
   box-shadow: 0 0 14px rgb(255 255 255 / 0.58);
   opacity: 0;
   transform-origin: left center;
   --shoot-angle: 155deg;
   --shoot-x: -170px;
   --shoot-y: 120px;
+}
+
+.home-wallpaper-bubble {
+  position: absolute;
+  left: var(--x, 50%);
+  top: var(--y, 108%);
+  width: var(--size, 3px);
+  height: var(--size, 3px);
+  border-radius: 999px;
+  border: 1px solid rgb(236 247 255 / 0.56);
+  background: radial-gradient(
+    circle at 30% 28%,
+    rgb(255 255 255 / 0.92),
+    rgb(202 229 255 / 0.38) 40%,
+    rgb(164 210 255 / 0.12) 68%,
+    rgb(255 255 255 / 0) 80%
+  );
+  box-shadow:
+    0 0 14px rgb(216 238 255 / 0.62),
+    inset 0 0 8px rgb(255 255 255 / 0.4);
+  opacity: calc(var(--alpha, 0.64) * var(--home-dyn-particle-opacity));
+  filter: blur(var(--blur, 0px));
+  animation: home-wallpaper-bubble-rise calc(var(--duration, 7.6s) / var(--home-dyn-speed-factor)) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.home-wallpaper-bubble-far {
+  border-color: rgb(226 238 250 / 0.36);
+  opacity: calc(var(--alpha, 0.52) * var(--home-dyn-particle-opacity) * 0.74);
+  box-shadow:
+    0 0 9px rgb(202 225 246 / 0.42),
+    inset 0 0 5px rgb(255 255 255 / 0.24);
+}
+
+.home-wallpaper-bubble-near {
+  border-color: rgb(238 248 255 / 0.58);
+  opacity: calc(var(--alpha, 0.74) * var(--home-dyn-particle-opacity) * 1.06);
+  box-shadow:
+    0 0 17px rgb(224 242 255 / 0.68),
+    inset 0 0 10px rgb(255 255 255 / 0.42);
+}
+
+.home-wallpaper-bubble-mid {
+  border-color: rgb(244 252 255 / 0.7);
+  opacity: calc(var(--alpha, 0.8) * var(--home-dyn-particle-opacity) * 1.16);
+  box-shadow:
+    0 0 22px rgb(232 246 255 / 0.78),
+    inset 0 0 12px rgb(255 255 255 / 0.5);
+}
+
+.home-wallpaper-bubble-hero {
+  border-color: rgb(248 253 255 / 0.82);
+  opacity: calc(var(--alpha, 0.86) * var(--home-dyn-particle-opacity) * 1.22);
+  box-shadow:
+    0 0 28px rgb(238 249 255 / 0.86),
+    inset 0 0 14px rgb(255 255 255 / 0.58);
 }
 
 .home-wallpaper-shooting-a {
@@ -1012,45 +1083,100 @@ textarea {
 
 .home-wallpaper-lantern {
   position: absolute;
-  left: var(--x, 50%);
-  bottom: -16%;
-  width: var(--size, 18px);
-  height: calc(var(--size, 18px) * 1.45);
-  border-radius: 38% 38% 42% 42%;
-  transform: translateX(-50%);
-  background: linear-gradient(180deg, rgb(255 224 168 / 0.98), rgb(255 174 112 / 0.94));
-  border: 1px solid rgb(255 233 195 / 0.62);
-  opacity: calc(0.72 * var(--home-dyn-particle-opacity));
+  width: 34px;
+  height: 48px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffe1a8 0%, #ffb86b 45%, #e67f4d 100%);
   box-shadow:
-    0 0 16px rgb(255 181 107 / 0.48),
-    0 2px 8px rgb(255 146 86 / 0.26);
-  animation: home-wallpaper-lantern-rise calc(var(--duration, 10s) / var(--home-dyn-speed-factor)) linear infinite;
-  animation-delay: var(--delay, 0s);
+    0 0 18px rgba(255, 193, 121, 0.72),
+    inset 0 -8px 10px rgba(120, 50, 20, 0.22);
+  animation-name: home-wallpaper-lantern-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
 .home-wallpaper-lantern::before {
   content: '';
   position: absolute;
   left: 50%;
-  top: -8%;
-  width: 46%;
-  height: 16%;
+  bottom: -10px;
+  width: 8px;
+  height: 10px;
   transform: translateX(-50%);
-  border-radius: 999px;
-  background: rgb(162 86 58 / 0.88);
+  border-radius: 50% 50% 55% 55%;
+  background: radial-gradient(circle at 50% 20%, #fff5c2 0%, #ffc34e 58%, rgba(255, 160, 60, 0.5) 100%);
+  filter: blur(0.4px);
 }
 
 .home-wallpaper-lantern::after {
   content: '';
   position: absolute;
   left: 50%;
-  top: 22%;
-  width: 22%;
-  height: 22%;
+  top: -5px;
+  width: 22px;
+  height: 2px;
   transform: translateX(-50%);
+  background: rgba(110, 50, 30, 0.55);
   border-radius: 999px;
-  background: rgb(255 245 188 / 0.95);
-  box-shadow: 0 0 9px rgb(255 235 156 / 0.7);
+}
+
+.home-wallpaper-heart {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  transform: rotate(45deg);
+  background: linear-gradient(160deg, #ff8fbc 0%, #ff5b96 100%);
+  box-shadow: 0 0 14px rgba(255, 120, 171, 0.65);
+  animation-name: home-wallpaper-heart-float;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.home-wallpaper-heart::before,
+.home-wallpaper-heart::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: inherit;
+}
+
+.home-wallpaper-heart::before {
+  left: -12px;
+  top: 0;
+}
+
+.home-wallpaper-heart::after {
+  left: 0;
+  top: -12px;
+}
+
+.home-wallpaper-ribbon {
+  position: absolute;
+  width: 56vw;
+  height: 24vh;
+  min-width: 320px;
+  border-radius: 999px;
+  filter: blur(24px) saturate(1.15);
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  animation-name: home-wallpaper-ribbon-wave;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  transform-origin: center;
+}
+
+.home-wallpaper-ribbon-a {
+  background: linear-gradient(90deg, rgba(255, 198, 122, 0), rgba(255, 198, 122, 0.72), rgba(255, 198, 122, 0));
+}
+
+.home-wallpaper-ribbon-b {
+  background: linear-gradient(90deg, rgba(146, 221, 255, 0), rgba(146, 221, 255, 0.7), rgba(146, 221, 255, 0));
+}
+
+.home-wallpaper-ribbon-c {
+  background: linear-gradient(90deg, rgba(232, 176, 255, 0), rgba(232, 176, 255, 0.68), rgba(232, 176, 255, 0));
 }
 
 @keyframes home-wallpaper-aura {
@@ -1362,6 +1488,23 @@ textarea {
   }
 }
 
+@keyframes home-wallpaper-bubble-rise {
+  0% {
+    transform: translate3d(0, 12vh, 0) scale(0.84);
+    opacity: 0;
+  }
+  12% {
+    opacity: calc(var(--alpha, 0.64) * var(--home-dyn-particle-opacity));
+  }
+  50% {
+    transform: translate3d(var(--bubble-drift, 14px), -30vh, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(calc(var(--bubble-drift, 14px) * -0.45), -110vh, 0) scale(1.08);
+    opacity: 0;
+  }
+}
+
 @keyframes home-wallpaper-bokeh-float {
   0%,
   100% {
@@ -1372,19 +1515,48 @@ textarea {
   }
 }
 
+@keyframes home-wallpaper-heart-float {
+  0% {
+    transform: translate3d(0, 8vh, 0) rotate(45deg) scale(calc(var(--heart-scale, 1) * 0.92));
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate3d(16px, -34vh, 0) rotate(38deg) scale(calc(var(--heart-scale, 1) * 1.06));
+  }
+  100% {
+    transform: translate3d(-12px, -112vh, 0) rotate(50deg) scale(calc(var(--heart-scale, 1) * 0.9));
+    opacity: 0;
+  }
+}
+
+@keyframes home-wallpaper-ribbon-wave {
+  0% {
+    transform: translate3d(-16vw, -8vh, 0) rotate(-10deg) scale(1);
+  }
+  50% {
+    transform: translate3d(10vw, 8vh, 0) rotate(9deg) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-16vw, -8vh, 0) rotate(-10deg) scale(1);
+  }
+}
+
 @keyframes home-wallpaper-lantern-rise {
   0% {
-    transform: translate3d(-50%, 22vh, 0);
+    transform: translate3d(0, 10vh, 0) rotate(-3deg);
     opacity: 0;
   }
   8% {
-    opacity: calc(0.56 * var(--home-dyn-particle-opacity));
+    opacity: 1;
   }
-  82% {
-    opacity: calc(0.78 * var(--home-dyn-particle-opacity));
+  50% {
+    transform: translate3d(18px, -35vh, 0) rotate(3deg);
   }
   100% {
-    transform: translate3d(calc(-50% + var(--drift, 0px)), -112vh, 0);
+    transform: translate3d(-14px, -110vh, 0) rotate(-4deg);
     opacity: 0;
   }
 }
@@ -1398,6 +1570,9 @@ textarea {
   .home-wallpaper-shooting,
   .home-wallpaper-bokeh,
   .home-wallpaper-lantern,
+  .home-wallpaper-heart,
+  .home-wallpaper-ribbon,
+  .home-wallpaper-bubble,
   .home-wallpaper-haze {
     animation: none !important;
   }

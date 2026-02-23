@@ -74,8 +74,17 @@ function normalizeHomeWallpaperEffectPreset(
   value: unknown,
   fallback: HomeWallpaperEffectPreset,
 ): HomeWallpaperEffectPreset {
-  if (value === 'firefly') return 'none';
-  return value === 'orbs' || value === 'snow' || value === 'stardust' || value === 'none' ? value : fallback;
+  if (value === 'firefly') return 'heart';
+  return value === 'orbs' ||
+    value === 'snow' ||
+    value === 'heart' ||
+    value === 'lantern' ||
+    value === 'ribbon' ||
+    value === 'stardust' ||
+    value === 'bubbles' ||
+    value === 'none'
+    ? value
+    : fallback;
 }
 
 function normalizeHomeDynamicWallpaperPreset(
@@ -100,6 +109,8 @@ function deriveLegacyHomeDynamicWallpaperPreset(
   effectPreset: HomeWallpaperEffectPreset,
 ): HomeDynamicWallpaperPreset {
   if (effectPreset === 'snow') return 'snowNight';
+  if (effectPreset === 'heart') return 'skyLantern';
+  if (effectPreset === 'lantern') return 'skyLantern';
   if (effectPreset === 'stardust') return 'meteorShower';
   if (gradientPreset === 'bokehDream') return 'bokehDream';
   if (gradientPreset === 'nightBlue') return 'meteorShower';

@@ -1133,6 +1133,8 @@ function App() {
             widgetIconDataUrl={settings.homeWidgetIconDataUrl}
             backgroundMode={settings.backgroundMode}
             homeDynamicWallpaperPreset={settings.homeDynamicWallpaperPreset}
+            homeWallpaperEffectPreset={settings.homeWallpaperEffectPreset}
+            homeDynamicEffectsEnabled={settings.homeDynamicEffectsEnabled}
             homeDynamicIntensity={settings.homeDynamicIntensity}
             homeDynamicSpeed={settings.homeDynamicSpeed}
             homeDynamicParticleAmount={settings.homeDynamicParticleAmount}

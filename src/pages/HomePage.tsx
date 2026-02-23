@@ -128,6 +128,41 @@ type WallpaperBokehOrb = {
   alpha: number;
 };
 
+type WallpaperLantern = {
+  left: number;
+  bottom: number;
+  duration: number;
+  delay: number;
+  scale: number;
+};
+
+type WallpaperHeart = {
+  left: number;
+  bottom: number;
+  duration: number;
+  delay: number;
+  scale: number;
+};
+
+type WallpaperRibbon = {
+  cls: 'a' | 'b' | 'c';
+  top: string;
+  left: string;
+  duration: number;
+  delay: number;
+};
+
+type WallpaperUpBubble = {
+  left: number;
+  top: number;
+  size: number;
+  opacity: number;
+  duration: number;
+  delay: number;
+  drift: number;
+  blur: number;
+};
+
 function pseudoRandom(seed: number) {
   const value = Math.sin(seed * 127.1 + 311.7) * 43758.5453123;
   return value - Math.floor(value);
@@ -181,6 +216,67 @@ function buildBokehOrbs(count: number): WallpaperBokehOrb[] {
     hue: (index * 38 + 12) % 360,
     alpha: 0.26 + (index % 4) * 0.08,
   }));
+}
+
+function buildLanterns(): WallpaperLantern[] {
+  const particles: WallpaperLantern[] = [];
+  for (let i = 0; i < 18; i += 1) {
+    particles.push({
+      left: Math.random() * 100,
+      bottom: -12 - Math.random() * 80,
+      duration: 16 + Math.random() * 16,
+      delay: -Math.random() * 22,
+      scale: 0.78 + Math.random() * 0.65,
+    });
+  }
+  return particles;
+}
+
+function buildHearts(count: number): WallpaperHeart[] {
+  const particles: WallpaperHeart[] = [];
+  for (let i = 0; i < count; i += 1) {
+    particles.push({
+      left: Math.random() * 100,
+      bottom: -12 - Math.random() * 84,
+      duration: 14 + Math.random() * 15,
+      delay: -Math.random() * 18,
+      scale: 0.78 + Math.random() * 0.72,
+    });
+  }
+  return particles;
+}
+
+function buildRibbons(): WallpaperRibbon[] {
+  return [
+    { cls: 'a', top: '24%', left: '-8%', duration: 14, delay: -3 },
+    { cls: 'b', top: '46%', left: '6%', duration: 16, delay: -9 },
+    { cls: 'c', top: '68%', left: '-4%', duration: 18, delay: -6 },
+  ];
+}
+
+function buildUpBubbles(count: number, seedOffset = 0, sizeBoost = 1): WallpaperUpBubble[] {
+  return Array.from({ length: count }, (_, index) => {
+    const seed = index + seedOffset;
+    const r1 = pseudoRandom(seed + 0.13);
+    const r2 = pseudoRandom(seed + 0.47);
+    const r3 = pseudoRandom(seed + 0.83);
+    const r4 = pseudoRandom(seed + 1.19);
+    const r5 = pseudoRandom(seed + 1.53);
+    const r6 = pseudoRandom(seed + 1.91);
+    const r7 = pseudoRandom(seed + 2.27);
+    const r8 = pseudoRandom(seed + 2.63);
+
+    return {
+      left: 1 + r1 * 98,
+      top: 102 + r2 * 36,
+      size: (2.3 + r3 * 4.8) * sizeBoost,
+      opacity: 0.46 + r4 * 0.46,
+      duration: 6.2 + r5 * 4.8,
+      delay: -(r6 * 10.8),
+      drift: (r7 > 0.5 ? 1 : -1) * (10 + r8 * 30),
+      blur: r3 * 1.1,
+    };
+  });
 }
 
 function pad2(value: number) {
@@ -365,6 +461,28 @@ export function HomePage({
   );
   const dynamicBokehOrbs = useMemo(
     () => buildBokehOrbs(Math.round(7 + dynamicParticleScale * 10)),
+    [dynamicParticleScale],
+  );
+  const dynamicLanterns = useMemo(() => buildLanterns(), []);
+  const dynamicHearts = useMemo(
+    () => buildHearts(Math.round(20 + dynamicParticleScale * 26)),
+    [dynamicParticleScale],
+  );
+  const dynamicRibbons = useMemo(() => buildRibbons(), []);
+  const dynamicBubbleFarParticles = useMemo(
+    () => buildUpBubbles(Math.round(34 + dynamicParticleScale * 44), 11.6, 0.94),
+    [dynamicParticleScale],
+  );
+  const dynamicBubbleNearParticles = useMemo(
+    () => buildUpBubbles(Math.round(24 + dynamicParticleScale * 34), 57.3, 1.58),
+    [dynamicParticleScale],
+  );
+  const dynamicBubbleMidParticles = useMemo(
+    () => buildUpBubbles(Math.round(14 + dynamicParticleScale * 24), 93.1, 2.05),
+    [dynamicParticleScale],
+  );
+  const dynamicBubbleHeroParticles = useMemo(
+    () => buildUpBubbles(Math.round(9 + dynamicParticleScale * 16), 141.7, 2.6),
     [dynamicParticleScale],
   );
 
@@ -1027,6 +1145,151 @@ export function HomePage({
                 />
               ))}
             </div>
+          )}
+          {dynamicEffectPreset === 'lantern' && (
+            <div className="home-wallpaper-lantern-layer">
+              {dynamicLanterns.map((lantern, index) => (
+                <span
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`lantern-${index}`}
+                  className="home-wallpaper-lantern"
+                  style={
+                    {
+                      left: `${lantern.left}%`,
+                      bottom: `${lantern.bottom}vh`,
+                      animationDuration: `${lantern.duration}s`,
+                      animationDelay: `${lantern.delay}s`,
+                      transform: `scale(${lantern.scale})`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
+            </div>
+          )}
+          {dynamicEffectPreset === 'heart' && (
+            <div className="home-wallpaper-heart-layer">
+              {dynamicHearts.map((heart, index) => (
+                <span
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`heart-${index}`}
+                  className="home-wallpaper-heart"
+                  style={
+                    {
+                      left: `${heart.left}%`,
+                      bottom: `${heart.bottom}vh`,
+                      animationDuration: `${heart.duration}s`,
+                      animationDelay: `${heart.delay}s`,
+                      '--heart-scale': heart.scale.toFixed(3),
+                    } as CSSProperties
+                  }
+                />
+              ))}
+            </div>
+          )}
+          {dynamicEffectPreset === 'ribbon' && (
+            <div className="home-wallpaper-ribbon-layer">
+              {dynamicRibbons.map((ribbon, index) => (
+                <span
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`ribbon-${index}`}
+                  className={`home-wallpaper-ribbon home-wallpaper-ribbon-${ribbon.cls}`}
+                  style={
+                    {
+                      top: ribbon.top,
+                      left: ribbon.left,
+                      animationDuration: `${ribbon.duration}s`,
+                      animationDelay: `${ribbon.delay}s`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
+            </div>
+          )}
+          {dynamicEffectPreset === 'bubbles' && (
+            <>
+              <div className="home-wallpaper-bubble-layer home-wallpaper-bubble-layer-far">
+                {dynamicBubbleFarParticles.map((bubble, index) => (
+                  <span
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={`bubble-up-far-${index}`}
+                    className="home-wallpaper-bubble home-wallpaper-bubble-far"
+                    style={
+                      {
+                        '--x': `${bubble.left}%`,
+                        '--y': `${bubble.top}%`,
+                        '--size': `${bubble.size.toFixed(2)}px`,
+                        '--alpha': (bubble.opacity * 0.76).toFixed(2),
+                        '--duration': `${(bubble.duration * 1.12).toFixed(2)}s`,
+                        '--delay': `${bubble.delay.toFixed(2)}s`,
+                        '--bubble-drift': `${Math.round(bubble.drift * 0.8)}px`,
+                        '--blur': `${(bubble.blur + 0.45).toFixed(2)}px`,
+                      } as CSSProperties
+                    }
+                  />
+                ))}
+              </div>
+              <div className="home-wallpaper-bubble-layer home-wallpaper-bubble-layer-near">
+                {dynamicBubbleNearParticles.map((bubble, index) => (
+                  <span
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={`bubble-up-near-${index}`}
+                    className="home-wallpaper-bubble home-wallpaper-bubble-near"
+                    style={
+                      {
+                        '--x': `${bubble.left}%`,
+                        '--y': `${bubble.top}%`,
+                        '--size': `${(bubble.size * 1.24).toFixed(2)}px`,
+                        '--alpha': Math.min(1, bubble.opacity * 1.12).toFixed(2),
+                        '--duration': `${(bubble.duration * 0.9).toFixed(2)}s`,
+                        '--delay': `${(bubble.delay * 0.9).toFixed(2)}s`,
+                        '--bubble-drift': `${Math.round(bubble.drift * 1.22)}px`,
+                        '--blur': `${Math.max(0, bubble.blur - 0.12).toFixed(2)}px`,
+                      } as CSSProperties
+                    }
+                  />
+                ))}
+              </div>
+              <div className="home-wallpaper-bubble-layer home-wallpaper-bubble-layer-hero">
+                {dynamicBubbleMidParticles.map((bubble, index) => (
+                  <span
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={`bubble-up-mid-${index}`}
+                    className="home-wallpaper-bubble home-wallpaper-bubble-mid"
+                    style={
+                      {
+                        '--x': `${bubble.left}%`,
+                        '--y': `${bubble.top}%`,
+                        '--size': `${(bubble.size * 1.18).toFixed(2)}px`,
+                        '--alpha': Math.min(1, bubble.opacity * 1.16).toFixed(2),
+                        '--duration': `${(bubble.duration * 1.02).toFixed(2)}s`,
+                        '--delay': `${bubble.delay.toFixed(2)}s`,
+                        '--bubble-drift': `${Math.round(bubble.drift * 1.28)}px`,
+                        '--blur': `${Math.max(0, bubble.blur - 0.08).toFixed(2)}px`,
+                      } as CSSProperties
+                    }
+                  />
+                ))}
+                {dynamicBubbleHeroParticles.map((bubble, index) => (
+                  <span
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={`bubble-up-hero-${index}`}
+                    className="home-wallpaper-bubble home-wallpaper-bubble-hero"
+                    style={
+                      {
+                        '--x': `${bubble.left}%`,
+                        '--y': `${bubble.top}%`,
+                        '--size': `${(bubble.size * 1.34).toFixed(2)}px`,
+                        '--alpha': Math.min(1, bubble.opacity * 1.22).toFixed(2),
+                        '--duration': `${(bubble.duration * 1.1).toFixed(2)}s`,
+                        '--delay': `${(bubble.delay * 1.05).toFixed(2)}s`,
+                        '--bubble-drift': `${Math.round(bubble.drift * 1.36)}px`,
+                        '--blur': `${Math.max(0, bubble.blur - 0.16).toFixed(2)}px`,
+                      } as CSSProperties
+                    }
+                  />
+                ))}
+              </div>
+            </>
           )}
           {dynamicEffectPreset === 'stardust' && (
             <div className="home-wallpaper-stardust-layer">

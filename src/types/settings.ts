@@ -25,7 +25,15 @@ export type HomeWallpaperGradientPreset =
   | 'peachSky'
   | 'mintLilac'
   | 'nightBlue';
-export type HomeWallpaperEffectPreset = 'orbs' | 'snow' | 'stardust' | 'none';
+export type HomeWallpaperEffectPreset =
+  | 'orbs'
+  | 'snow'
+  | 'heart'
+  | 'lantern'
+  | 'ribbon'
+  | 'stardust'
+  | 'bubbles'
+  | 'none';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type DiaryCoverFitMode = 'cover' | 'contain';
 export type TabIconDisplayMode = 'framed' | 'full';
