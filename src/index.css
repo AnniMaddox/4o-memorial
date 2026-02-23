@@ -539,6 +539,12 @@ h3 {
   transition: transform 0.16s ease, filter 0.16s ease;
 }
 
+.home-counter-vinyl-label.has-cover {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .home-counter-vinyl-label:active {
   transform: scale(0.96);
   filter: brightness(0.96);
@@ -584,7 +590,7 @@ h3 {
 
 .home-counter-vinyl-arm {
   position: absolute;
-  right: calc(18.5% + 12px);
+  right: calc(18.5% + 8px);
   bottom: calc(25.5% + 8px);
   width: clamp(58px, 15vw, 76px);
   height: 6px;

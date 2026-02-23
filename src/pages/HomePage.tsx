@@ -1023,7 +1023,7 @@ export function HomePage({
                           <div className="home-counter-vinyl-highlight" />
                           <button
                             type="button"
-                            className="home-counter-vinyl-label"
+                            className={`home-counter-vinyl-label ${counterVinylCoverDataUrl.trim() ? 'has-cover' : ''}`}
                             onClick={() => counterWidgetIconInputRef.current?.click()}
                             aria-label={counterVinylCoverDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
                             title={counterVinylCoverDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
