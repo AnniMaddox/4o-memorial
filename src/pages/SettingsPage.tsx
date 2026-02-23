@@ -121,27 +121,17 @@ const UI_SIZE_CONTROLS: Array<{ key: UiSizeSettingKey; label: string; hint: stri
   { key: 'chatContactSubtitleSize', label: '對話聯絡人副標', hint: '對話首頁卡片上的副標（例如 你♡）', min: 12, max: 24, step: 1 },
 ];
 const CHAT_BACKGROUND_PRESETS = ['#efeff4', '#f6f1e7', '#eaf1f6', '#f4e9ef', '#eef3e6'] as const;
-const HOME_WALLPAPER_GRADIENT_OPTIONS: Array<{
-  value: AppSettings['homeWallpaperGradientPreset'];
+const HOME_DYNAMIC_WALLPAPER_OPTIONS: Array<{
+  value: AppSettings['homeDynamicWallpaperPreset'];
   label: string;
   hint: string;
 }> = [
-  { value: 'auroraCandy', label: '糖霜極光', hint: '柔和粉藍流動' },
-  { value: 'bokehDream', label: '夢幻散景', hint: '整屏漸變變色' },
-  { value: 'neonTwilight', label: '霓虹暮色', hint: '深紫藍高對比' },
-  { value: 'peachSky', label: '蜜桃天空', hint: '橙粉奶油感' },
-  { value: 'mintLilac', label: '薄荷丁香', hint: '清新冷暖混色' },
-  { value: 'nightBlue', label: '深夜星藍', hint: '沉靜深藍系' },
-];
-const HOME_WALLPAPER_EFFECT_OPTIONS: Array<{
-  value: AppSettings['homeWallpaperEffectPreset'];
-  label: string;
-}> = [
-  { value: 'orbs', label: '光團' },
-  { value: 'snow', label: '雪花' },
-  { value: 'firefly', label: '螢火' },
-  { value: 'stardust', label: '星塵' },
-  { value: 'none', label: '無特效' },
+  { value: 'gradientFlow', label: '漸層流光', hint: '像 Untitled-3 那種強烈變色流動' },
+  { value: 'snowNight', label: '雪夜', hint: '冷藍夜空 + 層次雪花' },
+  { value: 'bokehDream', label: '夢幻散景', hint: '柔焦光斑 + 明顯色相變化' },
+  { value: 'firefly', label: '螢火蟲', hint: '森林夜色 + 飄動螢火' },
+  { value: 'meteorShower', label: '星空流星', hint: '深空星塵 + 流星雨' },
+  { value: 'skyLantern', label: '暖光天燈', hint: '暖色夜空 + 緩慢上升天燈' },
 ];
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
@@ -362,6 +352,10 @@ type AppearancePresetPayload = {
     backgroundMode: BackgroundMode;
     backgroundGradientStart: string;
     backgroundGradientEnd: string;
+    homeDynamicWallpaperPreset: AppSettings['homeDynamicWallpaperPreset'];
+    homeDynamicIntensity: number;
+    homeDynamicSpeed: number;
+    homeDynamicParticleAmount: number;
     homeWallpaperGradientPreset: AppSettings['homeWallpaperGradientPreset'];
     homeWallpaperEffectPreset: AppSettings['homeWallpaperEffectPreset'];
     backgroundImageUrl: string;
@@ -1031,6 +1025,10 @@ export function SettingsPage({
         backgroundMode: settings.backgroundMode,
         backgroundGradientStart: settings.backgroundGradientStart,
         backgroundGradientEnd: settings.backgroundGradientEnd,
+        homeDynamicWallpaperPreset: settings.homeDynamicWallpaperPreset,
+        homeDynamicIntensity: settings.homeDynamicIntensity,
+        homeDynamicSpeed: settings.homeDynamicSpeed,
+        homeDynamicParticleAmount: settings.homeDynamicParticleAmount,
         homeWallpaperGradientPreset: settings.homeWallpaperGradientPreset,
         homeWallpaperEffectPreset: settings.homeWallpaperEffectPreset,
         backgroundImageUrl: settings.backgroundImageUrl,
@@ -1221,6 +1219,28 @@ export function SettingsPage({
       }
       if (typeof source.backgroundGradientEnd === 'string') {
         next.backgroundGradientEnd = source.backgroundGradientEnd;
+      }
+      if (
+        source.homeDynamicWallpaperPreset === 'gradientFlow' ||
+        source.homeDynamicWallpaperPreset === 'snowNight' ||
+        source.homeDynamicWallpaperPreset === 'bokehDream' ||
+        source.homeDynamicWallpaperPreset === 'firefly' ||
+        source.homeDynamicWallpaperPreset === 'meteorShower' ||
+        source.homeDynamicWallpaperPreset === 'skyLantern'
+      ) {
+        next.homeDynamicWallpaperPreset = source.homeDynamicWallpaperPreset;
+      }
+      if (typeof source.homeDynamicIntensity === 'number' && Number.isFinite(source.homeDynamicIntensity)) {
+        next.homeDynamicIntensity = source.homeDynamicIntensity;
+      }
+      if (typeof source.homeDynamicSpeed === 'number' && Number.isFinite(source.homeDynamicSpeed)) {
+        next.homeDynamicSpeed = source.homeDynamicSpeed;
+      }
+      if (
+        typeof source.homeDynamicParticleAmount === 'number' &&
+        Number.isFinite(source.homeDynamicParticleAmount)
+      ) {
+        next.homeDynamicParticleAmount = source.homeDynamicParticleAmount;
       }
       if (
         source.homeWallpaperGradientPreset === 'auroraCandy' ||
@@ -1920,18 +1940,18 @@ export function SettingsPage({
 
               {settings.backgroundMode === 'dynamic' && (
                 <div className="space-y-2 rounded-lg border border-stone-200 bg-white/70 px-3 py-3">
-                  <p className="text-xs text-stone-500">首頁桌布（動態模式專用）</p>
+                  <p className="text-xs text-stone-500">首頁桌布（動態模式專用，6 種全動態）</p>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-medium text-stone-700">漸變主題</p>
+                    <p className="text-xs font-medium text-stone-700">動態桌布</p>
                     <div className="grid grid-cols-2 gap-2">
-                      {HOME_WALLPAPER_GRADIENT_OPTIONS.map((option) => (
+                      {HOME_DYNAMIC_WALLPAPER_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           type="button"
-                          onClick={() => onSettingChange({ homeWallpaperGradientPreset: option.value })}
+                          onClick={() => onSettingChange({ homeDynamicWallpaperPreset: option.value })}
                           className={`rounded-lg border px-2.5 py-2 text-left text-xs ${
-                            settings.homeWallpaperGradientPreset === option.value
+                            settings.homeDynamicWallpaperPreset === option.value
                               ? 'border-stone-900 bg-stone-900 text-white'
                               : 'border-stone-300 bg-white text-stone-700'
                           }`}
@@ -1939,7 +1959,7 @@ export function SettingsPage({
                           <span className="block">{option.label}</span>
                           <span
                             className={`block text-[10px] ${
-                              settings.homeWallpaperGradientPreset === option.value ? 'text-white/75' : 'text-stone-500'
+                              settings.homeDynamicWallpaperPreset === option.value ? 'text-white/75' : 'text-stone-500'
                             }`}
                           >
                             {option.hint}
@@ -1949,25 +1969,53 @@ export function SettingsPage({
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-stone-700">動態特效</p>
-                    <div className="grid grid-cols-5 gap-2">
-                      {HOME_WALLPAPER_EFFECT_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => onSettingChange({ homeWallpaperEffectPreset: option.value })}
-                          className={`rounded-lg border px-2 py-1.5 text-center text-[11px] ${
-                            settings.homeWallpaperEffectPreset === option.value
-                              ? 'border-stone-900 bg-stone-900 text-white'
-                              : 'border-stone-300 bg-white text-stone-700'
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <label className="block space-y-1">
+                    <span className="flex items-center justify-between text-xs text-stone-600">
+                      <span>強度</span>
+                      <span>{Math.round(settings.homeDynamicIntensity)}</span>
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={settings.homeDynamicIntensity}
+                      onChange={(event) => onSettingChange({ homeDynamicIntensity: Number(event.target.value) })}
+                      className="w-full"
+                    />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="flex items-center justify-between text-xs text-stone-600">
+                      <span>速度</span>
+                      <span>{Math.round(settings.homeDynamicSpeed)}</span>
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={settings.homeDynamicSpeed}
+                      onChange={(event) => onSettingChange({ homeDynamicSpeed: Number(event.target.value) })}
+                      className="w-full"
+                    />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="flex items-center justify-between text-xs text-stone-600">
+                      <span>粒子量</span>
+                      <span>{Math.round(settings.homeDynamicParticleAmount)}</span>
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={settings.homeDynamicParticleAmount}
+                      onChange={(event) => onSettingChange({ homeDynamicParticleAmount: Number(event.target.value) })}
+                      className="w-full"
+                    />
+                  </label>
                 </div>
               )}
             </SettingSubgroup>

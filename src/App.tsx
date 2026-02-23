@@ -1132,8 +1132,10 @@ function App() {
             widgetBadgeText={settings.homeWidgetBadgeText}
             widgetIconDataUrl={settings.homeWidgetIconDataUrl}
             backgroundMode={settings.backgroundMode}
-            homeWallpaperGradientPreset={settings.homeWallpaperGradientPreset}
-            homeWallpaperEffectPreset={settings.homeWallpaperEffectPreset}
+            homeDynamicWallpaperPreset={settings.homeDynamicWallpaperPreset}
+            homeDynamicIntensity={settings.homeDynamicIntensity}
+            homeDynamicSpeed={settings.homeDynamicSpeed}
+            homeDynamicParticleAmount={settings.homeDynamicParticleAmount}
             memorialStartDate={settings.memorialStartDate}
             onLaunchApp={onLaunchApp}
             onOpenCheckin={() => onLaunchApp('checkin')}

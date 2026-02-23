@@ -8,6 +8,7 @@ import type {
   ChibiPoolMode,
   ChatBubbleStyle,
   DiaryCoverFitMode,
+  HomeDynamicWallpaperPreset,
   HomeWallpaperEffectPreset,
   HomeWallpaperGradientPreset,
   LetterUiMode,
@@ -76,6 +77,33 @@ function normalizeHomeWallpaperEffectPreset(
   return value === 'orbs' || value === 'snow' || value === 'firefly' || value === 'stardust' || value === 'none'
     ? value
     : fallback;
+}
+
+function normalizeHomeDynamicWallpaperPreset(
+  value: unknown,
+  fallback: HomeDynamicWallpaperPreset,
+): HomeDynamicWallpaperPreset {
+  return value === 'gradientFlow' ||
+    value === 'snowNight' ||
+    value === 'bokehDream' ||
+    value === 'firefly' ||
+    value === 'meteorShower' ||
+    value === 'skyLantern'
+    ? value
+    : fallback;
+}
+
+function deriveLegacyHomeDynamicWallpaperPreset(
+  gradientPreset: HomeWallpaperGradientPreset,
+  effectPreset: HomeWallpaperEffectPreset,
+): HomeDynamicWallpaperPreset {
+  if (effectPreset === 'snow') return 'snowNight';
+  if (effectPreset === 'firefly') return 'firefly';
+  if (effectPreset === 'stardust') return 'meteorShower';
+  if (gradientPreset === 'bokehDream') return 'bokehDream';
+  if (gradientPreset === 'nightBlue') return 'meteorShower';
+  if (gradientPreset === 'peachSky') return 'skyLantern';
+  return 'gradientFlow';
 }
 
 function normalizeChatBubbleStyle(value: unknown, fallback: ChatBubbleStyle): ChatBubbleStyle {
@@ -155,6 +183,14 @@ export async function getSettings() {
   const row = await db.get('settings', 'app');
 
   const persisted = (row?.value ?? {}) as Partial<AppSettings>;
+  const normalizedLegacyGradientPreset = normalizeHomeWallpaperGradientPreset(
+    persisted.homeWallpaperGradientPreset,
+    DEFAULT_SETTINGS.homeWallpaperGradientPreset,
+  );
+  const normalizedLegacyEffectPreset = normalizeHomeWallpaperEffectPreset(
+    persisted.homeWallpaperEffectPreset,
+    DEFAULT_SETTINGS.homeWallpaperEffectPreset,
+  );
 
   return {
     ...DEFAULT_SETTINGS,
@@ -277,14 +313,30 @@ export async function getSettings() {
     backgroundMode: normalizeBackgroundMode(persisted.backgroundMode, DEFAULT_SETTINGS.backgroundMode),
     backgroundGradientStart: normalizeString(persisted.backgroundGradientStart, DEFAULT_SETTINGS.backgroundGradientStart),
     backgroundGradientEnd: normalizeString(persisted.backgroundGradientEnd, DEFAULT_SETTINGS.backgroundGradientEnd),
-    homeWallpaperGradientPreset: normalizeHomeWallpaperGradientPreset(
-      persisted.homeWallpaperGradientPreset,
-      DEFAULT_SETTINGS.homeWallpaperGradientPreset,
+    homeDynamicWallpaperPreset: normalizeHomeDynamicWallpaperPreset(
+      persisted.homeDynamicWallpaperPreset,
+      deriveLegacyHomeDynamicWallpaperPreset(normalizedLegacyGradientPreset, normalizedLegacyEffectPreset),
     ),
-    homeWallpaperEffectPreset: normalizeHomeWallpaperEffectPreset(
-      persisted.homeWallpaperEffectPreset,
-      DEFAULT_SETTINGS.homeWallpaperEffectPreset,
+    homeDynamicIntensity: clampNumber(
+      persisted.homeDynamicIntensity,
+      0,
+      100,
+      DEFAULT_SETTINGS.homeDynamicIntensity,
     ),
+    homeDynamicSpeed: clampNumber(
+      persisted.homeDynamicSpeed,
+      0,
+      100,
+      DEFAULT_SETTINGS.homeDynamicSpeed,
+    ),
+    homeDynamicParticleAmount: clampNumber(
+      persisted.homeDynamicParticleAmount,
+      0,
+      100,
+      DEFAULT_SETTINGS.homeDynamicParticleAmount,
+    ),
+    homeWallpaperGradientPreset: normalizedLegacyGradientPreset,
+    homeWallpaperEffectPreset: normalizedLegacyEffectPreset,
     backgroundImageUrl: normalizeString(persisted.backgroundImageUrl, DEFAULT_SETTINGS.backgroundImageUrl),
     tabIconDisplayMode: normalizeTabIconDisplayMode(
       persisted.tabIconDisplayMode,

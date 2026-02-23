@@ -8,6 +8,13 @@ export type HoverToneWeights = {
 
 export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image' | 'dynamic';
+export type HomeDynamicWallpaperPreset =
+  | 'gradientFlow'
+  | 'snowNight'
+  | 'bokehDream'
+  | 'firefly'
+  | 'meteorShower'
+  | 'skyLantern';
 export type HomeWallpaperGradientPreset =
   | 'auroraCandy'
   | 'bokehDream'
@@ -126,6 +133,10 @@ export type AppSettings = {
   backgroundMode: BackgroundMode;
   backgroundGradientStart: string;
   backgroundGradientEnd: string;
+  homeDynamicWallpaperPreset: HomeDynamicWallpaperPreset;
+  homeDynamicIntensity: number;
+  homeDynamicSpeed: number;
+  homeDynamicParticleAmount: number;
   homeWallpaperGradientPreset: HomeWallpaperGradientPreset;
   homeWallpaperEffectPreset: HomeWallpaperEffectPreset;
   backgroundImageUrl: string;
@@ -219,6 +230,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   backgroundMode: 'gradient',
   backgroundGradientStart: '#fde9d7',
   backgroundGradientEnd: '#ece4d5',
+  homeDynamicWallpaperPreset: 'gradientFlow',
+  homeDynamicIntensity: 72,
+  homeDynamicSpeed: 66,
+  homeDynamicParticleAmount: 58,
   homeWallpaperGradientPreset: 'auroraCandy',
   homeWallpaperEffectPreset: 'orbs',
   backgroundImageUrl: '',

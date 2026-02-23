@@ -11,8 +11,7 @@ import {
 import type {
   AppLabels,
   BackgroundMode,
-  HomeWallpaperEffectPreset,
-  HomeWallpaperGradientPreset,
+  HomeDynamicWallpaperPreset,
   TabIconUrls,
 } from '../types/settings';
 
@@ -46,8 +45,10 @@ type HomePageProps = {
   widgetBadgeText: string;
   widgetIconDataUrl: string;
   backgroundMode: BackgroundMode;
-  homeWallpaperGradientPreset: HomeWallpaperGradientPreset;
-  homeWallpaperEffectPreset: HomeWallpaperEffectPreset;
+  homeDynamicWallpaperPreset: HomeDynamicWallpaperPreset;
+  homeDynamicIntensity: number;
+  homeDynamicSpeed: number;
+  homeDynamicParticleAmount: number;
   memorialStartDate: string;
   onLaunchApp: (appId: LauncherAppId) => void;
   onOpenCheckin: () => void;
@@ -100,27 +101,98 @@ const COUNTER_VINYL_SPEED_OPTIONS = [
 const COUNTER_VINYL_COVER_OFFSET_MIN = -14;
 const COUNTER_VINYL_COVER_OFFSET_MAX = 14;
 const COUNTER_VINYL_COVER_OFFSET_STEP = 1;
-const HOME_WALLPAPER_SNOW_PARTICLES = Array.from({ length: 18 }, (_, index) => ({
-  x: (index * 17 + 9) % 100,
-  delay: -((index % 7) * 1.35),
-  duration: 8.8 + (index % 5) * 1.35,
-  size: 2.2 + (index % 4) * 1.15,
-  drift: (index % 2 === 0 ? 1 : -1) * (8 + (index % 3) * 6),
-}));
-const HOME_WALLPAPER_FIREFLIES = Array.from({ length: 12 }, (_, index) => ({
-  x: (index * 23 + 7) % 100,
-  y: 18 + ((index * 19 + 11) % 66),
-  delay: -((index % 5) * 1.75),
-  duration: 4.2 + (index % 4) * 1.15,
-  size: 4 + (index % 3) * 1.4,
-}));
-const HOME_WALLPAPER_STARDUST = Array.from({ length: 20 }, (_, index) => ({
-  x: (index * 13 + 4) % 100,
-  y: 10 + ((index * 17 + 8) % 72),
-  delay: -((index % 6) * 1.2),
-  duration: 2.4 + (index % 5) * 0.9,
-  size: 1.4 + (index % 3) * 1,
-}));
+
+type WallpaperParticle = {
+  x: number;
+  y: number;
+  delay: number;
+  duration: number;
+  size: number;
+  drift: number;
+  opacity: number;
+};
+
+type WallpaperBokehOrb = {
+  x: number;
+  y: number;
+  size: number;
+  blur: number;
+  delay: number;
+  duration: number;
+  driftX: number;
+  driftY: number;
+  hue: number;
+  alpha: number;
+};
+
+type WallpaperLantern = {
+  x: number;
+  delay: number;
+  duration: number;
+  size: number;
+  drift: number;
+};
+
+function buildSnowParticles(count: number): WallpaperParticle[] {
+  return Array.from({ length: count }, (_, index) => ({
+    x: (index * 17 + 9) % 100,
+    y: -16 - (index % 4) * 2.5,
+    delay: -((index % 9) * 1.18),
+    duration: 7.2 + (index % 6) * 1.04,
+    size: 1.8 + (index % 5) * 1.22,
+    drift: (index % 2 === 0 ? 1 : -1) * (8 + (index % 4) * 6),
+    opacity: 0.55 + (index % 4) * 0.12,
+  }));
+}
+
+function buildFireflies(count: number): WallpaperParticle[] {
+  return Array.from({ length: count }, (_, index) => ({
+    x: (index * 23 + 7) % 100,
+    y: 12 + ((index * 19 + 11) % 74),
+    delay: -((index % 7) * 1.6),
+    duration: 4 + (index % 5) * 1.05,
+    size: 2.8 + (index % 4) * 1.35,
+    drift: (index % 2 === 0 ? 1 : -1) * (4 + (index % 3) * 5),
+    opacity: 0.5 + (index % 3) * 0.16,
+  }));
+}
+
+function buildStardust(count: number): WallpaperParticle[] {
+  return Array.from({ length: count }, (_, index) => ({
+    x: (index * 13 + 4) % 100,
+    y: 8 + ((index * 17 + 8) % 80),
+    delay: -((index % 9) * 0.9),
+    duration: 2.1 + (index % 6) * 0.7,
+    size: 1 + (index % 4) * 0.96,
+    drift: (index % 2 === 0 ? 1 : -1) * (2 + (index % 3) * 2),
+    opacity: 0.5 + (index % 4) * 0.12,
+  }));
+}
+
+function buildBokehOrbs(count: number): WallpaperBokehOrb[] {
+  return Array.from({ length: count }, (_, index) => ({
+    x: 6 + ((index * 19 + 3) % 88),
+    y: 6 + ((index * 31 + 5) % 82),
+    size: 90 + (index % 4) * 42,
+    blur: 2 + (index % 3) * 2.5,
+    delay: -((index % 6) * 1.3),
+    duration: 9 + (index % 5) * 2.25,
+    driftX: (index % 2 === 0 ? 1 : -1) * (12 + (index % 4) * 8),
+    driftY: (index % 3 === 0 ? -1 : 1) * (10 + (index % 3) * 6),
+    hue: (index * 38 + 12) % 360,
+    alpha: 0.26 + (index % 4) * 0.08,
+  }));
+}
+
+function buildLanterns(count: number): WallpaperLantern[] {
+  return Array.from({ length: count }, (_, index) => ({
+    x: 8 + ((index * 21 + 11) % 84),
+    delay: -((index % 8) * 1.35),
+    duration: 9.2 + (index % 6) * 1.4,
+    size: 16 + (index % 4) * 6,
+    drift: (index % 2 === 0 ? 1 : -1) * (10 + (index % 3) * 6),
+  }));
+}
 
 function pad2(value: number) {
   return String(value).padStart(2, '0');
@@ -241,8 +313,10 @@ export function HomePage({
   widgetBadgeText,
   widgetIconDataUrl,
   backgroundMode,
-  homeWallpaperGradientPreset,
-  homeWallpaperEffectPreset,
+  homeDynamicWallpaperPreset,
+  homeDynamicIntensity,
+  homeDynamicSpeed,
+  homeDynamicParticleAmount,
   memorialStartDate,
   onLaunchApp,
   onOpenCheckin,
@@ -275,6 +349,34 @@ export function HomePage({
   const counterSpeedMenuRef = useRef<HTMLDivElement | null>(null);
   const counterSpeedToggleRef = useRef<HTMLButtonElement | null>(null);
   const cornerChibiUrl = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
+  const normalizedDynamicIntensity = Math.min(100, Math.max(0, homeDynamicIntensity));
+  const normalizedDynamicSpeed = Math.min(100, Math.max(0, homeDynamicSpeed));
+  const normalizedDynamicParticleAmount = Math.min(100, Math.max(0, homeDynamicParticleAmount));
+  const dynamicSpeedFactor = 0.62 + (normalizedDynamicSpeed / 100) * 1.88;
+  const dynamicIntensityFactor = 0.34 + (normalizedDynamicIntensity / 100) * 0.96;
+  const dynamicParticleOpacity = 0.32 + (normalizedDynamicIntensity / 100) * 0.64;
+  const dynamicGrainOpacity = 0.07 + (normalizedDynamicIntensity / 100) * 0.22;
+  const dynamicParticleScale = normalizedDynamicParticleAmount / 100;
+  const dynamicSnowParticles = useMemo(
+    () => buildSnowParticles(Math.round(12 + dynamicParticleScale * 28)),
+    [dynamicParticleScale],
+  );
+  const dynamicFireflies = useMemo(
+    () => buildFireflies(Math.round(10 + dynamicParticleScale * 22)),
+    [dynamicParticleScale],
+  );
+  const dynamicStardust = useMemo(
+    () => buildStardust(Math.round(16 + dynamicParticleScale * 36)),
+    [dynamicParticleScale],
+  );
+  const dynamicBokehOrbs = useMemo(
+    () => buildBokehOrbs(Math.round(7 + dynamicParticleScale * 10)),
+    [dynamicParticleScale],
+  );
+  const dynamicLanterns = useMemo(
+    () => buildLanterns(Math.round(6 + dynamicParticleScale * 9)),
+    [dynamicParticleScale],
+  );
 
   useEffect(() => {
     chibiAnchorRef.current = chibiAnchor;
@@ -821,19 +923,46 @@ export function HomePage({
     <div ref={homeRootRef} className="home-page-root relative mx-auto h-full w-full max-w-xl">
       {backgroundMode === 'dynamic' && (
         <div
-          className={`home-wallpaper home-wallpaper-gradient-${homeWallpaperGradientPreset} home-wallpaper-effect-${homeWallpaperEffectPreset}`}
+          className={`home-wallpaper home-wallpaper-preset-${homeDynamicWallpaperPreset}`}
+          data-dynamic-preset={homeDynamicWallpaperPreset}
+          style={
+            {
+              '--home-dyn-intensity': dynamicIntensityFactor.toFixed(3),
+              '--home-dyn-speed-factor': dynamicSpeedFactor.toFixed(3),
+              '--home-dyn-particle-opacity': dynamicParticleOpacity.toFixed(3),
+              '--home-dyn-grain-opacity': dynamicGrainOpacity.toFixed(3),
+            } as CSSProperties
+          }
           aria-hidden="true"
         >
-          {homeWallpaperEffectPreset === 'orbs' && (
+          {homeDynamicWallpaperPreset === 'gradientFlow' && (
             <>
-              <span className="home-wallpaper-orb home-wallpaper-orb-a" />
-              <span className="home-wallpaper-orb home-wallpaper-orb-b" />
-              <span className="home-wallpaper-orb home-wallpaper-orb-c" />
+              {dynamicBokehOrbs.map((orb, index) => (
+                <span
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`flow-orb-${index}`}
+                  className="home-wallpaper-bokeh"
+                  style={
+                    {
+                      '--x': `${orb.x}%`,
+                      '--y': `${orb.y}%`,
+                      '--size': `${orb.size}px`,
+                      '--blur': `${orb.blur}px`,
+                      '--delay': `${orb.delay}s`,
+                      '--duration': `${orb.duration}s`,
+                      '--drift-x': `${orb.driftX}px`,
+                      '--drift-y': `${orb.driftY}px`,
+                      '--hue': `${orb.hue}deg`,
+                      '--alpha': orb.alpha.toFixed(2),
+                    } as CSSProperties
+                  }
+                />
+              ))}
             </>
           )}
-          {homeWallpaperEffectPreset === 'snow' && (
+          {homeDynamicWallpaperPreset === 'snowNight' && (
             <div className="home-wallpaper-snow-layer">
-              {HOME_WALLPAPER_SNOW_PARTICLES.map((particle, index) => (
+              {dynamicSnowParticles.map((particle, index) => (
                 <span
                   // eslint-disable-next-line react/no-array-index-key
                   key={`snow-${index}`}
@@ -841,19 +970,46 @@ export function HomePage({
                   style={
                     {
                       '--x': `${particle.x}%`,
+                      '--y': `${particle.y}%`,
                       '--delay': `${particle.delay}s`,
                       '--duration': `${particle.duration}s`,
                       '--size': `${particle.size}px`,
                       '--drift': `${particle.drift}px`,
+                      '--alpha': particle.opacity.toFixed(2),
                     } as CSSProperties
                   }
                 />
               ))}
             </div>
           )}
-          {homeWallpaperEffectPreset === 'firefly' && (
+          {homeDynamicWallpaperPreset === 'bokehDream' && (
+            <div className="home-wallpaper-bokeh-layer">
+              {dynamicBokehOrbs.map((orb, index) => (
+                <span
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`bokeh-orb-${index}`}
+                  className="home-wallpaper-bokeh"
+                  style={
+                    {
+                      '--x': `${orb.x}%`,
+                      '--y': `${orb.y}%`,
+                      '--size': `${orb.size + 18}px`,
+                      '--blur': `${orb.blur + 2}px`,
+                      '--delay': `${orb.delay}s`,
+                      '--duration': `${orb.duration + 1.6}s`,
+                      '--drift-x': `${orb.driftX * 1.15}px`,
+                      '--drift-y': `${orb.driftY * 1.05}px`,
+                      '--hue': `${(orb.hue + 45) % 360}deg`,
+                      '--alpha': Math.min(0.56, orb.alpha + 0.08).toFixed(2),
+                    } as CSSProperties
+                  }
+                />
+              ))}
+            </div>
+          )}
+          {homeDynamicWallpaperPreset === 'firefly' && (
             <div className="home-wallpaper-firefly-layer">
-              {HOME_WALLPAPER_FIREFLIES.map((particle, index) => (
+              {dynamicFireflies.map((particle, index) => (
                 <span
                   // eslint-disable-next-line react/no-array-index-key
                   key={`firefly-${index}`}
@@ -865,15 +1021,17 @@ export function HomePage({
                       '--delay': `${particle.delay}s`,
                       '--duration': `${particle.duration}s`,
                       '--size': `${particle.size}px`,
+                      '--drift': `${particle.drift}px`,
+                      '--alpha': particle.opacity.toFixed(2),
                     } as CSSProperties
                   }
                 />
               ))}
             </div>
           )}
-          {homeWallpaperEffectPreset === 'stardust' && (
+          {homeDynamicWallpaperPreset === 'meteorShower' && (
             <div className="home-wallpaper-stardust-layer">
-              {HOME_WALLPAPER_STARDUST.map((particle, index) => (
+              {dynamicStardust.map((particle, index) => (
                 <span
                   // eslint-disable-next-line react/no-array-index-key
                   key={`stardust-${index}`}
@@ -885,6 +1043,8 @@ export function HomePage({
                       '--delay': `${particle.delay}s`,
                       '--duration': `${particle.duration}s`,
                       '--size': `${particle.size}px`,
+                      '--drift': `${particle.drift}px`,
+                      '--alpha': particle.opacity.toFixed(2),
                     } as CSSProperties
                   }
                 />
@@ -892,6 +1052,26 @@ export function HomePage({
               <span className="home-wallpaper-shooting home-wallpaper-shooting-a" />
               <span className="home-wallpaper-shooting home-wallpaper-shooting-b" />
               <span className="home-wallpaper-shooting home-wallpaper-shooting-c" />
+            </div>
+          )}
+          {homeDynamicWallpaperPreset === 'skyLantern' && (
+            <div className="home-wallpaper-lantern-layer">
+              {dynamicLanterns.map((lantern, index) => (
+                <span
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`lantern-${index}`}
+                  className="home-wallpaper-lantern"
+                  style={
+                    {
+                      '--x': `${lantern.x}%`,
+                      '--delay': `${lantern.delay}s`,
+                      '--duration': `${lantern.duration}s`,
+                      '--size': `${lantern.size}px`,
+                      '--drift': `${lantern.drift}px`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
             </div>
           )}
         </div>

@@ -670,6 +670,10 @@ textarea {
 
 /* Home-only text tint (from settings "globalTextColor"). */
 .home-wallpaper {
+  --home-dyn-intensity: 0.72;
+  --home-dyn-speed-factor: 1;
+  --home-dyn-particle-opacity: 0.78;
+  --home-dyn-grain-opacity: 0.14;
   pointer-events: none;
   position: absolute;
   inset: 0;
@@ -687,183 +691,137 @@ textarea {
 }
 
 .home-wallpaper::before {
-  inset: -20%;
+  inset: -16%;
   background:
-    radial-gradient(34% 42% at 22% 28%, rgb(255 255 255 / 0.38), transparent 72%),
-    radial-gradient(38% 44% at 76% 34%, rgb(255 255 255 / 0.32), transparent 74%),
-    radial-gradient(44% 50% at 52% 78%, rgb(255 255 255 / 0.2), transparent 76%);
-  filter: blur(34px);
+    radial-gradient(44% 48% at 18% 22%, rgb(255 255 255 / 0.3), transparent 72%),
+    radial-gradient(44% 50% at 80% 26%, rgb(255 255 255 / 0.24), transparent 74%),
+    radial-gradient(48% 56% at 52% 82%, rgb(255 255 255 / 0.16), transparent 76%);
+  filter: blur(30px);
   mix-blend-mode: screen;
-  opacity: 0.62;
-  animation: home-wallpaper-flow 18s ease-in-out infinite alternate;
+  opacity: calc(0.24 + var(--home-dyn-intensity) * 0.42);
+  animation: home-wallpaper-aura calc(24s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate;
 }
 
 .home-wallpaper::after {
   background:
     repeating-linear-gradient(0deg, rgb(255 255 255 / 0.018) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.016) 0 1px, transparent 1px 5px);
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.015) 0 1px, transparent 1px 5px);
   mix-blend-mode: soft-light;
-  opacity: 0.22;
-  animation: home-wallpaper-grain 1.3s steps(2) infinite;
+  opacity: var(--home-dyn-grain-opacity);
+  animation: home-wallpaper-grain calc(1.45s / var(--home-dyn-speed-factor)) steps(2) infinite;
 }
 
-.home-wallpaper-gradient-auroraCandy {
+.home-wallpaper-preset-gradientFlow {
   background:
-    radial-gradient(132% 112% at 8% -8%, rgb(255 238 204 / 0.58), rgb(255 238 204 / 0) 58%),
-    radial-gradient(128% 108% at 96% 106%, rgb(214 225 255 / 0.56), rgb(214 225 255 / 0) 58%),
-    radial-gradient(98% 82% at 52% 38%, rgb(255 208 228 / 0.34), rgb(255 208 228 / 0) 72%),
+    radial-gradient(132% 112% at 8% -8%, rgb(255 238 204 / 0.62), rgb(255 238 204 / 0) 58%),
+    radial-gradient(128% 108% at 96% 106%, rgb(214 225 255 / 0.62), rgb(214 225 255 / 0) 58%),
+    radial-gradient(98% 82% at 52% 38%, rgb(255 208 228 / 0.42), rgb(255 208 228 / 0) 72%),
     conic-gradient(
       from 32deg at 50% 48%,
-      rgb(255 222 200 / 0.72) 0deg,
-      rgb(255 198 220 / 0.74) 88deg,
-      rgb(198 220 255 / 0.72) 176deg,
-      rgb(197 239 221 / 0.7) 248deg,
-      rgb(255 224 190 / 0.72) 320deg,
-      rgb(255 222 200 / 0.72) 360deg
+      rgb(255 222 200 / 0.78) 0deg,
+      rgb(255 198 220 / 0.8) 88deg,
+      rgb(198 220 255 / 0.78) 176deg,
+      rgb(197 239 221 / 0.76) 248deg,
+      rgb(255 224 190 / 0.78) 320deg,
+      rgb(255 222 200 / 0.78) 360deg
     );
   background-size: 160% 160%, 160% 160%, 132% 132%, 190% 190%;
   background-position: 0% 0%, 100% 100%, 50% 38%, 50% 50%;
   animation:
-    home-wallpaper-pan 18s ease-in-out infinite alternate,
-    home-wallpaper-hue-soft 24s linear infinite;
+    home-wallpaper-pan calc(16s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
+    home-wallpaper-hue-strong calc(13s / var(--home-dyn-speed-factor)) linear infinite;
 }
 
-.home-wallpaper-gradient-bokehDream {
+.home-wallpaper-preset-snowNight {
   background:
-    radial-gradient(44% 40% at 18% 22%, rgb(255 213 232 / 0.6), transparent 70%),
-    radial-gradient(42% 36% at 82% 28%, rgb(186 231 255 / 0.56), transparent 72%),
-    radial-gradient(38% 34% at 30% 80%, rgb(255 240 188 / 0.5), transparent 74%),
-    radial-gradient(38% 34% at 76% 78%, rgb(198 255 232 / 0.46), transparent 76%),
+    radial-gradient(132% 114% at 12% 8%, rgb(122 163 255 / 0.26), transparent 64%),
+    radial-gradient(124% 106% at 86% 12%, rgb(159 223 255 / 0.22), transparent 66%),
+    radial-gradient(114% 92% at 58% 96%, rgb(145 162 255 / 0.22), transparent 70%),
+    linear-gradient(160deg, rgb(16 31 78 / 0.97), rgb(22 41 102 / 0.96) 42%, rgb(18 33 83 / 0.97) 76%, rgb(15 26 72 / 0.98));
+  background-size: 150% 150%, 144% 144%, 138% 138%, 186% 186%;
+  animation:
+    home-wallpaper-pan calc(23s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
+    home-wallpaper-hue-drift calc(28s / var(--home-dyn-speed-factor)) linear infinite;
+}
+
+.home-wallpaper-preset-bokehDream {
+  background:
+    radial-gradient(44% 40% at 18% 22%, rgb(255 213 232 / 0.66), transparent 70%),
+    radial-gradient(42% 36% at 82% 28%, rgb(186 231 255 / 0.6), transparent 72%),
+    radial-gradient(38% 34% at 30% 80%, rgb(255 240 188 / 0.58), transparent 74%),
+    radial-gradient(38% 34% at 76% 78%, rgb(198 255 232 / 0.5), transparent 76%),
     conic-gradient(
       from 52deg at 50% 50%,
-      rgb(255 189 215 / 0.78) 0deg,
-      rgb(255 208 163 / 0.76) 76deg,
-      rgb(170 212 255 / 0.78) 154deg,
-      rgb(175 255 217 / 0.74) 230deg,
-      rgb(231 203 255 / 0.76) 304deg,
-      rgb(255 189 215 / 0.78) 360deg
+      rgb(255 189 215 / 0.8) 0deg,
+      rgb(255 208 163 / 0.78) 76deg,
+      rgb(170 212 255 / 0.8) 154deg,
+      rgb(175 255 217 / 0.76) 230deg,
+      rgb(231 203 255 / 0.78) 304deg,
+      rgb(255 189 215 / 0.8) 360deg
     );
   background-size: 170% 170%, 170% 170%, 150% 150%, 150% 150%, 210% 210%;
   background-position: 12% 14%, 88% 16%, 24% 82%, 82% 80%, 50% 50%;
   animation:
-    home-wallpaper-pan 22s ease-in-out infinite alternate,
-    home-wallpaper-hue-strong 18s linear infinite;
+    home-wallpaper-pan calc(18s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
+    home-wallpaper-hue-strong calc(10.5s / var(--home-dyn-speed-factor)) linear infinite;
 }
 
-.home-wallpaper-gradient-neonTwilight {
+.home-wallpaper-preset-firefly {
   background:
-    radial-gradient(116% 102% at 12% 8%, rgb(255 116 224 / 0.46), transparent 62%),
-    radial-gradient(126% 108% at 92% 14%, rgb(74 164 255 / 0.5), transparent 64%),
-    radial-gradient(112% 104% at 56% 94%, rgb(122 255 226 / 0.34), transparent 62%),
-    linear-gradient(140deg, rgb(17 26 60 / 0.94), rgb(36 33 88 / 0.94) 38%, rgb(57 35 94 / 0.93) 68%, rgb(18 32 78 / 0.94));
-  background-size: 150% 150%, 160% 160%, 140% 140%, 180% 180%;
+    radial-gradient(132% 116% at 10% 8%, rgb(150 255 220 / 0.24), transparent 66%),
+    radial-gradient(120% 104% at 90% 20%, rgb(255 223 163 / 0.2), transparent 70%),
+    radial-gradient(110% 88% at 56% 94%, rgb(166 255 214 / 0.18), transparent 68%),
+    linear-gradient(164deg, rgb(16 38 52 / 0.98), rgb(20 55 58 / 0.96) 42%, rgb(24 45 40 / 0.97) 74%, rgb(14 32 34 / 0.98));
+  background-size: 152% 152%, 146% 146%, 140% 140%, 188% 188%;
   animation:
-    home-wallpaper-pan 20s ease-in-out infinite alternate,
-    home-wallpaper-hue-soft 30s linear infinite;
+    home-wallpaper-pan calc(20s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
+    home-wallpaper-hue-drift calc(24s / var(--home-dyn-speed-factor)) linear infinite;
 }
 
-.home-wallpaper-gradient-peachSky {
+.home-wallpaper-preset-meteorShower {
   background:
-    radial-gradient(132% 110% at 18% 6%, rgb(255 239 198 / 0.6), transparent 64%),
-    radial-gradient(122% 96% at 88% 22%, rgb(255 206 190 / 0.58), transparent 66%),
-    radial-gradient(112% 90% at 70% 96%, rgb(255 233 207 / 0.44), transparent 68%),
-    linear-gradient(165deg, rgb(255 232 214 / 0.94), rgb(255 215 208 / 0.94) 42%, rgb(249 219 199 / 0.94) 78%, rgb(242 224 206 / 0.95));
-  background-size: 150% 150%, 146% 146%, 138% 138%, 180% 180%;
-  animation:
-    home-wallpaper-pan 24s ease-in-out infinite alternate,
-    home-wallpaper-hue-soft 38s linear infinite;
-}
-
-.home-wallpaper-gradient-mintLilac {
-  background:
-    radial-gradient(128% 110% at 14% 14%, rgb(194 255 236 / 0.52), transparent 64%),
-    radial-gradient(122% 106% at 86% 12%, rgb(212 228 255 / 0.52), transparent 66%),
-    radial-gradient(112% 98% at 62% 86%, rgb(238 212 255 / 0.4), transparent 68%),
-    linear-gradient(145deg, rgb(224 250 242 / 0.95), rgb(231 239 255 / 0.95) 44%, rgb(240 230 255 / 0.94) 76%, rgb(220 248 240 / 0.95));
-  background-size: 152% 152%, 146% 146%, 142% 142%, 190% 190%;
-  animation:
-    home-wallpaper-pan 21s ease-in-out infinite alternate,
-    home-wallpaper-hue-soft 34s linear infinite;
-}
-
-.home-wallpaper-gradient-nightBlue {
-  background:
-    radial-gradient(124% 102% at 18% 10%, rgb(131 170 255 / 0.28), transparent 62%),
-    radial-gradient(116% 96% at 84% 20%, rgb(132 212 255 / 0.22), transparent 64%),
-    radial-gradient(112% 88% at 58% 94%, rgb(124 148 255 / 0.24), transparent 68%),
+    radial-gradient(124% 102% at 18% 10%, rgb(131 170 255 / 0.32), transparent 62%),
+    radial-gradient(116% 96% at 84% 20%, rgb(132 212 255 / 0.24), transparent 64%),
+    radial-gradient(112% 88% at 58% 94%, rgb(124 148 255 / 0.26), transparent 68%),
     linear-gradient(150deg, rgb(15 24 54 / 0.96), rgb(24 36 74 / 0.96) 42%, rgb(20 30 65 / 0.97) 76%, rgb(16 22 53 / 0.98));
   background-size: 150% 150%, 144% 144%, 138% 138%, 186% 186%;
   animation:
-    home-wallpaper-pan 26s ease-in-out infinite alternate,
-    home-wallpaper-hue-soft 42s linear infinite;
+    home-wallpaper-pan calc(17s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
+    home-wallpaper-hue-drift calc(15s / var(--home-dyn-speed-factor)) linear infinite;
 }
 
-.home-wallpaper-effect-none .home-wallpaper-orb,
-.home-wallpaper-effect-none .home-wallpaper-snow-layer,
-.home-wallpaper-effect-none .home-wallpaper-firefly-layer,
-.home-wallpaper-effect-none .home-wallpaper-stardust-layer {
-  display: none;
-}
-
-.home-wallpaper-orb {
-  position: absolute;
-  border-radius: 999px;
-  mix-blend-mode: screen;
-  filter: blur(6px);
-  opacity: 0.62;
-  will-change: transform;
-}
-
-.home-wallpaper-orb-a {
-  width: 38vw;
-  height: 38vw;
-  min-width: 160px;
-  min-height: 160px;
-  left: -8%;
-  top: 8%;
-  background: radial-gradient(circle at 35% 35%, rgb(255 255 255 / 0.72), rgb(255 188 214 / 0.18) 56%, transparent 72%);
-  animation: home-wallpaper-orb-a 12s ease-in-out infinite;
-}
-
-.home-wallpaper-orb-b {
-  width: 34vw;
-  height: 34vw;
-  min-width: 150px;
-  min-height: 150px;
-  right: -10%;
-  top: 26%;
-  background: radial-gradient(circle at 42% 35%, rgb(255 255 255 / 0.66), rgb(171 201 255 / 0.2) 58%, transparent 73%);
-  animation: home-wallpaper-orb-b 14s ease-in-out infinite;
-}
-
-.home-wallpaper-orb-c {
-  width: 42vw;
-  height: 42vw;
-  min-width: 180px;
-  min-height: 180px;
-  left: 22%;
-  bottom: -12%;
-  background: radial-gradient(circle at 50% 28%, rgb(255 255 255 / 0.64), rgb(255 216 161 / 0.18) 56%, transparent 72%);
-  animation: home-wallpaper-orb-c 16s ease-in-out infinite;
+.home-wallpaper-preset-skyLantern {
+  background:
+    radial-gradient(128% 110% at 16% 12%, rgb(255 212 170 / 0.4), transparent 66%),
+    radial-gradient(118% 102% at 84% 18%, rgb(255 178 142 / 0.3), transparent 68%),
+    radial-gradient(112% 92% at 56% 90%, rgb(255 226 170 / 0.22), transparent 70%),
+    linear-gradient(160deg, rgb(80 43 42 / 0.97), rgb(117 62 58 / 0.96) 44%, rgb(145 87 72 / 0.95) 76%, rgb(88 48 46 / 0.98));
+  background-size: 148% 148%, 142% 142%, 136% 136%, 182% 182%;
+  animation:
+    home-wallpaper-pan calc(22s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
+    home-wallpaper-hue-drift calc(26s / var(--home-dyn-speed-factor)) linear infinite;
 }
 
 .home-wallpaper-snow-layer,
 .home-wallpaper-firefly-layer,
-.home-wallpaper-stardust-layer {
+.home-wallpaper-stardust-layer,
+.home-wallpaper-bokeh-layer,
+.home-wallpaper-lantern-layer {
   position: absolute;
   inset: 0;
 }
 
 .home-wallpaper-snow-particle {
   position: absolute;
-  top: -16%;
+  top: var(--y, -16%);
   left: var(--x, 50%);
   width: var(--size, 3px);
   height: var(--size, 3px);
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.9);
-  box-shadow: 0 0 8px rgb(255 255 255 / 0.42);
-  animation: home-wallpaper-snow-fall var(--duration, 10s) linear infinite;
+  background: rgb(255 255 255 / 0.96);
+  opacity: calc(var(--alpha, 0.75) * var(--home-dyn-particle-opacity));
+  box-shadow: 0 0 8px rgb(255 255 255 / 0.52);
+  animation: home-wallpaper-snow-fall calc(var(--duration, 10s) / var(--home-dyn-speed-factor)) linear infinite;
   animation-delay: var(--delay, 0s);
 }
 
@@ -874,13 +832,14 @@ textarea {
   width: var(--size, 4px);
   height: var(--size, 4px);
   border-radius: 999px;
-  background: rgb(255 246 180 / 0.95);
+  background: rgb(255 246 180 / 0.96);
+  opacity: calc(var(--alpha, 0.8) * var(--home-dyn-particle-opacity));
   box-shadow:
-    0 0 10px rgb(255 235 146 / 0.8),
-    0 0 24px rgb(255 223 116 / 0.34);
+    0 0 10px rgb(255 235 146 / 0.85),
+    0 0 24px rgb(255 223 116 / 0.42);
   animation:
-    home-wallpaper-firefly-float var(--duration, 4.8s) ease-in-out infinite,
-    home-wallpaper-firefly-flicker calc(var(--duration, 4.8s) * 0.72) ease-in-out infinite;
+    home-wallpaper-firefly-float calc(var(--duration, 4.8s) / var(--home-dyn-speed-factor)) ease-in-out infinite,
+    home-wallpaper-firefly-flicker calc((var(--duration, 4.8s) * 0.72) / var(--home-dyn-speed-factor)) ease-in-out infinite;
   animation-delay: var(--delay, 0s), var(--delay, 0s);
 }
 
@@ -891,19 +850,20 @@ textarea {
   width: var(--size, 2px);
   height: var(--size, 2px);
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.9);
-  box-shadow: 0 0 8px rgb(255 255 255 / 0.55);
-  animation: home-wallpaper-stardust-twinkle var(--duration, 3s) ease-in-out infinite;
+  background: rgb(255 255 255 / 0.95);
+  opacity: calc(var(--alpha, 0.7) * var(--home-dyn-particle-opacity));
+  box-shadow: 0 0 8px rgb(255 255 255 / 0.58);
+  animation: home-wallpaper-stardust-twinkle calc(var(--duration, 3s) / var(--home-dyn-speed-factor)) ease-in-out infinite;
   animation-delay: var(--delay, 0s);
 }
 
 .home-wallpaper-shooting {
   position: absolute;
-  width: 64px;
+  width: 68px;
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0));
-  box-shadow: 0 0 12px rgb(255 255 255 / 0.5);
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0));
+  box-shadow: 0 0 14px rgb(255 255 255 / 0.58);
   opacity: 0;
   transform-origin: left center;
   --shoot-angle: 155deg;
@@ -917,7 +877,7 @@ textarea {
   --shoot-angle: 155deg;
   --shoot-x: -170px;
   --shoot-y: 120px;
-  animation: home-wallpaper-shooting 8.2s linear infinite;
+  animation: home-wallpaper-shooting calc(8.2s / var(--home-dyn-speed-factor)) linear infinite;
 }
 
 .home-wallpaper-shooting-b {
@@ -926,7 +886,7 @@ textarea {
   --shoot-angle: 160deg;
   --shoot-x: -150px;
   --shoot-y: 108px;
-  animation: home-wallpaper-shooting 9.4s linear infinite 2s;
+  animation: home-wallpaper-shooting calc(9.4s / var(--home-dyn-speed-factor)) linear infinite 2s;
 }
 
 .home-wallpaper-shooting-c {
@@ -935,21 +895,84 @@ textarea {
   --shoot-angle: 150deg;
   --shoot-x: -182px;
   --shoot-y: 128px;
-  animation: home-wallpaper-shooting 10.4s linear infinite 4.2s;
+  animation: home-wallpaper-shooting calc(10.4s / var(--home-dyn-speed-factor)) linear infinite 4.2s;
 }
 
-@keyframes home-wallpaper-flow {
+.home-wallpaper-bokeh {
+  position: absolute;
+  left: var(--x, 50%);
+  top: var(--y, 50%);
+  width: var(--size, 120px);
+  height: var(--size, 120px);
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 32% 30%,
+    rgb(255 255 255 / 0.9),
+    hsl(var(--hue, 200deg) 90% 74% / 0.46) 58%,
+    transparent 76%
+  );
+  filter: blur(var(--blur, 3px));
+  mix-blend-mode: screen;
+  opacity: calc(var(--alpha, 0.34) * var(--home-dyn-particle-opacity));
+  animation: home-wallpaper-bokeh-float calc(var(--duration, 9s) / var(--home-dyn-speed-factor)) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.home-wallpaper-lantern {
+  position: absolute;
+  left: var(--x, 50%);
+  bottom: -16%;
+  width: var(--size, 18px);
+  height: calc(var(--size, 18px) * 1.45);
+  border-radius: 38% 38% 42% 42%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgb(255 224 168 / 0.98), rgb(255 174 112 / 0.94));
+  border: 1px solid rgb(255 233 195 / 0.62);
+  opacity: calc(0.72 * var(--home-dyn-particle-opacity));
+  box-shadow:
+    0 0 16px rgb(255 181 107 / 0.48),
+    0 2px 8px rgb(255 146 86 / 0.26);
+  animation: home-wallpaper-lantern-rise calc(var(--duration, 10s) / var(--home-dyn-speed-factor)) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.home-wallpaper-lantern::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -8%;
+  width: 46%;
+  height: 16%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgb(162 86 58 / 0.88);
+}
+
+.home-wallpaper-lantern::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  width: 22%;
+  height: 22%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgb(255 245 188 / 0.95);
+  box-shadow: 0 0 9px rgb(255 235 156 / 0.7);
+}
+
+@keyframes home-wallpaper-aura {
   0% {
     transform: translate3d(-1.5%, -1%, 0) rotate(-2deg) scale(1);
-    opacity: 0.66;
+    opacity: calc(0.26 + var(--home-dyn-intensity) * 0.34);
   }
   50% {
-    transform: translate3d(2%, 1%, 0) rotate(1.5deg) scale(1.04);
-    opacity: 0.78;
+    transform: translate3d(2%, 1.4%, 0) rotate(1.4deg) scale(1.04);
+    opacity: calc(0.34 + var(--home-dyn-intensity) * 0.38);
   }
   100% {
-    transform: translate3d(-1%, 2%, 0) rotate(-1deg) scale(1.01);
-    opacity: 0.64;
+    transform: translate3d(-1%, 2.4%, 0) rotate(-0.9deg) scale(1.01);
+    opacity: calc(0.24 + var(--home-dyn-intensity) * 0.3);
   }
 }
 
@@ -965,33 +988,33 @@ textarea {
   }
 }
 
-@keyframes home-wallpaper-hue-soft {
+@keyframes home-wallpaper-hue-drift {
   0% {
-    filter: saturate(1.04) hue-rotate(0deg) brightness(1);
+    filter: saturate(calc(1 + var(--home-dyn-intensity) * 0.12)) hue-rotate(0deg) brightness(1);
   }
   50% {
-    filter: saturate(1.16) hue-rotate(18deg) brightness(1.01);
+    filter: saturate(calc(1 + var(--home-dyn-intensity) * 0.16)) hue-rotate(22deg) brightness(1.02);
   }
   100% {
-    filter: saturate(1.04) hue-rotate(0deg) brightness(1);
+    filter: saturate(calc(1 + var(--home-dyn-intensity) * 0.12)) hue-rotate(0deg) brightness(1);
   }
 }
 
 @keyframes home-wallpaper-hue-strong {
   0% {
-    filter: saturate(1.1) hue-rotate(0deg) brightness(1);
+    filter: saturate(calc(1.04 + var(--home-dyn-intensity) * 0.18)) hue-rotate(0deg) brightness(1);
   }
   25% {
-    filter: saturate(1.2) hue-rotate(26deg) brightness(1.02);
+    filter: saturate(calc(1.08 + var(--home-dyn-intensity) * 0.24)) hue-rotate(34deg) brightness(1.02);
   }
   50% {
-    filter: saturate(1.28) hue-rotate(48deg) brightness(1.03);
+    filter: saturate(calc(1.12 + var(--home-dyn-intensity) * 0.3)) hue-rotate(66deg) brightness(1.03);
   }
   75% {
-    filter: saturate(1.2) hue-rotate(22deg) brightness(1.01);
+    filter: saturate(calc(1.08 + var(--home-dyn-intensity) * 0.24)) hue-rotate(28deg) brightness(1.01);
   }
   100% {
-    filter: saturate(1.1) hue-rotate(0deg) brightness(1);
+    filter: saturate(calc(1.04 + var(--home-dyn-intensity) * 0.18)) hue-rotate(0deg) brightness(1);
   }
 }
 
@@ -1004,36 +1027,6 @@ textarea {
   }
   100% {
     transform: translate3d(1px, -1px, 0);
-  }
-}
-
-@keyframes home-wallpaper-orb-a {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(22px, 18px, 0);
-  }
-}
-
-@keyframes home-wallpaper-orb-b {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(-24px, 22px, 0);
-  }
-}
-
-@keyframes home-wallpaper-orb-c {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(18px, -26px, 0);
   }
 }
 
@@ -1057,7 +1050,7 @@ textarea {
     transform: translate3d(0, 0, 0);
   }
   50% {
-    transform: translate3d(8px, -10px, 0);
+    transform: translate3d(var(--drift, 8px), -10px, 0);
   }
 }
 
@@ -1078,11 +1071,11 @@ textarea {
   0%,
   100% {
     opacity: 0.2;
-    transform: scale(0.84);
+    transform: translate3d(0, 0, 0) scale(0.84);
   }
   50% {
     opacity: 0.96;
-    transform: scale(1.16);
+    transform: translate3d(var(--drift, 2px), -2px, 0) scale(1.16);
   }
 }
 
@@ -1104,20 +1097,43 @@ textarea {
   }
 }
 
+@keyframes home-wallpaper-bokeh-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(var(--drift-x, 14px), var(--drift-y, -10px), 0) scale(1.05);
+  }
+}
+
+@keyframes home-wallpaper-lantern-rise {
+  0% {
+    transform: translate3d(-50%, 22vh, 0);
+    opacity: 0;
+  }
+  8% {
+    opacity: calc(0.56 * var(--home-dyn-particle-opacity));
+  }
+  82% {
+    opacity: calc(0.78 * var(--home-dyn-particle-opacity));
+  }
+  100% {
+    transform: translate3d(calc(-50% + var(--drift, 0px)), -112vh, 0);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .home-wallpaper-gradient-auroraCandy,
-  .home-wallpaper-gradient-bokehDream,
-  .home-wallpaper-gradient-neonTwilight,
-  .home-wallpaper-gradient-peachSky,
-  .home-wallpaper-gradient-mintLilac,
-  .home-wallpaper-gradient-nightBlue,
+  .home-wallpaper,
   .home-wallpaper::before,
   .home-wallpaper::after,
-  .home-wallpaper-orb,
   .home-wallpaper-snow-particle,
   .home-wallpaper-firefly,
   .home-wallpaper-stardust,
-  .home-wallpaper-shooting {
+  .home-wallpaper-shooting,
+  .home-wallpaper-bokeh,
+  .home-wallpaper-lantern {
     animation: none !important;
   }
 }
