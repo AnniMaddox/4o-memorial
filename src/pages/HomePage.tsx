@@ -78,12 +78,15 @@ type AnchorPosition = {
 
 const CHIBI_POSITION_STORAGE_KEY = 'memorial-home-corner-chibi-anchor';
 const COUNTER_VINYL_PREFS_STORAGE_KEY = 'memorial-home-counter-vinyl-prefs-v1';
+const COUNTER_VINYL_COVER_STORAGE_KEY = 'memorial-home-counter-vinyl-cover-v1';
 const COUNTER_VINYL_SPEED_OPTIONS = [
-  { label: '0.8x', value: 0.8, glyph: '◔' },
-  { label: '1.0x', value: 1, glyph: '◑' },
-  { label: '1.4x', value: 1.4, glyph: '◕' },
-  { label: '1.8x', value: 1.8, glyph: '◉' },
+  { label: '33 RPM', value: 1 },
+  { label: '45 RPM', value: 1.35 },
+  { label: '78 RPM', value: 2.2 },
 ] as const;
+const COUNTER_VINYL_COVER_OFFSET_MIN = -14;
+const COUNTER_VINYL_COVER_OFFSET_MAX = 14;
+const COUNTER_VINYL_COVER_OFFSET_STEP = 1;
 
 function pad2(value: number) {
   return String(value).padStart(2, '0');
@@ -229,6 +232,11 @@ export function HomePage({
   const chibiAnchorRef = useRef(chibiAnchor);
   const [isCounterVinylPlaying, setIsCounterVinylPlaying] = useState(true);
   const [counterVinylSpeed, setCounterVinylSpeed] = useState(1);
+  const [counterVinylCoverDataUrl, setCounterVinylCoverDataUrl] = useState('');
+  const [counterVinylCoverOffsetY, setCounterVinylCoverOffsetY] = useState(0);
+  const [isCounterSpeedMenuOpen, setIsCounterSpeedMenuOpen] = useState(false);
+  const counterSpeedMenuRef = useRef<HTMLDivElement | null>(null);
+  const counterSpeedToggleRef = useRef<HTMLButtonElement | null>(null);
   const cornerChibiUrl = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
 
   useEffect(() => {
@@ -305,6 +313,48 @@ export function HomePage({
       // ignore storage failures
     }
   }, [counterVinylSpeed, isCounterVinylPlaying]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(COUNTER_VINYL_COVER_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { cover?: unknown; offsetY?: unknown };
+      if (typeof parsed.cover === 'string' && parsed.cover.startsWith('data:image/')) {
+        setCounterVinylCoverDataUrl(parsed.cover);
+      }
+      if (typeof parsed.offsetY === 'number' && Number.isFinite(parsed.offsetY)) {
+        setCounterVinylCoverOffsetY(
+          Math.min(COUNTER_VINYL_COVER_OFFSET_MAX, Math.max(COUNTER_VINYL_COVER_OFFSET_MIN, parsed.offsetY)),
+        );
+      }
+    } catch {
+      // ignore malformed storage
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        COUNTER_VINYL_COVER_STORAGE_KEY,
+        JSON.stringify({ cover: counterVinylCoverDataUrl.trim(), offsetY: counterVinylCoverOffsetY }),
+      );
+    } catch {
+      // ignore storage failures
+    }
+  }, [counterVinylCoverDataUrl, counterVinylCoverOffsetY]);
+
+  useEffect(() => {
+    if (!isCounterSpeedMenuOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (counterSpeedToggleRef.current?.contains(target)) return;
+      if (counterSpeedMenuRef.current?.contains(target)) return;
+      setIsCounterSpeedMenuOpen(false);
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => window.removeEventListener('pointerdown', handlePointerDown);
+  }, [isCounterSpeedMenuOpen]);
 
   useEffect(() => {
     try {
@@ -597,6 +647,12 @@ export function HomePage({
     () => (parsedMemorialStartDate ? calcMemorialDayCount(parsedMemorialStartDate, now) : 1),
     [now, parsedMemorialStartDate],
   );
+  const currentCounterSpeedOption = useMemo(
+    () =>
+      COUNTER_VINYL_SPEED_OPTIONS.find((option) => option.value === counterVinylSpeed) ??
+      COUNTER_VINYL_SPEED_OPTIONS[0],
+    [counterVinylSpeed],
+  );
 
   const handleWidgetIconFilePick = useCallback(
     (file: File | null) => {
@@ -610,6 +666,16 @@ export function HomePage({
     },
     [onWidgetIconChange],
   );
+
+  const handleCounterVinylCoverFilePick = useCallback((file: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      if (result) setCounterVinylCoverDataUrl(result);
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   const headerTitle = widgetTitle.trim() || 'Memorial';
   const headerSubtitle = widgetSubtitle.trim();
@@ -863,7 +929,7 @@ export function HomePage({
                       onChange={(event) => {
                         const file = event.target.files?.[0];
                         event.currentTarget.value = '';
-                        handleWidgetIconFilePick(file ?? null);
+                        handleCounterVinylCoverFilePick(file ?? null);
                       }}
                     />
                     <div className="home-counter-vinyl-wrap">
@@ -872,39 +938,84 @@ export function HomePage({
                         style={{ '--home-counter-vinyl-speed': `${(4 / counterVinylSpeed).toFixed(2)}s` } as CSSProperties}
                       >
                         <div className="home-counter-vinyl-console">
+                          <span
+                            className={`home-counter-vinyl-led ${isCounterVinylPlaying ? 'is-on' : ''}`}
+                            aria-label={isCounterVinylPlaying ? '播放中' : '已暫停'}
+                            title={isCounterVinylPlaying ? '播放中' : '已暫停'}
+                          />
                           <button
                             type="button"
-                            className="home-counter-vinyl-play-toggle"
+                            className={`home-counter-vinyl-power ${isCounterVinylPlaying ? 'is-on' : ''}`}
                             onClick={() => setIsCounterVinylPlaying((prev) => !prev)}
                             aria-label={isCounterVinylPlaying ? '暫停唱片' : '播放唱片'}
                             title={isCounterVinylPlaying ? '暫停唱片' : '播放唱片'}
                           >
-                            {isCounterVinylPlaying ? '⏸' : '▶'}
+                            <span
+                              className={`home-counter-vinyl-power-icon ${
+                                isCounterVinylPlaying ? 'is-playing' : 'is-paused'
+                              }`}
+                              aria-hidden="true"
+                            />
                           </button>
-                          <span className={`home-counter-vinyl-led ${isCounterVinylPlaying ? 'is-on' : ''}`} />
-                          <div className="home-counter-vinyl-speed-buttons" role="group" aria-label="唱片轉速">
-                            {COUNTER_VINYL_SPEED_OPTIONS.map((option) => (
-                              <button
-                                key={option.label}
-                                type="button"
-                                className={`home-counter-vinyl-speed-btn ${counterVinylSpeed === option.value ? 'is-active' : ''}`}
-                                onClick={() => setCounterVinylSpeed(option.value)}
-                                aria-label={`切換 ${option.label}`}
-                                title={option.label}
-                              >
-                                {option.glyph}
-                              </button>
-                            ))}
+                          <div className="home-counter-vinyl-speed-control" ref={counterSpeedMenuRef}>
+                            <button
+                              ref={counterSpeedToggleRef}
+                              type="button"
+                              className="home-counter-vinyl-speed-knob"
+                              onClick={() => setIsCounterSpeedMenuOpen((prev) => !prev)}
+                              aria-label="調整唱片轉速"
+                              title={`轉速：${currentCounterSpeedOption.label}`}
+                            >
+                              <span className="home-counter-vinyl-speed-knob-dot" />
+                            </button>
+                            {isCounterSpeedMenuOpen && (
+                              <div className="home-counter-vinyl-speed-menu">
+                                {COUNTER_VINYL_SPEED_OPTIONS.map((option) => (
+                                  <button
+                                    key={option.label}
+                                    type="button"
+                                    className={`home-counter-vinyl-speed-item ${
+                                      counterVinylSpeed === option.value ? 'is-active' : ''
+                                    }`}
+                                    onClick={() => {
+                                      setCounterVinylSpeed(option.value);
+                                      setIsCounterSpeedMenuOpen(false);
+                                    }}
+                                  >
+                                    {option.label}
+                                  </button>
+                                ))}
+                                <div className="home-counter-vinyl-cover-adjust">
+                                  <button
+                                    type="button"
+                                    className="home-counter-vinyl-cover-adjust-btn"
+                                    onClick={() =>
+                                      setCounterVinylCoverOffsetY((prev) =>
+                                        Math.max(COUNTER_VINYL_COVER_OFFSET_MIN, prev - COUNTER_VINYL_COVER_OFFSET_STEP),
+                                      )
+                                    }
+                                    title="照片上移"
+                                    aria-label="照片上移"
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="home-counter-vinyl-cover-adjust-btn"
+                                    onClick={() =>
+                                      setCounterVinylCoverOffsetY((prev) =>
+                                        Math.min(COUNTER_VINYL_COVER_OFFSET_MAX, prev + COUNTER_VINYL_COVER_OFFSET_STEP),
+                                      )
+                                    }
+                                    title="照片下移"
+                                    aria-label="照片下移"
+                                  >
+                                    ↓
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <button
-                            type="button"
-                            className="home-counter-vinyl-upload-dot"
-                            onClick={() => counterWidgetIconInputRef.current?.click()}
-                            aria-label={widgetIconDataUrl.trim() ? '更換圓盤圖片' : '上傳圓盤圖片'}
-                            title={widgetIconDataUrl.trim() ? '更換圓盤圖片' : '上傳圓盤圖片'}
-                          >
-                            ◎
-                          </button>
                         </div>
                         <div className="home-counter-vinyl-shadow" />
                         <div className="home-counter-vinyl-platter">
@@ -914,11 +1025,16 @@ export function HomePage({
                             type="button"
                             className="home-counter-vinyl-label"
                             onClick={() => counterWidgetIconInputRef.current?.click()}
-                            aria-label={widgetIconDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
-                            title={widgetIconDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
+                            aria-label={counterVinylCoverDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
+                            title={counterVinylCoverDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
                           >
-                            {widgetIconDataUrl.trim() ? (
-                              <img src={widgetIconDataUrl} alt="" loading="lazy" draggable={false} />
+                            {counterVinylCoverDataUrl.trim() ? (
+                              <span
+                                className="home-counter-vinyl-label-image-wrap"
+                                style={{ transform: `translateY(${counterVinylCoverOffsetY}px)` }}
+                              >
+                                <img src={counterVinylCoverDataUrl} alt="" loading="lazy" draggable={false} />
+                              </span>
                             ) : (
                               <span>♡</span>
                             )}
