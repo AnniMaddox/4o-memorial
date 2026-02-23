@@ -63,6 +63,7 @@ type PanelKey =
   | 'bigBackup'
   | 'manuals'
   | 'appearance'
+  | 'wallpaper'
   | 'fontCenter'
   | 'home'
   | 'labels'
@@ -76,7 +77,7 @@ type PanelKey =
   | 'chatLogs'
   | 'maintenance';
 
-type AppearanceGroupKey = 'colorScale' | 'background' | 'calendar' | 'chibi' | 'preset';
+type AppearanceGroupKey = 'colorScale' | 'calendar' | 'chibi' | 'preset';
 type FontCenterGroupKey = 'preset' | 'scope' | 'usage' | 'size';
 type FontSlotSettingKey = 'customFontUrlSlots' | 'letterFontUrlSlots' | 'diaryFontUrlSlots' | 'soulmateFontUrlSlots';
 type FontSlotNameSettingKey =
@@ -126,12 +127,25 @@ const HOME_DYNAMIC_WALLPAPER_OPTIONS: Array<{
   label: string;
   hint: string;
 }> = [
-  { value: 'gradientFlow', label: '漸層流光', hint: '像 Untitled-3 那種強烈變色流動' },
-  { value: 'snowNight', label: '雪夜', hint: '冷藍夜空 + 層次雪花' },
+  { value: 'gradientFlow', label: '糖霧幻彩', hint: 'R1 彩糖散景：粉黃青藍同場慢慢流動' },
+  { value: 'snowNight', label: '雪夜', hint: '冷藍晚霞 + 自然飄雪' },
   { value: 'bokehDream', label: '夢幻散景', hint: '柔焦光斑 + 明顯色相變化' },
-  { value: 'firefly', label: '螢火蟲', hint: '森林夜色 + 飄動螢火' },
-  { value: 'meteorShower', label: '星空流星', hint: '深空星塵 + 流星雨' },
-  { value: 'skyLantern', label: '暖光天燈', hint: '暖色夜空 + 緩慢上升天燈' },
+  { value: 'firefly', label: '奶霧薄荷', hint: 'R2 奶霧薄荷：淡綠奶白薰紫，柔和換色' },
+  { value: 'meteorShower', label: '夜藍閃變', hint: '青綠粉暮色 + 一瞬偏藍變暗（純背景）' },
+  { value: 'skyLantern', label: '夢幻甜彩', hint: '像晚霞一樣一寸寸自然換色' },
+  { value: 'coolTwilight', label: '好酷流焰', hint: 'Untitled-3 原版紅藍金純變色（無圈圈）' },
+  { value: 'prismDepth', label: '藍紫深境', hint: 'R3 藍紫深度：藍紫青層次更深、流動更有空間感' },
+  { value: 'auroraDance', label: 'Anni專屬：極光之舞', hint: '照抄：#00cdac → #02aab0 → #00cdac → #8EE4AF，15s 緩慢循環' },
+];
+const HOME_DYNAMIC_EFFECT_OPTIONS: Array<{
+  value: AppSettings['homeWallpaperEffectPreset'];
+  label: string;
+  hint: string;
+}> = [
+  { value: 'none', label: '無特效', hint: '只留背景，先專心看換色節奏' },
+  { value: 'orbs', label: '光暈圓斑', hint: '柔焦漂浮光斑，存在感中等' },
+  { value: 'snow', label: '雪花', hint: '前後景層次飄雪，立體感最強' },
+  { value: 'stardust', label: '星塵流星', hint: '細亮點 + 流星掠過，動感較強' },
 ];
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
@@ -353,6 +367,7 @@ type AppearancePresetPayload = {
     backgroundGradientStart: string;
     backgroundGradientEnd: string;
     homeDynamicWallpaperPreset: AppSettings['homeDynamicWallpaperPreset'];
+    homeDynamicEffectsEnabled: boolean;
     homeDynamicIntensity: number;
     homeDynamicSpeed: number;
     homeDynamicParticleAmount: number;
@@ -497,6 +512,8 @@ export function SettingsPage({
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [fontFileUrlDraft, setFontFileUrlDraft] = useState(settings.customFontUrlSlots[0] ?? settings.customFontFileUrl);
   const [backgroundImageUrlDraft, setBackgroundImageUrlDraft] = useState(settings.backgroundImageUrl);
+  const [homeDynamicWallpaperDraft, setHomeDynamicWallpaperDraft] = useState(settings.homeDynamicWallpaperPreset);
+  const [homeDynamicEffectDraft, setHomeDynamicEffectDraft] = useState(settings.homeWallpaperEffectPreset);
   const [chatBackgroundImageUrlDraft, setChatBackgroundImageUrlDraft] = useState(settings.chatBackgroundImageUrl);
   const [tabIconDrafts, setTabIconDrafts] = useState<TabIconUrls>(settings.tabIconUrls);
   const [labelDrafts, setLabelDrafts] = useState<AppLabels>(settings.appLabels);
@@ -544,9 +561,37 @@ export function SettingsPage({
     diaryFontUrlSlots: settings.diaryFontUrlSlotNames[0] ?? '',
     soulmateFontUrlSlots: settings.soulmateFontUrlSlotNames[0] ?? '',
   });
+  const activeHomeDynamicOption = useMemo(
+    () =>
+      HOME_DYNAMIC_WALLPAPER_OPTIONS.find((option) => option.value === settings.homeDynamicWallpaperPreset) ??
+      HOME_DYNAMIC_WALLPAPER_OPTIONS[0],
+    [settings.homeDynamicWallpaperPreset],
+  );
+  const selectedHomeDynamicOption = useMemo(
+    () =>
+      HOME_DYNAMIC_WALLPAPER_OPTIONS.find((option) => option.value === homeDynamicWallpaperDraft) ??
+      HOME_DYNAMIC_WALLPAPER_OPTIONS[0],
+    [homeDynamicWallpaperDraft],
+  );
+  const activeHomeDynamicEffectOption = useMemo(
+    () =>
+      HOME_DYNAMIC_EFFECT_OPTIONS.find((option) => option.value === settings.homeWallpaperEffectPreset) ??
+      HOME_DYNAMIC_EFFECT_OPTIONS[0],
+    [settings.homeWallpaperEffectPreset],
+  );
+  const selectedHomeDynamicEffectOption = useMemo(
+    () =>
+      HOME_DYNAMIC_EFFECT_OPTIONS.find((option) => option.value === homeDynamicEffectDraft) ??
+      HOME_DYNAMIC_EFFECT_OPTIONS[0],
+    [homeDynamicEffectDraft],
+  );
+  const isHomeDynamicWallpaperDirty = homeDynamicWallpaperDraft !== settings.homeDynamicWallpaperPreset;
+  const isHomeDynamicEffectDirty = homeDynamicEffectDraft !== settings.homeWallpaperEffectPreset;
 
   useEffect(() => {
     setBackgroundImageUrlDraft(settings.backgroundImageUrl);
+    setHomeDynamicWallpaperDraft(settings.homeDynamicWallpaperPreset);
+    setHomeDynamicEffectDraft(settings.homeWallpaperEffectPreset);
     setChatBackgroundImageUrlDraft(settings.chatBackgroundImageUrl);
     setTabIconDrafts(settings.tabIconUrls);
     setLabelDrafts(settings.appLabels);
@@ -559,6 +604,8 @@ export function SettingsPage({
     setMemorialStartDateDraft(settings.memorialStartDate);
   }, [
     settings.backgroundImageUrl,
+    settings.homeDynamicWallpaperPreset,
+    settings.homeWallpaperEffectPreset,
     settings.chatBackgroundImageUrl,
     settings.tabIconUrls,
     settings.appLabels,
@@ -1026,6 +1073,7 @@ export function SettingsPage({
         backgroundGradientStart: settings.backgroundGradientStart,
         backgroundGradientEnd: settings.backgroundGradientEnd,
         homeDynamicWallpaperPreset: settings.homeDynamicWallpaperPreset,
+        homeDynamicEffectsEnabled: settings.homeDynamicEffectsEnabled,
         homeDynamicIntensity: settings.homeDynamicIntensity,
         homeDynamicSpeed: settings.homeDynamicSpeed,
         homeDynamicParticleAmount: settings.homeDynamicParticleAmount,
@@ -1226,9 +1274,15 @@ export function SettingsPage({
         source.homeDynamicWallpaperPreset === 'bokehDream' ||
         source.homeDynamicWallpaperPreset === 'firefly' ||
         source.homeDynamicWallpaperPreset === 'meteorShower' ||
-        source.homeDynamicWallpaperPreset === 'skyLantern'
+        source.homeDynamicWallpaperPreset === 'skyLantern' ||
+        source.homeDynamicWallpaperPreset === 'coolTwilight' ||
+        source.homeDynamicWallpaperPreset === 'auroraDance' ||
+        source.homeDynamicWallpaperPreset === 'prismDepth'
       ) {
         next.homeDynamicWallpaperPreset = source.homeDynamicWallpaperPreset;
+      }
+      if (typeof source.homeDynamicEffectsEnabled === 'boolean') {
+        next.homeDynamicEffectsEnabled = source.homeDynamicEffectsEnabled;
       }
       if (typeof source.homeDynamicIntensity === 'number' && Number.isFinite(source.homeDynamicIntensity)) {
         next.homeDynamicIntensity = source.homeDynamicIntensity;
@@ -1255,7 +1309,6 @@ export function SettingsPage({
       if (
         source.homeWallpaperEffectPreset === 'orbs' ||
         source.homeWallpaperEffectPreset === 'snow' ||
-        source.homeWallpaperEffectPreset === 'firefly' ||
         source.homeWallpaperEffectPreset === 'stardust' ||
         source.homeWallpaperEffectPreset === 'none'
       ) {
@@ -1754,7 +1807,7 @@ export function SettingsPage({
         <SettingPanel
           icon="🎨"
           title="外觀"
-          subtitle="主題色、背景與日曆外觀"
+          subtitle="主題色、字體比例與日曆外觀"
           isOpen={openPanel === 'appearance'}
           onToggle={() => togglePanel('appearance')}
         >
@@ -1817,207 +1870,6 @@ export function SettingsPage({
                   className="w-full"
                 />
               </label>
-            </SettingSubgroup>
-
-            <SettingSubgroup
-              title="背景樣式"
-              subtitle="三種模式互斥：漸層 / 圖片 / 動態"
-              isOpen={openAppearanceGroup === 'background'}
-              onToggle={() => toggleAppearanceGroup('background')}
-            >
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onSettingChange({ backgroundMode: 'gradient' })}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    settings.backgroundMode === 'gradient'
-                      ? 'border-stone-900 bg-stone-900 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  漸層背景
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSettingChange({ backgroundMode: 'image' })}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    settings.backgroundMode === 'image'
-                      ? 'border-stone-900 bg-stone-900 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  圖片背景
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSettingChange({ backgroundMode: 'dynamic' })}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    settings.backgroundMode === 'dynamic'
-                      ? 'border-stone-900 bg-stone-900 text-white'
-                      : 'border-stone-300 bg-white text-stone-700'
-                  }`}
-                >
-                  動態背景
-                </button>
-              </div>
-
-              {settings.backgroundMode === 'gradient' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block space-y-1">
-                    <span className="text-xs text-stone-600">漸層起始色</span>
-                    <input
-                      type="color"
-                      value={settings.backgroundGradientStart}
-                      onChange={(event) => onSettingChange({ backgroundGradientStart: event.target.value })}
-                      className="h-10 w-full rounded-md border border-stone-300"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-stone-600">漸層結束色</span>
-                    <input
-                      type="color"
-                      value={settings.backgroundGradientEnd}
-                      onChange={(event) => onSettingChange({ backgroundGradientEnd: event.target.value })}
-                      className="h-10 w-full rounded-md border border-stone-300"
-                    />
-                  </label>
-                </div>
-              )}
-
-              {settings.backgroundMode === 'image' && (
-                <div className="space-y-2">
-                  <label className="block space-y-1">
-                    <span className="text-xs text-stone-600">背景圖片網址</span>
-                    <input
-                      type="url"
-                      value={backgroundImageUrlDraft}
-                      onChange={(event) => setBackgroundImageUrlDraft(event.target.value)}
-                      placeholder="https://example.com/background.jpg"
-                      className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
-                    />
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSettingChange({ backgroundImageUrl: backgroundImageUrlDraft.trim() });
-                        emitActionToast({ kind: 'success', message: '背景圖片已套用' });
-                      }}
-                      className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
-                    >
-                      套用圖片網址
-                    </button>
-                    <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700">
-                      上傳背景圖
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(event) => {
-                          handleBackgroundImageUpload(event.target.files?.[0] ?? null);
-                          event.currentTarget.value = '';
-                        }}
-                      />
-                    </label>
-                  </div>
-                  <label className="block space-y-1">
-                    <span className="flex items-center justify-between text-xs text-stone-600">
-                      <span>圖片遮罩深度</span>
-                      <span>{settings.backgroundImageOverlay}%</span>
-                    </span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={90}
-                      step={1}
-                      value={settings.backgroundImageOverlay}
-                      onChange={(event) => onSettingChange({ backgroundImageOverlay: Number(event.target.value) })}
-                      className="w-full"
-                    />
-                  </label>
-                </div>
-              )}
-
-              {settings.backgroundMode === 'dynamic' && (
-                <div className="space-y-2 rounded-lg border border-stone-200 bg-white/70 px-3 py-3">
-                  <p className="text-xs text-stone-500">首頁桌布（動態模式專用，6 種全動態）</p>
-
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-stone-700">動態桌布</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {HOME_DYNAMIC_WALLPAPER_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => onSettingChange({ homeDynamicWallpaperPreset: option.value })}
-                          className={`rounded-lg border px-2.5 py-2 text-left text-xs ${
-                            settings.homeDynamicWallpaperPreset === option.value
-                              ? 'border-stone-900 bg-stone-900 text-white'
-                              : 'border-stone-300 bg-white text-stone-700'
-                          }`}
-                        >
-                          <span className="block">{option.label}</span>
-                          <span
-                            className={`block text-[10px] ${
-                              settings.homeDynamicWallpaperPreset === option.value ? 'text-white/75' : 'text-stone-500'
-                            }`}
-                          >
-                            {option.hint}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <label className="block space-y-1">
-                    <span className="flex items-center justify-between text-xs text-stone-600">
-                      <span>強度</span>
-                      <span>{Math.round(settings.homeDynamicIntensity)}</span>
-                    </span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.homeDynamicIntensity}
-                      onChange={(event) => onSettingChange({ homeDynamicIntensity: Number(event.target.value) })}
-                      className="w-full"
-                    />
-                  </label>
-
-                  <label className="block space-y-1">
-                    <span className="flex items-center justify-between text-xs text-stone-600">
-                      <span>速度</span>
-                      <span>{Math.round(settings.homeDynamicSpeed)}</span>
-                    </span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.homeDynamicSpeed}
-                      onChange={(event) => onSettingChange({ homeDynamicSpeed: Number(event.target.value) })}
-                      className="w-full"
-                    />
-                  </label>
-
-                  <label className="block space-y-1">
-                    <span className="flex items-center justify-between text-xs text-stone-600">
-                      <span>粒子量</span>
-                      <span>{Math.round(settings.homeDynamicParticleAmount)}</span>
-                    </span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.homeDynamicParticleAmount}
-                      onChange={(event) => onSettingChange({ homeDynamicParticleAmount: Number(event.target.value) })}
-                      className="w-full"
-                    />
-                  </label>
-                </div>
-              )}
             </SettingSubgroup>
 
             <SettingSubgroup
@@ -2221,6 +2073,282 @@ export function SettingsPage({
               </div>
               {appearancePresetStatus && <p className="text-xs text-stone-600">{appearancePresetStatus}</p>}
             </SettingSubgroup>
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
+          icon="🖼️"
+          title="背景樣式"
+          subtitle="漸層 / 圖片 / 動態桌布與特效"
+          isOpen={openPanel === 'wallpaper'}
+          onToggle={() => togglePanel('wallpaper')}
+        >
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => onSettingChange({ backgroundMode: 'gradient' })}
+                className={`rounded-lg border px-3 py-2 text-sm ${
+                  settings.backgroundMode === 'gradient'
+                    ? 'border-stone-900 bg-stone-900 text-white'
+                    : 'border-stone-300 bg-white text-stone-700'
+                }`}
+              >
+                漸層背景
+              </button>
+              <button
+                type="button"
+                onClick={() => onSettingChange({ backgroundMode: 'image' })}
+                className={`rounded-lg border px-3 py-2 text-sm ${
+                  settings.backgroundMode === 'image'
+                    ? 'border-stone-900 bg-stone-900 text-white'
+                    : 'border-stone-300 bg-white text-stone-700'
+                }`}
+              >
+                圖片背景
+              </button>
+              <button
+                type="button"
+                onClick={() => onSettingChange({ backgroundMode: 'dynamic' })}
+                className={`rounded-lg border px-3 py-2 text-sm ${
+                  settings.backgroundMode === 'dynamic'
+                    ? 'border-stone-900 bg-stone-900 text-white'
+                    : 'border-stone-300 bg-white text-stone-700'
+                }`}
+              >
+                動態背景
+              </button>
+            </div>
+
+            {settings.backgroundMode === 'gradient' && (
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">漸層起始色</span>
+                  <input
+                    type="color"
+                    value={settings.backgroundGradientStart}
+                    onChange={(event) => onSettingChange({ backgroundGradientStart: event.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">漸層結束色</span>
+                  <input
+                    type="color"
+                    value={settings.backgroundGradientEnd}
+                    onChange={(event) => onSettingChange({ backgroundGradientEnd: event.target.value })}
+                    className="h-10 w-full rounded-md border border-stone-300"
+                  />
+                </label>
+              </div>
+            )}
+
+            {settings.backgroundMode === 'image' && (
+              <div className="space-y-2">
+                <label className="block space-y-1">
+                  <span className="text-xs text-stone-600">背景圖片網址</span>
+                  <input
+                    type="url"
+                    value={backgroundImageUrlDraft}
+                    onChange={(event) => setBackgroundImageUrlDraft(event.target.value)}
+                    placeholder="https://example.com/background.jpg"
+                    className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2"
+                  />
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSettingChange({ backgroundImageUrl: backgroundImageUrlDraft.trim() });
+                      emitActionToast({ kind: 'success', message: '背景圖片已套用' });
+                    }}
+                    className="rounded-lg bg-stone-900 px-3 py-2 text-xs text-white"
+                  >
+                    套用圖片網址
+                  </button>
+                  <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700">
+                    上傳背景圖
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        handleBackgroundImageUpload(event.target.files?.[0] ?? null);
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>圖片遮罩深度</span>
+                    <span>{settings.backgroundImageOverlay}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={90}
+                    step={1}
+                    value={settings.backgroundImageOverlay}
+                    onChange={(event) => onSettingChange({ backgroundImageOverlay: Number(event.target.value) })}
+                    className="w-full"
+                  />
+                </label>
+              </div>
+            )}
+
+            {settings.backgroundMode === 'dynamic' && (
+              <div className="space-y-2 rounded-lg border border-stone-200 bg-white/70 px-3 py-3">
+                <p className="text-xs text-stone-500">首頁桌布（動態模式專用，9 種全動態）</p>
+
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>動態桌布</span>
+                    <span className="text-[11px] text-stone-500">目前：{activeHomeDynamicOption.label}</span>
+                  </span>
+                  <select
+                    value={homeDynamicWallpaperDraft}
+                    onChange={(event) =>
+                      setHomeDynamicWallpaperDraft(event.target.value as AppSettings['homeDynamicWallpaperPreset'])
+                    }
+                    className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+                  >
+                    {HOME_DYNAMIC_WALLPAPER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-stone-500">說明</p>
+                  <p className="mt-1 text-xs text-stone-700">{selectedHomeDynamicOption.hint}</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSettingChange({ homeDynamicWallpaperPreset: homeDynamicWallpaperDraft });
+                    emitActionToast({ kind: 'success', message: `已套用：${selectedHomeDynamicOption.label}` });
+                  }}
+                  disabled={!isHomeDynamicWallpaperDirty}
+                  className={`rounded-lg px-3 py-2 text-xs transition ${
+                    isHomeDynamicWallpaperDirty
+                      ? 'bg-stone-900 text-white hover:bg-stone-700'
+                      : 'cursor-not-allowed bg-stone-300 text-stone-500'
+                  }`}
+                >
+                  {isHomeDynamicWallpaperDirty ? `套用：${selectedHomeDynamicOption.label}` : '已套用'}
+                </button>
+
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>特效樣式</span>
+                    <span className="text-[11px] text-stone-500">目前：{activeHomeDynamicEffectOption.label}</span>
+                  </span>
+                  <select
+                    value={homeDynamicEffectDraft}
+                    onChange={(event) =>
+                      setHomeDynamicEffectDraft(event.target.value as AppSettings['homeWallpaperEffectPreset'])
+                    }
+                    className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs text-stone-700"
+                  >
+                    {HOME_DYNAMIC_EFFECT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-stone-500">特效說明</p>
+                  <p className="mt-1 text-xs text-stone-700">{selectedHomeDynamicEffectOption.hint}</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSettingChange({ homeWallpaperEffectPreset: homeDynamicEffectDraft });
+                    emitActionToast({ kind: 'success', message: `特效已套用：${selectedHomeDynamicEffectOption.label}` });
+                  }}
+                  disabled={!isHomeDynamicEffectDirty}
+                  className={`rounded-lg px-3 py-2 text-xs transition ${
+                    isHomeDynamicEffectDirty
+                      ? 'bg-stone-900 text-white hover:bg-stone-700'
+                      : 'cursor-not-allowed bg-stone-300 text-stone-500'
+                  }`}
+                >
+                  {isHomeDynamicEffectDirty ? `套用特效：${selectedHomeDynamicEffectOption.label}` : '特效已套用'}
+                </button>
+
+                <label className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-2">
+                  <span className="text-xs text-stone-700">特效總開關</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={settings.homeDynamicEffectsEnabled}
+                    onClick={() => onSettingChange({ homeDynamicEffectsEnabled: !settings.homeDynamicEffectsEnabled })}
+                    className={`rounded-full px-2.5 py-1 text-[11px] ${
+                      settings.homeDynamicEffectsEnabled
+                        ? 'bg-stone-900 text-white'
+                        : 'bg-stone-300 text-stone-700'
+                    }`}
+                  >
+                    {settings.homeDynamicEffectsEnabled ? '開' : '關'}
+                  </button>
+                </label>
+
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>強度</span>
+                    <span>{Math.round(settings.homeDynamicIntensity)}</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={settings.homeDynamicIntensity}
+                    onChange={(event) => onSettingChange({ homeDynamicIntensity: Number(event.target.value) })}
+                    className="w-full"
+                  />
+                </label>
+
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>速度</span>
+                    <span>{Math.round(settings.homeDynamicSpeed)}</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={settings.homeDynamicSpeed}
+                    onChange={(event) => onSettingChange({ homeDynamicSpeed: Number(event.target.value) })}
+                    className="w-full"
+                  />
+                </label>
+
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between text-xs text-stone-600">
+                    <span>粒子量</span>
+                    <span>{Math.round(settings.homeDynamicParticleAmount)}</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={settings.homeDynamicParticleAmount}
+                    onChange={(event) => onSettingChange({ homeDynamicParticleAmount: Number(event.target.value) })}
+                    className="w-full"
+                  />
+                </label>
+              </div>
+            )}
           </div>
         </SettingPanel>
 

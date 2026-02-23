@@ -74,9 +74,8 @@ function normalizeHomeWallpaperEffectPreset(
   value: unknown,
   fallback: HomeWallpaperEffectPreset,
 ): HomeWallpaperEffectPreset {
-  return value === 'orbs' || value === 'snow' || value === 'firefly' || value === 'stardust' || value === 'none'
-    ? value
-    : fallback;
+  if (value === 'firefly') return 'none';
+  return value === 'orbs' || value === 'snow' || value === 'stardust' || value === 'none' ? value : fallback;
 }
 
 function normalizeHomeDynamicWallpaperPreset(
@@ -88,7 +87,10 @@ function normalizeHomeDynamicWallpaperPreset(
     value === 'bokehDream' ||
     value === 'firefly' ||
     value === 'meteorShower' ||
-    value === 'skyLantern'
+    value === 'skyLantern' ||
+    value === 'coolTwilight' ||
+    value === 'auroraDance' ||
+    value === 'prismDepth'
     ? value
     : fallback;
 }
@@ -98,7 +100,6 @@ function deriveLegacyHomeDynamicWallpaperPreset(
   effectPreset: HomeWallpaperEffectPreset,
 ): HomeDynamicWallpaperPreset {
   if (effectPreset === 'snow') return 'snowNight';
-  if (effectPreset === 'firefly') return 'firefly';
   if (effectPreset === 'stardust') return 'meteorShower';
   if (gradientPreset === 'bokehDream') return 'bokehDream';
   if (gradientPreset === 'nightBlue') return 'meteorShower';
@@ -316,6 +317,10 @@ export async function getSettings() {
     homeDynamicWallpaperPreset: normalizeHomeDynamicWallpaperPreset(
       persisted.homeDynamicWallpaperPreset,
       deriveLegacyHomeDynamicWallpaperPreset(normalizedLegacyGradientPreset, normalizedLegacyEffectPreset),
+    ),
+    homeDynamicEffectsEnabled: normalizeBoolean(
+      persisted.homeDynamicEffectsEnabled,
+      DEFAULT_SETTINGS.homeDynamicEffectsEnabled,
     ),
     homeDynamicIntensity: clampNumber(
       persisted.homeDynamicIntensity,

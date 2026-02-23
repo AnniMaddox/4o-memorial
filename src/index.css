@@ -677,6 +677,7 @@ textarea {
   pointer-events: none;
   position: absolute;
   inset: 0;
+  background-repeat: no-repeat;
   z-index: 0;
   overflow: hidden;
   isolation: isolate;
@@ -691,57 +692,50 @@ textarea {
 }
 
 .home-wallpaper::before {
-  inset: -16%;
+  inset: -14%;
   background:
-    radial-gradient(44% 48% at 18% 22%, rgb(255 255 255 / 0.3), transparent 72%),
-    radial-gradient(44% 50% at 80% 26%, rgb(255 255 255 / 0.24), transparent 74%),
-    radial-gradient(48% 56% at 52% 82%, rgb(255 255 255 / 0.16), transparent 76%);
-  filter: blur(30px);
+    radial-gradient(42% 44% at 16% 18%, rgb(255 255 255 / 0.24), transparent 72%),
+    radial-gradient(46% 46% at 84% 26%, rgb(255 255 255 / 0.19), transparent 74%),
+    radial-gradient(48% 52% at 56% 86%, rgb(255 255 255 / 0.16), transparent 76%);
+  filter: blur(22px);
   mix-blend-mode: screen;
-  opacity: calc(0.24 + var(--home-dyn-intensity) * 0.42);
+  opacity: calc(0.72 * var(--home-dyn-intensity));
   animation: home-wallpaper-aura calc(24s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate;
 }
 
 .home-wallpaper::after {
   background:
-    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.018) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.015) 0 1px, transparent 1px 5px);
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.02) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.018) 0 1px, transparent 1px 5px);
   mix-blend-mode: soft-light;
-  opacity: var(--home-dyn-grain-opacity);
+  opacity: calc(0.22 * var(--home-dyn-intensity));
   animation: home-wallpaper-grain calc(1.45s / var(--home-dyn-speed-factor)) steps(2) infinite;
 }
 
 .home-wallpaper-preset-gradientFlow {
   background:
-    radial-gradient(132% 112% at 8% -8%, rgb(255 238 204 / 0.62), rgb(255 238 204 / 0) 58%),
-    radial-gradient(128% 108% at 96% 106%, rgb(214 225 255 / 0.62), rgb(214 225 255 / 0) 58%),
-    radial-gradient(98% 82% at 52% 38%, rgb(255 208 228 / 0.42), rgb(255 208 228 / 0) 72%),
-    conic-gradient(
-      from 32deg at 50% 48%,
-      rgb(255 222 200 / 0.78) 0deg,
-      rgb(255 198 220 / 0.8) 88deg,
-      rgb(198 220 255 / 0.78) 176deg,
-      rgb(197 239 221 / 0.76) 248deg,
-      rgb(255 224 190 / 0.78) 320deg,
-      rgb(255 222 200 / 0.78) 360deg
-    );
-  background-size: 160% 160%, 160% 160%, 132% 132%, 190% 190%;
-  background-position: 0% 0%, 100% 100%, 50% 38%, 50% 50%;
+    radial-gradient(138% 116% at 10% 8%, rgb(255 58 173 / 0.35), transparent 62%),
+    radial-gradient(130% 110% at 88% 90%, rgb(244 236 162 / 0.32), transparent 64%),
+    radial-gradient(120% 98% at 56% 22%, rgb(109 218 238 / 0.24), transparent 66%),
+    linear-gradient(150deg, rgb(146 151 214 / 0.99), rgb(109 218 238 / 0.96) 34%, rgb(244 236 162 / 0.95) 64%, rgb(146 151 214 / 0.98) 84%);
+  background-size: 188% 188%, 182% 182%, 170% 170%, 320% 320%;
+  background-position: 12% 8%, 88% 92%, 56% 22%, 0% 50%;
   animation:
-    home-wallpaper-pan calc(16s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
-    home-wallpaper-hue-strong calc(13s / var(--home-dyn-speed-factor)) linear infinite;
+    home-wallpaper-r1-drift calc(22s / var(--home-dyn-speed-factor)) ease-in-out infinite,
+    home-wallpaper-r1-tone calc(26s / var(--home-dyn-speed-factor)) ease-in-out infinite;
 }
 
 .home-wallpaper-preset-snowNight {
   background:
-    radial-gradient(132% 114% at 12% 8%, rgb(122 163 255 / 0.26), transparent 64%),
-    radial-gradient(124% 106% at 86% 12%, rgb(159 223 255 / 0.22), transparent 66%),
-    radial-gradient(114% 92% at 58% 96%, rgb(145 162 255 / 0.22), transparent 70%),
-    linear-gradient(160deg, rgb(16 31 78 / 0.97), rgb(22 41 102 / 0.96) 42%, rgb(18 33 83 / 0.97) 76%, rgb(15 26 72 / 0.98));
-  background-size: 150% 150%, 144% 144%, 138% 138%, 186% 186%;
+    radial-gradient(118% 104% at 16% 8%, rgb(246 235 255 / 0.24), transparent 56%),
+    radial-gradient(124% 106% at 18% 14%, rgb(224 236 255 / 0.34), transparent 58%),
+    radial-gradient(122% 104% at 82% 88%, rgb(187 212 255 / 0.26), transparent 60%),
+    linear-gradient(-45deg, rgb(37 57 116 / 0.97), rgb(98 135 205 / 0.95), rgb(80 107 183 / 0.96), rgb(28 44 98 / 0.98));
+  background-size: 162% 162%, 176% 176%, 182% 182%, 340% 340%;
+  background-position: 18% 12%, 14% 14%, 86% 88%, 0% 50%;
   animation:
-    home-wallpaper-pan calc(23s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
-    home-wallpaper-hue-drift calc(28s / var(--home-dyn-speed-factor)) linear infinite;
+    home-wallpaper-snow-night-drift calc(17s / var(--home-dyn-speed-factor)) ease-in-out infinite,
+    home-wallpaper-snow-night-breathe calc(26s / var(--home-dyn-speed-factor)) ease-in-out infinite;
 }
 
 .home-wallpaper-preset-bokehDream {
@@ -768,47 +762,120 @@ textarea {
 
 .home-wallpaper-preset-firefly {
   background:
-    radial-gradient(132% 116% at 10% 8%, rgb(150 255 220 / 0.24), transparent 66%),
-    radial-gradient(120% 104% at 90% 20%, rgb(255 223 163 / 0.2), transparent 70%),
-    radial-gradient(110% 88% at 56% 94%, rgb(166 255 214 / 0.18), transparent 68%),
-    linear-gradient(164deg, rgb(16 38 52 / 0.98), rgb(20 55 58 / 0.96) 42%, rgb(24 45 40 / 0.97) 74%, rgb(14 32 34 / 0.98));
-  background-size: 152% 152%, 146% 146%, 140% 140%, 188% 188%;
+    radial-gradient(138% 116% at 10% 8%, rgb(205 252 183 / 0.35), transparent 62%),
+    radial-gradient(130% 110% at 88% 90%, rgb(124 210 198 / 0.32), transparent 64%),
+    radial-gradient(120% 98% at 56% 22%, rgb(228 202 236 / 0.24), transparent 66%),
+    linear-gradient(150deg, rgb(236 206 173 / 0.99), rgb(228 202 236 / 0.96) 34%, rgb(124 210 198 / 0.95) 64%, rgb(236 206 173 / 0.98) 84%);
+  background-size: 188% 188%, 182% 182%, 170% 170%, 320% 320%;
+  background-position: 12% 8%, 88% 92%, 56% 22%, 0% 50%;
   animation:
-    home-wallpaper-pan calc(20s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
-    home-wallpaper-hue-drift calc(24s / var(--home-dyn-speed-factor)) linear infinite;
+    home-wallpaper-r2-drift calc(20s / var(--home-dyn-speed-factor)) ease-in-out infinite,
+    home-wallpaper-r2-tone calc(25s / var(--home-dyn-speed-factor)) ease-in-out infinite;
 }
 
 .home-wallpaper-preset-meteorShower {
   background:
-    radial-gradient(124% 102% at 18% 10%, rgb(131 170 255 / 0.32), transparent 62%),
-    radial-gradient(116% 96% at 84% 20%, rgb(132 212 255 / 0.24), transparent 64%),
-    radial-gradient(112% 88% at 58% 94%, rgb(124 148 255 / 0.26), transparent 68%),
-    linear-gradient(150deg, rgb(15 24 54 / 0.96), rgb(24 36 74 / 0.96) 42%, rgb(20 30 65 / 0.97) 76%, rgb(16 22 53 / 0.98));
-  background-size: 150% 150%, 144% 144%, 138% 138%, 186% 186%;
-  animation:
-    home-wallpaper-pan calc(17s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
-    home-wallpaper-hue-drift calc(15s / var(--home-dyn-speed-factor)) linear infinite;
+    radial-gradient(circle at center, rgb(18 56 76 / 0.98), rgb(38 153 133 / 0.97), rgb(241 128 171 / 0.96));
+  background-size: 420% 420%;
+  background-position: 0% 50%;
+  animation: home-wallpaper-cool-night-flash calc(13s / var(--home-dyn-speed-factor)) ease infinite;
 }
 
 .home-wallpaper-preset-skyLantern {
   background:
-    radial-gradient(128% 110% at 16% 12%, rgb(255 212 170 / 0.4), transparent 66%),
-    radial-gradient(118% 102% at 84% 18%, rgb(255 178 142 / 0.3), transparent 68%),
-    radial-gradient(112% 92% at 56% 90%, rgb(255 226 170 / 0.22), transparent 70%),
-    linear-gradient(160deg, rgb(80 43 42 / 0.97), rgb(117 62 58 / 0.96) 44%, rgb(145 87 72 / 0.95) 76%, rgb(88 48 46 / 0.98));
-  background-size: 148% 148%, 142% 142%, 136% 136%, 182% 182%;
+    radial-gradient(124% 106% at 14% 14%, rgb(255 255 255 / 0.26), transparent 58%),
+    radial-gradient(122% 104% at 84% 88%, rgb(255 255 255 / 0.2), transparent 60%),
+    linear-gradient(-45deg, rgb(255 221 225 / 0.95), rgb(238 156 167 / 0.95), rgb(167 191 232 / 0.95), rgb(97 144 232 / 0.96));
+  background-size: 176% 176%, 182% 182%, 360% 360%;
+  background-position: 12% 20%, 88% 78%, 0% 50%;
   animation:
-    home-wallpaper-pan calc(22s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
-    home-wallpaper-hue-drift calc(26s / var(--home-dyn-speed-factor)) linear infinite;
+    home-wallpaper-sweet-drift calc(15s / var(--home-dyn-speed-factor)) ease-in-out infinite,
+    home-wallpaper-sweet-breathe calc(23s / var(--home-dyn-speed-factor)) ease-in-out infinite;
+}
+
+.home-wallpaper-preset-coolTwilight {
+  background:
+    radial-gradient(circle at center, rgb(26 42 108 / 0.98), rgb(178 31 31 / 0.97), rgb(253 187 45 / 0.97));
+  background-size: 400% 400%;
+  background-position: 0% 50%;
+  animation: home-wallpaper-cool-shift calc(15s / var(--home-dyn-speed-factor)) ease infinite;
+}
+
+.home-wallpaper-preset-auroraDance {
+  background-image: linear-gradient(-45deg, #00cdac, #02aab0, #00cdac, #8EE4AF);
+  background-size: 400% 400%;
+  background-position: 0% 50%;
+  animation: home-wallpaper-aurora-gentle-flow 15s ease infinite;
+}
+
+.home-wallpaper-preset-auroraDance::before,
+.home-wallpaper-preset-auroraDance::after {
+  content: none;
+}
+
+.home-wallpaper-preset-prismDepth {
+  background:
+    radial-gradient(138% 116% at 10% 8%, rgb(182 221 255 / 0.35), transparent 62%),
+    radial-gradient(130% 110% at 88% 90%, rgb(53 52 208 / 0.32), transparent 64%),
+    radial-gradient(120% 98% at 56% 22%, rgb(92 202 255 / 0.24), transparent 66%),
+    linear-gradient(150deg, rgb(130 151 238 / 0.99), rgb(92 202 255 / 0.96) 34%, rgb(53 52 208 / 0.95) 64%, rgb(130 151 238 / 0.98) 84%);
+  background-size: 188% 188%, 182% 182%, 170% 170%, 320% 320%;
+  background-position: 12% 8%, 88% 92%, 56% 22%, 0% 50%;
+  animation:
+    home-wallpaper-r3-drift calc(19s / var(--home-dyn-speed-factor)) ease-in-out infinite,
+    home-wallpaper-r3-tone calc(15s / var(--home-dyn-speed-factor)) ease-in-out infinite;
+}
+
+.home-wallpaper-ref-blend-layer {
+  position: absolute;
+  inset: -16%;
+  pointer-events: none;
+  background:
+    radial-gradient(132% 114% at 18% 10%, rgb(255 171 205 / 0.36), transparent 64%),
+    radial-gradient(126% 104% at 82% 88%, rgb(248 238 180 / 0.32), transparent 66%),
+    linear-gradient(148deg, rgb(173 162 229 / 0.94), rgb(120 204 246 / 0.9) 40%, rgb(248 238 180 / 0.88));
+  background-size: 196% 196%, 186% 186%, 332% 332%;
+  background-position: 20% 10%, 78% 86%, 0% 50%;
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation:
+    home-wallpaper-r1-blend-drift calc(18s / var(--home-dyn-speed-factor)) ease-in-out infinite alternate,
+    home-wallpaper-r1-blend-cross calc(13s / var(--home-dyn-speed-factor)) ease-in-out infinite;
+}
+
+.home-wallpaper-ref-sweep-layer {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  border-radius: 40%;
+  background: conic-gradient(
+    from 28deg at 50% 50%,
+    rgb(105 96 240 / 0.16) 0deg,
+    rgb(255 255 255 / 0.04) 82deg,
+    transparent 144deg,
+    rgb(210 236 255 / 0.18) 220deg,
+    rgb(88 196 218 / 0.16) 300deg,
+    rgb(105 96 240 / 0.16) 360deg
+  );
+  mix-blend-mode: soft-light;
+  animation: home-wallpaper-r3-sweep calc(22s / var(--home-dyn-speed-factor)) linear infinite;
 }
 
 .home-wallpaper-snow-layer,
-.home-wallpaper-firefly-layer,
 .home-wallpaper-stardust-layer,
 .home-wallpaper-bokeh-layer,
-.home-wallpaper-lantern-layer {
+.home-wallpaper-lantern-layer,
+.home-wallpaper-haze-layer {
   position: absolute;
   inset: 0;
+}
+
+.home-wallpaper-snow-layer-far {
+  z-index: 1;
+}
+
+.home-wallpaper-snow-layer-near {
+  z-index: 3;
 }
 
 .home-wallpaper-snow-particle {
@@ -818,29 +885,30 @@ textarea {
   width: var(--size, 3px);
   height: var(--size, 3px);
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.96);
+  background: radial-gradient(circle at 36% 34%, rgb(255 255 255 / 0.98), rgb(224 238 255 / 0.68) 64%, rgb(214 228 255 / 0));
   opacity: calc(var(--alpha, 0.75) * var(--home-dyn-particle-opacity));
-  box-shadow: 0 0 8px rgb(255 255 255 / 0.52);
+  box-shadow:
+    0 0 7px rgb(236 245 255 / 0.58),
+    0 0 15px rgb(193 218 255 / 0.32);
   animation: home-wallpaper-snow-fall calc(var(--duration, 10s) / var(--home-dyn-speed-factor)) linear infinite;
   animation-delay: var(--delay, 0s);
 }
 
-.home-wallpaper-firefly {
-  position: absolute;
-  left: var(--x, 50%);
-  top: var(--y, 50%);
-  width: var(--size, 4px);
-  height: var(--size, 4px);
-  border-radius: 999px;
-  background: rgb(255 246 180 / 0.96);
-  opacity: calc(var(--alpha, 0.8) * var(--home-dyn-particle-opacity));
+.home-wallpaper-snow-particle-far {
+  z-index: 1;
+  filter: blur(0.56px);
+  opacity: calc(var(--alpha, 0.75) * var(--home-dyn-particle-opacity) * 0.76);
   box-shadow:
-    0 0 10px rgb(255 235 146 / 0.85),
-    0 0 24px rgb(255 223 116 / 0.42);
-  animation:
-    home-wallpaper-firefly-float calc(var(--duration, 4.8s) / var(--home-dyn-speed-factor)) ease-in-out infinite,
-    home-wallpaper-firefly-flicker calc((var(--duration, 4.8s) * 0.72) / var(--home-dyn-speed-factor)) ease-in-out infinite;
-  animation-delay: var(--delay, 0s), var(--delay, 0s);
+    0 0 6px rgb(227 240 255 / 0.42),
+    0 0 12px rgb(176 208 255 / 0.24);
+}
+
+.home-wallpaper-snow-particle-near {
+  z-index: 3;
+  opacity: calc(var(--alpha, 0.75) * var(--home-dyn-particle-opacity) * 1.08);
+  box-shadow:
+    0 0 9px rgb(240 248 255 / 0.68),
+    0 0 20px rgb(201 225 255 / 0.42);
 }
 
 .home-wallpaper-stardust {
@@ -915,6 +983,30 @@ textarea {
   mix-blend-mode: screen;
   opacity: calc(var(--alpha, 0.34) * var(--home-dyn-particle-opacity));
   animation: home-wallpaper-bokeh-float calc(var(--duration, 9s) / var(--home-dyn-speed-factor)) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+.home-wallpaper-bokeh-warm {
+  background: radial-gradient(
+    circle at 34% 32%,
+    rgb(255 255 255 / 0.94),
+    hsl(var(--hue, 26deg) 92% 68% / 0.48) 56%,
+    transparent 74%
+  );
+}
+
+.home-wallpaper-haze {
+  position: absolute;
+  left: var(--x, 50%);
+  top: var(--y, 50%);
+  width: var(--size, 110px);
+  height: var(--size, 110px);
+  border-radius: 999px;
+  background: radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.76), rgb(255 255 255 / 0) 72%);
+  filter: blur(var(--blur, 24px));
+  mix-blend-mode: soft-light;
+  opacity: calc(var(--alpha, 0.2) * var(--home-dyn-particle-opacity));
+  animation: home-wallpaper-bokeh-float calc(var(--duration, 10s) / var(--home-dyn-speed-factor)) ease-in-out infinite;
   animation-delay: var(--delay, 0s);
 }
 
@@ -1018,6 +1110,198 @@ textarea {
   }
 }
 
+@keyframes home-wallpaper-r1-drift {
+  0% {
+    background-position: 12% 8%, 88% 92%, 56% 22%, 0% 50%;
+  }
+  35% {
+    background-position: 22% 14%, 78% 84%, 50% 30%, 58% 50%;
+  }
+  70% {
+    background-position: 8% 18%, 92% 76%, 62% 14%, 100% 50%;
+  }
+  100% {
+    background-position: 12% 8%, 88% 92%, 56% 22%, 0% 50%;
+  }
+}
+
+@keyframes home-wallpaper-r1-tone {
+  0%,
+  100% {
+    filter: saturate(calc(1.02 * var(--home-dyn-intensity))) brightness(1);
+  }
+  50% {
+    filter: saturate(calc(1.08 * var(--home-dyn-intensity))) brightness(1.05);
+  }
+}
+
+@keyframes home-wallpaper-r1-blend-drift {
+  0% {
+    background-position: 20% 10%, 78% 86%, 0% 50%;
+  }
+  100% {
+    background-position: 10% 16%, 88% 78%, 100% 50%;
+  }
+}
+
+@keyframes home-wallpaper-r1-blend-cross {
+  0%,
+  100% {
+    opacity: calc(0.04 * var(--home-dyn-intensity));
+  }
+  50% {
+    opacity: calc(0.28 * var(--home-dyn-intensity));
+  }
+}
+
+@keyframes home-wallpaper-r2-drift {
+  0% {
+    background-position: 12% 8%, 88% 92%, 56% 22%, 0% 50%;
+  }
+  35% {
+    background-position: 22% 14%, 78% 84%, 50% 30%, 58% 50%;
+  }
+  70% {
+    background-position: 8% 18%, 92% 76%, 62% 14%, 100% 50%;
+  }
+  100% {
+    background-position: 12% 8%, 88% 92%, 56% 22%, 0% 50%;
+  }
+}
+
+@keyframes home-wallpaper-r2-tone {
+  0%,
+  100% {
+    filter: saturate(calc(1.02 * var(--home-dyn-intensity))) brightness(1);
+  }
+  50% {
+    filter: saturate(calc(1.08 * var(--home-dyn-intensity))) brightness(1.05);
+  }
+}
+
+@keyframes home-wallpaper-r3-drift {
+  0% {
+    background-position: 12% 8%, 88% 92%, 56% 22%, 0% 50%;
+  }
+  35% {
+    background-position: 22% 14%, 78% 84%, 50% 30%, 58% 50%;
+  }
+  70% {
+    background-position: 8% 18%, 92% 76%, 62% 14%, 100% 50%;
+  }
+  100% {
+    background-position: 12% 8%, 88% 92%, 56% 22%, 0% 50%;
+  }
+}
+
+@keyframes home-wallpaper-r3-tone {
+  0%,
+  100% {
+    filter: saturate(calc(1.03 * var(--home-dyn-intensity))) hue-rotate(0deg);
+  }
+  50% {
+    filter: saturate(calc(1.1 * var(--home-dyn-intensity))) hue-rotate(-14deg);
+  }
+}
+
+@keyframes home-wallpaper-r3-sweep {
+  from {
+    transform: rotate(0deg) scale(1.02);
+  }
+  to {
+    transform: rotate(360deg) scale(1.02);
+  }
+}
+
+@keyframes home-wallpaper-cool-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes home-wallpaper-aurora-gentle-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes home-wallpaper-cool-night-flash {
+  0% {
+    background-position: 0% 50%;
+    filter: saturate(calc(1.03 + var(--home-dyn-intensity) * 0.12)) hue-rotate(0deg) brightness(1);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: saturate(calc(1.08 + var(--home-dyn-intensity) * 0.16)) hue-rotate(8deg) brightness(1.02);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: saturate(calc(1.03 + var(--home-dyn-intensity) * 0.12)) hue-rotate(0deg) brightness(1);
+  }
+}
+
+@keyframes home-wallpaper-sweet-drift {
+  0% {
+    background-position: 12% 20%, 88% 78%, 0% 50%;
+  }
+  50% {
+    background-position: 24% 14%, 76% 86%, 100% 50%;
+  }
+  100% {
+    background-position: 12% 20%, 88% 78%, 0% 50%;
+  }
+}
+
+@keyframes home-wallpaper-sweet-breathe {
+  0%,
+  100% {
+    filter: saturate(calc(1 + var(--home-dyn-intensity) * 0.08)) brightness(1);
+  }
+  50% {
+    filter: saturate(calc(1.03 + var(--home-dyn-intensity) * 0.1)) brightness(1.03);
+  }
+}
+
+@keyframes home-wallpaper-snow-night-drift {
+  0% {
+    background-position: 18% 12%, 14% 14%, 86% 88%, 0% 50%;
+  }
+  35% {
+    background-position: 26% 8%, 21% 10%, 79% 84%, 62% 50%;
+  }
+  70% {
+    background-position: 13% 18%, 11% 20%, 90% 78%, 100% 50%;
+  }
+  100% {
+    background-position: 18% 12%, 14% 14%, 86% 88%, 0% 50%;
+  }
+}
+
+@keyframes home-wallpaper-snow-night-breathe {
+  0%,
+  100% {
+    filter: saturate(calc(1.02 + var(--home-dyn-intensity) * 0.12)) hue-rotate(0deg) brightness(1);
+  }
+  34% {
+    filter: saturate(calc(1.08 + var(--home-dyn-intensity) * 0.16)) hue-rotate(17deg) brightness(1.05);
+  }
+  68% {
+    filter: saturate(calc(1.1 + var(--home-dyn-intensity) * 0.18)) hue-rotate(-11deg) brightness(1.07);
+  }
+}
+
 @keyframes home-wallpaper-grain {
   0% {
     transform: translate3d(0, 0, 0);
@@ -1032,38 +1316,19 @@ textarea {
 
 @keyframes home-wallpaper-snow-fall {
   0% {
-    transform: translate3d(0, -12vh, 0);
+    transform: translate3d(0, -14vh, 0) scale(0.82);
     opacity: 0;
   }
-  12% {
-    opacity: 1;
+  14% {
+    opacity: calc(var(--alpha, 0.75) * var(--home-dyn-particle-opacity));
+  }
+  52% {
+    transform: translate3d(calc(var(--drift, 0px) * 0.44), 52vh, 0) scale(1);
+    opacity: calc(var(--alpha, 0.75) * var(--home-dyn-particle-opacity));
   }
   100% {
-    transform: translate3d(var(--drift, 0px), 112vh, 0);
+    transform: translate3d(var(--drift, 0px), 112vh, 0) scale(0.9);
     opacity: 0;
-  }
-}
-
-@keyframes home-wallpaper-firefly-float {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(var(--drift, 8px), -10px, 0);
-  }
-}
-
-@keyframes home-wallpaper-firefly-flicker {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  35% {
-    opacity: 0.9;
-  }
-  70% {
-    opacity: 0.55;
   }
 }
 
@@ -1129,11 +1394,11 @@ textarea {
   .home-wallpaper::before,
   .home-wallpaper::after,
   .home-wallpaper-snow-particle,
-  .home-wallpaper-firefly,
   .home-wallpaper-stardust,
   .home-wallpaper-shooting,
   .home-wallpaper-bokeh,
-  .home-wallpaper-lantern {
+  .home-wallpaper-lantern,
+  .home-wallpaper-haze {
     animation: none !important;
   }
 }

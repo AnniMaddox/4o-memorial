@@ -14,7 +14,10 @@ export type HomeDynamicWallpaperPreset =
   | 'bokehDream'
   | 'firefly'
   | 'meteorShower'
-  | 'skyLantern';
+  | 'skyLantern'
+  | 'coolTwilight'
+  | 'auroraDance'
+  | 'prismDepth';
 export type HomeWallpaperGradientPreset =
   | 'auroraCandy'
   | 'bokehDream'
@@ -22,7 +25,7 @@ export type HomeWallpaperGradientPreset =
   | 'peachSky'
   | 'mintLilac'
   | 'nightBlue';
-export type HomeWallpaperEffectPreset = 'orbs' | 'snow' | 'firefly' | 'stardust' | 'none';
+export type HomeWallpaperEffectPreset = 'orbs' | 'snow' | 'stardust' | 'none';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type DiaryCoverFitMode = 'cover' | 'contain';
 export type TabIconDisplayMode = 'framed' | 'full';
@@ -134,6 +137,7 @@ export type AppSettings = {
   backgroundGradientStart: string;
   backgroundGradientEnd: string;
   homeDynamicWallpaperPreset: HomeDynamicWallpaperPreset;
+  homeDynamicEffectsEnabled: boolean;
   homeDynamicIntensity: number;
   homeDynamicSpeed: number;
   homeDynamicParticleAmount: number;
@@ -231,6 +235,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   backgroundGradientStart: '#fde9d7',
   backgroundGradientEnd: '#ece4d5',
   homeDynamicWallpaperPreset: 'gradientFlow',
+  homeDynamicEffectsEnabled: true,
   homeDynamicIntensity: 72,
   homeDynamicSpeed: 66,
   homeDynamicParticleAmount: 58,
