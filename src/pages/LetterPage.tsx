@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getActiveBaseChibiSources } from '../lib/chibiPool';
 import type { StoredLetter } from '../lib/letterDB';
+import { pickLetterWrittenAt } from '../lib/letterDate';
 import type { LetterUiMode } from '../types/settings';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -88,8 +89,13 @@ function stripExt(name: string) {
   return name.replace(/\.(txt|md|docx|json)$/i, '');
 }
 
-function formatDate(ts: number) {
-  if (!Number.isFinite(ts) || ts <= 0) {
+function normalizeLetterTimestamp(value: unknown) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
+function formatDate(ts: number | null) {
+  if (typeof ts !== 'number' || !Number.isFinite(ts) || ts <= 0) {
     return '♡';
   }
 
@@ -303,6 +309,17 @@ export function LetterPage({
   }, [readingPrefs]);
 
   const effectiveFavoritedNames = onFavorite ? favoritedNames : localFavoritedNames;
+  const letterDisplayDateMap = useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const letter of letters) {
+      const writtenAt =
+        normalizeLetterTimestamp(letter.writtenAt) ??
+        normalizeLetterTimestamp(pickLetterWrittenAt({ name: letter.name, content: letter.content }));
+      const fallback = normalizeLetterTimestamp(letter.importedAt);
+      map.set(letter.name, writtenAt ?? fallback);
+    }
+    return map;
+  }, [letters]);
 
   function toggleFavorite(name: string) {
     if (onFavorite) {
@@ -345,6 +362,7 @@ export function LetterPage({
       {uiMode === 'preview' ? (
         <PreviewLetterDeskScene
           letters={letters}
+          dateMap={letterDisplayDateMap}
           uiVariant={(uiVariant === 'A' ? 'B' : uiVariant) as PreviewLetterVariant}
           variants={availableVariants}
           isReading={Boolean(current)}
@@ -363,6 +381,7 @@ export function LetterPage({
       ) : (
         <LetterDeskScene
           letters={letters}
+          dateMap={letterDisplayDateMap}
           uiVariant={uiVariant}
           variants={availableVariants}
           chibiSrc={deskChibiSrc}
@@ -734,6 +753,7 @@ function LetterPile({
 
 function LetterDeskScene({
   letters,
+  dateMap,
   uiVariant,
   variants,
   chibiSrc,
@@ -749,6 +769,7 @@ function LetterDeskScene({
   onExit,
 }: {
   letters: StoredLetter[];
+  dateMap: Map<string, number | null>;
   uiVariant: LetterUiVariant;
   variants: readonly LetterUiVariant[];
   chibiSrc: string;
@@ -1118,6 +1139,7 @@ function LetterDeskScene({
       {showSheet && (
         <LetterBrowseSheet
           letters={letters}
+          dateMap={dateMap}
           uiVariant={uiVariant}
           onClose={onHideSheet}
           onOpen={onOpenLetter}
@@ -1452,6 +1474,7 @@ function PreviewEnvelopeStack({
 
 function PreviewLetterDeskScene({
   letters,
+  dateMap,
   uiVariant,
   variants,
   isReading,
@@ -1468,6 +1491,7 @@ function PreviewLetterDeskScene({
   onExit,
 }: {
   letters: StoredLetter[];
+  dateMap: Map<string, number | null>;
   uiVariant: PreviewLetterVariant;
   variants: readonly LetterUiVariant[];
   isReading: boolean;
@@ -1730,6 +1754,7 @@ function PreviewLetterDeskScene({
       {showSheet && (
         <PreviewLetterBrowseSheet
           letters={letters}
+          dateMap={dateMap}
           uiVariant={uiVariant}
           onClose={onHideSheet}
           onOpen={onOpenLetter}
@@ -1744,6 +1769,7 @@ function PreviewLetterDeskScene({
 
 function PreviewLetterBrowseSheet({
   letters,
+  dateMap,
   uiVariant,
   onClose,
   onOpen,
@@ -1752,6 +1778,7 @@ function PreviewLetterBrowseSheet({
   onToggleFavoritesOnly,
 }: {
   letters: StoredLetter[];
+  dateMap: Map<string, number | null>;
   uiVariant: PreviewLetterVariant;
   onClose: () => void;
   onOpen: (l: StoredLetter) => void;
@@ -1912,7 +1939,7 @@ function PreviewLetterBrowseSheet({
                     {stripExt(letter.name)}
                   </span>
                   <span className="mt-0.5 block text-[10px]" style={{ color: isB ? '#B8A080' : 'rgba(180,160,220,0.45)' }}>
-                    {formatDate(letter.importedAt)}
+                    {formatDate(dateMap.get(letter.name) ?? normalizeLetterTimestamp(letter.importedAt))}
                   </span>
                 </span>
                 <span
@@ -2184,6 +2211,7 @@ function PreviewLetterFullscreenView({
 
 function LetterBrowseSheet({
   letters,
+  dateMap,
   uiVariant,
   onClose,
   onOpen,
@@ -2192,6 +2220,7 @@ function LetterBrowseSheet({
   onToggleFavoritesOnly,
 }: {
   letters: StoredLetter[];
+  dateMap: Map<string, number | null>;
   uiVariant: LetterUiVariant;
   onClose: () => void;
   onOpen: (l: StoredLetter) => void;
@@ -2362,7 +2391,7 @@ function LetterBrowseSheet({
                   className="mt-0.5 text-xs"
                   style={{ color: sheetTheme.rowDate }}
                 >
-                  {formatDate(letter.importedAt)}
+                  {formatDate(dateMap.get(letter.name) ?? normalizeLetterTimestamp(letter.importedAt))}
                 </p>
               </div>
               {favoritedNames.has(letter.name) && (

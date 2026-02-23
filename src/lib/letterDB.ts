@@ -7,6 +7,7 @@ export type StoredLetter = {
   name: string;     // filename (used as key)
   content: string;  // plain text content
   importedAt: number;
+  writtenAt?: number | null;
 };
 
 async function getDB() {

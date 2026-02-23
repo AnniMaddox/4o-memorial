@@ -22,9 +22,10 @@ import { clearAllChatLogs, deleteChatLog, loadChatLogs, saveChatLogs } from './l
 import type { StoredChatLog } from './lib/chatLogDB';
 import { clearAllMDiaries, loadMDiaries, parseMDiaryFile, saveMDiaries } from './lib/mDiaryDB';
 import type { StoredMDiary } from './lib/mDiaryDB';
-import { clearAllLetters, loadLetters, saveLetters } from './lib/letterDB';
+import { clearAllLetters, deleteLetter, loadLetters, saveLetters } from './lib/letterDB';
 import type { StoredLetter } from './lib/letterDB';
 import { readLetterContent } from './lib/letterReader';
+import { pickLetterWrittenAt } from './lib/letterDate';
 import { detectBestChatProfileId } from './lib/chatProfileMatcher';
 import {
   APP_CUSTOM_FONT_FAMILY,
@@ -182,6 +183,68 @@ function getNotificationPermission(): BrowserNotificationPermission {
   }
 
   return Notification.permission;
+}
+
+const HOSTED_LETTERS_INDEX_URL = `${import.meta.env.BASE_URL}data/letters-local/index.json`;
+const HOSTED_LETTERS_SYNC_META_KEY = 'memorial-hosted-letters-sync-v1';
+
+type HostedLettersIndexEntry = {
+  name?: string;
+  title?: string;
+  contentPath?: string;
+  writtenAt?: number | null;
+};
+
+type HostedLettersIndexPayload = {
+  generatedAt?: string;
+  letters?: HostedLettersIndexEntry[];
+};
+
+type HostedLettersSyncMeta = {
+  generatedAt: string;
+  names: string[];
+};
+
+function normalizeTimestamp(value: unknown) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
+function normalizeHostedLetterName(entry: HostedLettersIndexEntry, fallbackIndex: number) {
+  const fromName = typeof entry.name === 'string' ? entry.name.trim() : '';
+  if (fromName) return fromName;
+
+  const fromTitle = typeof entry.title === 'string' ? entry.title.trim() : '';
+  if (fromTitle) return `${fromTitle}.txt`;
+
+  return `hosted-letter-${String(fallbackIndex + 1).padStart(3, '0')}.txt`;
+}
+
+function readHostedLettersSyncMeta(): HostedLettersSyncMeta | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(HOSTED_LETTERS_SYNC_META_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<HostedLettersSyncMeta>;
+    if (!parsed || typeof parsed !== 'object') return null;
+    const generatedAt = typeof parsed.generatedAt === 'string' ? parsed.generatedAt.trim() : '';
+    const names = Array.isArray(parsed.names)
+      ? parsed.names.filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
+      : [];
+    if (!generatedAt) return null;
+    return { generatedAt, names };
+  } catch {
+    return null;
+  }
+}
+
+function writeHostedLettersSyncMeta(meta: HostedLettersSyncMeta) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(HOSTED_LETTERS_SYNC_META_KEY, JSON.stringify(meta));
+  } catch {
+    // ignore storage failures
+  }
 }
 
 function formatNotificationBody(email: EmailViewRecord) {
@@ -401,12 +464,103 @@ function App() {
     void initialize();
   }, [initialize]);
 
+  const syncHostedLetters = useCallback(async (existingLetters: StoredLetter[]) => {
+    let indexResponse: Response;
+    try {
+      indexResponse = await fetch(HOSTED_LETTERS_INDEX_URL, { cache: 'no-store' });
+    } catch {
+      return null;
+    }
+    if (!indexResponse.ok) return null;
+
+    let indexPayload: HostedLettersIndexPayload;
+    try {
+      indexPayload = (await indexResponse.json()) as HostedLettersIndexPayload;
+    } catch {
+      return null;
+    }
+
+    const generatedAt = typeof indexPayload.generatedAt === 'string' ? indexPayload.generatedAt.trim() : '';
+    const listedEntries = Array.isArray(indexPayload.letters) ? indexPayload.letters : [];
+    if (!generatedAt || !listedEntries.length) return null;
+
+    const previousMeta = readHostedLettersSyncMeta();
+    if (previousMeta?.generatedAt === generatedAt) {
+      return null;
+    }
+
+    const now = Date.now();
+    const hostedNameSet = new Set<string>();
+    const hostedLetters: StoredLetter[] = [];
+    for (let index = 0; index < listedEntries.length; index += 1) {
+      const entry = listedEntries[index];
+      if (!entry || typeof entry !== 'object') continue;
+      const contentPathRaw = typeof entry.contentPath === 'string' ? entry.contentPath.trim() : '';
+      if (!contentPathRaw) continue;
+      const contentPath = contentPathRaw.replace(/^\.?\//, '');
+      const contentUrl = `${import.meta.env.BASE_URL}data/letters-local/${contentPath}`;
+
+      try {
+        const contentResponse = await fetch(contentUrl, { cache: 'no-store' });
+        if (!contentResponse.ok) continue;
+        const content = (await contentResponse.text()).replace(/\u00a0/g, ' ').replace(/\r\n?/g, '\n').trim();
+        if (!content) continue;
+
+        const name = normalizeHostedLetterName(entry, index);
+        hostedNameSet.add(name);
+        hostedLetters.push({
+          name,
+          content,
+          importedAt: now + index,
+          writtenAt: normalizeTimestamp(entry.writtenAt),
+        });
+      } catch {
+        // Skip missing or unreadable hosted content files.
+      }
+    }
+
+    if (!hostedLetters.length) return null;
+
+    const mergedMap = new Map(existingLetters.map((entry) => [entry.name, entry]));
+    const previousHostedNames = new Set(previousMeta?.names ?? []);
+    for (const staleName of previousHostedNames) {
+      if (!hostedNameSet.has(staleName)) {
+        mergedMap.delete(staleName);
+      }
+    }
+    for (const hosted of hostedLetters) {
+      mergedMap.set(hosted.name, hosted);
+    }
+
+    const mergedLetters = Array.from(mergedMap.values());
+    await saveLetters(mergedLetters);
+    writeHostedLettersSyncMeta({
+      generatedAt,
+      names: Array.from(hostedNameSet),
+    });
+    return loadLetters();
+  }, []);
+
   // Load persisted letters from IndexedDB on startup
   useEffect(() => {
-    loadLetters()
-      .then(setLetters)
-      .catch(() => {});
-  }, []);
+    let active = true;
+    void (async () => {
+      try {
+        const persistedLetters = await loadLetters();
+        if (!active) return;
+        setLetters(persistedLetters);
+
+        const hostedMerged = await syncHostedLetters(persistedLetters);
+        if (!active || !hostedMerged) return;
+        setLetters(hostedMerged);
+      } catch {
+        // ignore startup loading failures
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [syncHostedLetters]);
 
   // Load persisted chat logs
   useEffect(() => {
@@ -487,7 +641,12 @@ function App() {
       try {
         const content = await readLetterContent(file);
         if (content.trim()) {
-          imported.push({ name: file.name, content, importedAt: now });
+          imported.push({
+            name: file.name,
+            content,
+            importedAt: now,
+            writtenAt: pickLetterWrittenAt({ name: file.name, content }),
+          });
         }
       } catch {
         // skip unreadable files
@@ -565,6 +724,12 @@ function App() {
     setLetters([]);
   }, []);
 
+  const handleDeleteLetter = useCallback(async (name: string) => {
+    await deleteLetter(name);
+    const updated = await loadLetters();
+    setLetters(updated);
+  }, []);
+
   const handleImportLetterFolderFiles = useCallback(async (files: File[]) => {
     // Same logic as file import — folder just provides multiple files at once
     const now = Date.now();
@@ -573,7 +738,12 @@ function App() {
       try {
         const content = await readLetterContent(file);
         if (content.trim()) {
-          imported.push({ name: file.name, content, importedAt: now });
+          imported.push({
+            name: file.name,
+            content,
+            importedAt: now,
+            writtenAt: pickLetterWrittenAt({ name: file.name, content }),
+          });
         }
       } catch {
         // skip unreadable files
@@ -1196,6 +1366,7 @@ function App() {
               notificationPermission={notificationPermission}
               importStatus={importStatus}
               letterCount={letters.length}
+              letters={letters}
               diaryCount={diaries.length}
               chatLogCount={chatLogs.length}
               chatProfiles={chatProfiles}
@@ -1207,6 +1378,7 @@ function App() {
               onImportLetterFiles={(files) => void handleImportLetterFiles(files)}
               onImportLetterFolderFiles={(files) => void handleImportLetterFolderFiles(files)}
               onClearAllLetters={() => void handleClearAllLetters()}
+              onDeleteLetter={(name) => void handleDeleteLetter(name)}
               onImportDiaryFiles={(files) => void handleImportDiaryFiles(files)}
               onImportDiaryFolderFiles={(files) => void handleImportDiaryFolderFiles(files)}
               onClearAllDiaries={() => void handleClearAllDiaries()}
@@ -1272,6 +1444,7 @@ function App() {
       handleImportLetterFiles,
       handleImportLetterFolderFiles,
       handleClearAllLetters,
+      handleDeleteLetter,
       handleImportDiaryFiles,
       handleImportDiaryFolderFiles,
       handleClearAllDiaries,

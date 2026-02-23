@@ -274,7 +274,13 @@ function normalizeStoredLetterArray(value: unknown): StoredLetter[] {
 
     const content = typeof item.content === 'string' ? item.content : '';
     const importedAt = normalizeTimestamp(item.importedAt, now + index);
-    normalized.push({ name, content, importedAt });
+    const writtenAt = normalizeTimestamp(item.writtenAt, 0);
+    normalized.push({
+      name,
+      content,
+      importedAt,
+      writtenAt: writtenAt > 0 ? writtenAt : null,
+    });
   });
 
   return dedupeByName(normalized);

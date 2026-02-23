@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { emitActionToast } from '../lib/actionToast';
 import { APP_CUSTOM_FONT_FAMILY, SETTINGS_PREVIEW_FONT_FAMILY, buildFontFaceRule } from '../lib/font';
 import type { ChatProfile } from '../lib/chatDB';
+import type { StoredLetter } from '../lib/letterDB';
 import { DEFAULT_SETTINGS, type AppLabelKey, type AppLabels, type AppSettings, type BackgroundMode, type TabIconKey, type TabIconUrls } from '../types/settings';
 
 type SettingsPageProps = {
@@ -17,6 +18,7 @@ type SettingsPageProps = {
     message: string;
   };
   letterCount: number;
+  letters: StoredLetter[];
   diaryCount: number;
   chatLogCount: number;
   chatProfiles: ChatProfile[];
@@ -36,6 +38,7 @@ type SettingsPageProps = {
   onImportChatLogFiles: (files: File[]) => void;
   onImportChatLogFolderFiles: (files: File[]) => void;
   onClearAllLetters: () => void;
+  onDeleteLetter: (name: string) => void;
   onClearAllDiaries: () => void;
   onClearAllChatLogs: () => void;
   onExportAboutMeBackup: () => Promise<string> | string;
@@ -104,6 +107,25 @@ function normalizeFontSlotArray(input: unknown, fallback: string[]) {
   return Array.from({ length: FONT_PRESET_LIMIT }, (_, index) => {
     const value = input[index];
     return typeof value === 'string' ? value.trim() : '';
+  });
+}
+
+function stripLetterExtension(name: string) {
+  return name.replace(/\.(txt|md|docx?|json)$/i, '');
+}
+
+function normalizeLetterTimestamp(value: unknown) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
+function formatLetterDateForList(letter: StoredLetter) {
+  const timestamp = normalizeLetterTimestamp(letter.writtenAt) ?? normalizeLetterTimestamp(letter.importedAt);
+  if (!timestamp) return '未知日期';
+  return new Date(timestamp).toLocaleDateString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   });
 }
 
@@ -468,6 +490,7 @@ export function SettingsPage({
   notificationPermission,
   importStatus,
   letterCount,
+  letters,
   diaryCount,
   chatLogCount,
   chatProfiles,
@@ -483,6 +506,7 @@ export function SettingsPage({
   onImportChatLogFiles,
   onImportChatLogFolderFiles,
   onClearAllLetters,
+  onDeleteLetter,
   onClearAllDiaries,
   onClearAllChatLogs,
   onExportAboutMeBackup,
@@ -1528,6 +1552,17 @@ export function SettingsPage({
         : notificationPermission === 'denied'
           ? '已封鎖'
           : '尚未決定';
+
+  const letterEntriesForSettings = useMemo(() => {
+    const list = [...letters];
+    list.sort((a, b) => {
+      const ta = normalizeLetterTimestamp(a.writtenAt) ?? normalizeLetterTimestamp(a.importedAt) ?? 0;
+      const tb = normalizeLetterTimestamp(b.writtenAt) ?? normalizeLetterTimestamp(b.importedAt) ?? 0;
+      if (ta !== tb) return tb - ta;
+      return a.name.localeCompare(b.name, 'zh-TW');
+    });
+    return list;
+  }, [letters]);
 
   const activeFontSlots = getFontSlots(FONT_PRESET_KEY);
   const activeFontSlotNames = getFontSlotNames(FONT_PRESET_KEY);
@@ -3205,6 +3240,41 @@ export function SettingsPage({
                 </label>
               </div>
               <p className="text-xs text-stone-400">iPhone 通常不支援資料夾匯入，建議用「匯入檔案」。</p>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-stone-600">已匯入清單（可單封刪除）</p>
+                <span className="text-[11px] text-stone-500">{letterEntriesForSettings.length} 封</span>
+              </div>
+              {letterEntriesForSettings.length ? (
+                <div className="max-h-44 overflow-y-auto rounded-md border border-stone-200 bg-white">
+                  {letterEntriesForSettings.map((letter, index) => (
+                    <div
+                      key={`${letter.name}-${index}`}
+                      className="flex items-center gap-2 px-2.5 py-2"
+                      style={{
+                        borderTop: index === 0 ? 'none' : '1px solid rgba(0,0,0,0.05)',
+                      }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs text-stone-800">{stripLetterExtension(letter.name)}</p>
+                        <p className="mt-0.5 text-[11px] text-stone-500">{formatLetterDateForList(letter)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteLetter(letter.name)}
+                        className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] text-rose-700 transition active:opacity-80"
+                        title={`刪除 ${letter.name}`}
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-stone-400">目前沒有情書資料。</p>
+              )}
             </div>
 
             <div className="border-t border-stone-100 pt-3">
