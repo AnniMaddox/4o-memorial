@@ -226,19 +226,47 @@ export function NotesPage({
     <div className="relative flex h-full flex-col overflow-hidden" style={{ background: '#fdf6ee' }}>
 
       {/* ── Header ──────────────────────────────────────────────── */}
-      <header
-        className="shrink-0 flex items-center gap-3 border-b border-stone-200/70 px-4 pb-3 pt-4"
-        style={{ background: '#fdf6ee' }}
-      >
-        <button
-          type="button"
-          onClick={onExit}
-          className="grid h-8 w-8 place-items-center rounded-full border border-stone-300 bg-white/80 text-[22px] leading-none text-stone-600 transition active:scale-95"
-        >
-          ‹
-        </button>
+      <header className="relative shrink-0 border-b border-stone-200/70 px-4 pb-3 pt-4" style={{ background: '#fdf6ee' }}>
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onExit}
+            className="grid h-8 w-8 place-items-center rounded-full border border-stone-300 bg-white/80 text-[22px] leading-none text-stone-600 transition active:scale-95"
+          >
+            ‹
+          </button>
 
-        <div className="flex-1 text-center">
+          <div className="flex items-center gap-1.5">
+            <div className="flex overflow-hidden rounded-xl border border-stone-300 bg-white/80 text-xs">
+              <button
+                type="button"
+                onClick={() => setView('wall')}
+                className={`px-3 py-1.5 transition ${view === 'wall' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
+              >
+                牆
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('timeline')}
+                className={`px-3 py-1.5 transition ${view === 'timeline' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
+              >
+                流
+              </button>
+            </div>
+            {hideFloatingChibi && (
+              <button
+                type="button"
+                onClick={() => setShowSettings(true)}
+                aria-label="更多設定"
+                className="grid h-7 w-7 place-items-center text-[20px] leading-none text-[#b3a393] transition active:opacity-60"
+              >
+                ⋯
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center">
           <p className="uppercase tracking-[0.25em] text-stone-400" style={{ fontSize: 'var(--ui-hint-text-size, 9px)' }}>
             Notes
           </p>
@@ -248,36 +276,6 @@ export function NotesPage({
           >
             便利貼
           </h1>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          {/* View toggle */}
-          <div className="flex overflow-hidden rounded-xl border border-stone-300 bg-white/80 text-xs">
-            <button
-              type="button"
-              onClick={() => setView('wall')}
-              className={`px-3 py-1.5 transition ${view === 'wall' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
-            >
-              牆
-            </button>
-            <button
-              type="button"
-              onClick={() => setView('timeline')}
-              className={`px-3 py-1.5 transition ${view === 'timeline' ? 'bg-stone-800 text-white' : 'text-stone-600'}`}
-            >
-              流
-            </button>
-          </div>
-          {hideFloatingChibi && (
-            <button
-              type="button"
-              onClick={() => setShowSettings(true)}
-              aria-label="更多設定"
-              className="grid h-7 w-7 place-items-center text-[20px] leading-none text-[#b3a393] transition active:opacity-60"
-            >
-              ⋯
-            </button>
-          )}
         </div>
       </header>
 
@@ -302,13 +300,16 @@ export function NotesPage({
 
       {/* ── Bottom FAB row ───────────────────────────────────────── */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between pl-4 pr-5 pb-4">
-        {/* + New note */}
+        {/* Pin New note */}
         <button
           type="button"
           onClick={() => { setEditingNote(null); setComposing(true); }}
-          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-stone-800 text-2xl text-white shadow-lg transition active:scale-90"
+          aria-label="新增便利貼"
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-transparent text-[34px] leading-none transition active:scale-90"
         >
-          +
+          <span aria-hidden="true" className="select-none drop-shadow-[0_5px_10px_rgba(185,40,40,0.28)]">
+            📍
+          </span>
         </button>
         {!hideFloatingChibi && (
           <button
@@ -366,7 +367,7 @@ function NoteEmptyState() {
     <div className="flex flex-col items-center justify-center pt-20 text-center">
       <p className="mb-3 text-5xl">📝</p>
       <p className="text-base text-stone-500">還沒有便利貼</p>
-      <p className="mt-1 text-sm text-stone-400">點左下角 + 寫下第一個想法</p>
+      <p className="mt-1 text-sm text-stone-400">點左下角大頭針寫下第一個想法</p>
     </div>
   );
 }
