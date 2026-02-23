@@ -121,6 +121,28 @@ const UI_SIZE_CONTROLS: Array<{ key: UiSizeSettingKey; label: string; hint: stri
   { key: 'chatContactSubtitleSize', label: '對話聯絡人副標', hint: '對話首頁卡片上的副標（例如 你♡）', min: 12, max: 24, step: 1 },
 ];
 const CHAT_BACKGROUND_PRESETS = ['#efeff4', '#f6f1e7', '#eaf1f6', '#f4e9ef', '#eef3e6'] as const;
+const HOME_WALLPAPER_GRADIENT_OPTIONS: Array<{
+  value: AppSettings['homeWallpaperGradientPreset'];
+  label: string;
+  hint: string;
+}> = [
+  { value: 'auroraCandy', label: '糖霜極光', hint: '柔和粉藍流動' },
+  { value: 'bokehDream', label: '夢幻散景', hint: '整屏漸變變色' },
+  { value: 'neonTwilight', label: '霓虹暮色', hint: '深紫藍高對比' },
+  { value: 'peachSky', label: '蜜桃天空', hint: '橙粉奶油感' },
+  { value: 'mintLilac', label: '薄荷丁香', hint: '清新冷暖混色' },
+  { value: 'nightBlue', label: '深夜星藍', hint: '沉靜深藍系' },
+];
+const HOME_WALLPAPER_EFFECT_OPTIONS: Array<{
+  value: AppSettings['homeWallpaperEffectPreset'];
+  label: string;
+}> = [
+  { value: 'orbs', label: '光團' },
+  { value: 'snow', label: '雪花' },
+  { value: 'firefly', label: '螢火' },
+  { value: 'stardust', label: '星塵' },
+  { value: 'none', label: '無特效' },
+];
 
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   home: '🏠',
@@ -340,6 +362,8 @@ type AppearancePresetPayload = {
     backgroundMode: BackgroundMode;
     backgroundGradientStart: string;
     backgroundGradientEnd: string;
+    homeWallpaperGradientPreset: AppSettings['homeWallpaperGradientPreset'];
+    homeWallpaperEffectPreset: AppSettings['homeWallpaperEffectPreset'];
     backgroundImageUrl: string;
     backgroundImageOverlay: number;
     homeWidgetTitle: string;
@@ -1007,6 +1031,8 @@ export function SettingsPage({
         backgroundMode: settings.backgroundMode,
         backgroundGradientStart: settings.backgroundGradientStart,
         backgroundGradientEnd: settings.backgroundGradientEnd,
+        homeWallpaperGradientPreset: settings.homeWallpaperGradientPreset,
+        homeWallpaperEffectPreset: settings.homeWallpaperEffectPreset,
         backgroundImageUrl: settings.backgroundImageUrl,
         backgroundImageOverlay: settings.backgroundImageOverlay,
         homeWidgetTitle: settings.homeWidgetTitle,
@@ -1195,6 +1221,25 @@ export function SettingsPage({
       }
       if (typeof source.backgroundGradientEnd === 'string') {
         next.backgroundGradientEnd = source.backgroundGradientEnd;
+      }
+      if (
+        source.homeWallpaperGradientPreset === 'auroraCandy' ||
+        source.homeWallpaperGradientPreset === 'bokehDream' ||
+        source.homeWallpaperGradientPreset === 'neonTwilight' ||
+        source.homeWallpaperGradientPreset === 'peachSky' ||
+        source.homeWallpaperGradientPreset === 'mintLilac' ||
+        source.homeWallpaperGradientPreset === 'nightBlue'
+      ) {
+        next.homeWallpaperGradientPreset = source.homeWallpaperGradientPreset;
+      }
+      if (
+        source.homeWallpaperEffectPreset === 'orbs' ||
+        source.homeWallpaperEffectPreset === 'snow' ||
+        source.homeWallpaperEffectPreset === 'firefly' ||
+        source.homeWallpaperEffectPreset === 'stardust' ||
+        source.homeWallpaperEffectPreset === 'none'
+      ) {
+        next.homeWallpaperEffectPreset = source.homeWallpaperEffectPreset;
       }
       if (typeof source.backgroundImageUrl === 'string') {
         next.backgroundImageUrl = source.backgroundImageUrl;
@@ -1859,6 +1904,57 @@ export function SettingsPage({
                   </label>
                 </div>
               )}
+
+              <div className="space-y-2 rounded-lg border border-stone-200 bg-white/70 px-3 py-3">
+                <p className="text-xs text-stone-500">首頁桌布（可獨立於上方背景模式）</p>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-stone-700">漸變主題</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {HOME_WALLPAPER_GRADIENT_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => onSettingChange({ homeWallpaperGradientPreset: option.value })}
+                        className={`rounded-lg border px-2.5 py-2 text-left text-xs ${
+                          settings.homeWallpaperGradientPreset === option.value
+                            ? 'border-stone-900 bg-stone-900 text-white'
+                            : 'border-stone-300 bg-white text-stone-700'
+                        }`}
+                      >
+                        <span className="block">{option.label}</span>
+                        <span
+                          className={`block text-[10px] ${
+                            settings.homeWallpaperGradientPreset === option.value ? 'text-white/75' : 'text-stone-500'
+                          }`}
+                        >
+                          {option.hint}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-stone-700">動態特效</p>
+                  <div className="grid grid-cols-5 gap-2">
+                    {HOME_WALLPAPER_EFFECT_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => onSettingChange({ homeWallpaperEffectPreset: option.value })}
+                        className={`rounded-lg border px-2 py-1.5 text-center text-[11px] ${
+                          settings.homeWallpaperEffectPreset === option.value
+                            ? 'border-stone-900 bg-stone-900 text-white'
+                            : 'border-stone-300 bg-white text-stone-700'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </SettingSubgroup>
 
             <SettingSubgroup

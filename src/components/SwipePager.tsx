@@ -113,7 +113,12 @@ export function SwipePager({ activeIndex, onIndexChange, swipeEnabled, pages }: 
     >
       <div className="flex h-full w-full">
         {pages.map((page, pageIndex) => (
-          <section key={page.id} className="h-full w-full shrink-0 snap-center overflow-y-auto px-4 pb-28 pt-4">
+          <section
+            key={page.id}
+            className={`h-full w-full shrink-0 snap-center ${
+              page.id === 'home' ? 'overflow-hidden p-0' : 'overflow-y-auto px-4 pb-28 pt-4'
+            }`}
+          >
             {visitedPageIndexes.has(pageIndex) ? (
               page.node
             ) : (

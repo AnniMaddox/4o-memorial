@@ -8,6 +8,14 @@ export type HoverToneWeights = {
 
 export type CalendarColorMode = 'month' | 'custom';
 export type BackgroundMode = 'gradient' | 'image';
+export type HomeWallpaperGradientPreset =
+  | 'auroraCandy'
+  | 'bokehDream'
+  | 'neonTwilight'
+  | 'peachSky'
+  | 'mintLilac'
+  | 'nightBlue';
+export type HomeWallpaperEffectPreset = 'orbs' | 'snow' | 'firefly' | 'stardust' | 'none';
 export type ChatBubbleStyle = 'jelly' | 'imessage' | 'imessageClassic';
 export type DiaryCoverFitMode = 'cover' | 'contain';
 export type TabIconDisplayMode = 'framed' | 'full';
@@ -118,6 +126,8 @@ export type AppSettings = {
   backgroundMode: BackgroundMode;
   backgroundGradientStart: string;
   backgroundGradientEnd: string;
+  homeWallpaperGradientPreset: HomeWallpaperGradientPreset;
+  homeWallpaperEffectPreset: HomeWallpaperEffectPreset;
   backgroundImageUrl: string;
   backgroundImageOverlay: number;
   tabIconDisplayMode: TabIconDisplayMode;
@@ -209,6 +219,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   backgroundMode: 'gradient',
   backgroundGradientStart: '#fde9d7',
   backgroundGradientEnd: '#ece4d5',
+  homeWallpaperGradientPreset: 'auroraCandy',
+  homeWallpaperEffectPreset: 'orbs',
   backgroundImageUrl: '',
   backgroundImageOverlay: 36,
   tabIconDisplayMode: 'framed',

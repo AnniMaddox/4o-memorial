@@ -305,9 +305,14 @@ export function NotesPage({
           type="button"
           onClick={() => { setEditingNote(null); setComposing(true); }}
           aria-label="新增便利貼"
-          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-transparent text-[34px] leading-none transition active:scale-90"
+          className="pointer-events-auto flex h-16 w-16 items-center justify-center bg-transparent leading-none transition active:scale-90"
+          style={{ fontSize: '56px' }}
         >
-          <span aria-hidden="true" className="select-none drop-shadow-[0_5px_10px_rgba(185,40,40,0.28)]">
+          <span
+            aria-hidden="true"
+            className="select-none drop-shadow-[0_6px_12px_rgba(200,70,70,0.28)]"
+            style={{ transform: 'translateY(1px)' }}
+          >
             📍
           </span>
         </button>

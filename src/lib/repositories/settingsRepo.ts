@@ -8,6 +8,8 @@ import type {
   ChibiPoolMode,
   ChatBubbleStyle,
   DiaryCoverFitMode,
+  HomeWallpaperEffectPreset,
+  HomeWallpaperGradientPreset,
   LetterUiMode,
   TabIconDisplayMode,
   TabIconUrls,
@@ -51,6 +53,29 @@ function normalizeCalendarColorMode(value: unknown, fallback: CalendarColorMode)
 
 function normalizeBackgroundMode(value: unknown, fallback: BackgroundMode): BackgroundMode {
   return value === 'image' || value === 'gradient' ? value : fallback;
+}
+
+function normalizeHomeWallpaperGradientPreset(
+  value: unknown,
+  fallback: HomeWallpaperGradientPreset,
+): HomeWallpaperGradientPreset {
+  return value === 'auroraCandy' ||
+    value === 'bokehDream' ||
+    value === 'neonTwilight' ||
+    value === 'peachSky' ||
+    value === 'mintLilac' ||
+    value === 'nightBlue'
+    ? value
+    : fallback;
+}
+
+function normalizeHomeWallpaperEffectPreset(
+  value: unknown,
+  fallback: HomeWallpaperEffectPreset,
+): HomeWallpaperEffectPreset {
+  return value === 'orbs' || value === 'snow' || value === 'firefly' || value === 'stardust' || value === 'none'
+    ? value
+    : fallback;
 }
 
 function normalizeChatBubbleStyle(value: unknown, fallback: ChatBubbleStyle): ChatBubbleStyle {
@@ -252,6 +277,14 @@ export async function getSettings() {
     backgroundMode: normalizeBackgroundMode(persisted.backgroundMode, DEFAULT_SETTINGS.backgroundMode),
     backgroundGradientStart: normalizeString(persisted.backgroundGradientStart, DEFAULT_SETTINGS.backgroundGradientStart),
     backgroundGradientEnd: normalizeString(persisted.backgroundGradientEnd, DEFAULT_SETTINGS.backgroundGradientEnd),
+    homeWallpaperGradientPreset: normalizeHomeWallpaperGradientPreset(
+      persisted.homeWallpaperGradientPreset,
+      DEFAULT_SETTINGS.homeWallpaperGradientPreset,
+    ),
+    homeWallpaperEffectPreset: normalizeHomeWallpaperEffectPreset(
+      persisted.homeWallpaperEffectPreset,
+      DEFAULT_SETTINGS.homeWallpaperEffectPreset,
+    ),
     backgroundImageUrl: normalizeString(persisted.backgroundImageUrl, DEFAULT_SETTINGS.backgroundImageUrl),
     tabIconDisplayMode: normalizeTabIconDisplayMode(
       persisted.tabIconDisplayMode,

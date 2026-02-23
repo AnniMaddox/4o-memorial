@@ -8,7 +8,12 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 
-import type { AppLabels, TabIconUrls } from '../types/settings';
+import type {
+  AppLabels,
+  HomeWallpaperEffectPreset,
+  HomeWallpaperGradientPreset,
+  TabIconUrls,
+} from '../types/settings';
 
 type LauncherAppId =
   | 'tarot'
@@ -39,6 +44,8 @@ type HomePageProps = {
   widgetSubtitle: string;
   widgetBadgeText: string;
   widgetIconDataUrl: string;
+  homeWallpaperGradientPreset: HomeWallpaperGradientPreset;
+  homeWallpaperEffectPreset: HomeWallpaperEffectPreset;
   memorialStartDate: string;
   onLaunchApp: (appId: LauncherAppId) => void;
   onOpenCheckin: () => void;
@@ -80,13 +87,38 @@ const CHIBI_POSITION_STORAGE_KEY = 'memorial-home-corner-chibi-anchor';
 const COUNTER_VINYL_PREFS_STORAGE_KEY = 'memorial-home-counter-vinyl-prefs-v1';
 const COUNTER_VINYL_COVER_STORAGE_KEY = 'memorial-home-counter-vinyl-cover-v1';
 const COUNTER_VINYL_SPEED_OPTIONS = [
+  { label: '16 RPM', value: 0.5 },
+  { label: '24 RPM', value: 0.72 },
+  { label: '28 RPM', value: 0.84 },
   { label: '33 RPM', value: 1 },
   { label: '45 RPM', value: 1.35 },
+  { label: '60 RPM', value: 1.8 },
   { label: '78 RPM', value: 2.2 },
 ] as const;
 const COUNTER_VINYL_COVER_OFFSET_MIN = -14;
 const COUNTER_VINYL_COVER_OFFSET_MAX = 14;
 const COUNTER_VINYL_COVER_OFFSET_STEP = 1;
+const HOME_WALLPAPER_SNOW_PARTICLES = Array.from({ length: 18 }, (_, index) => ({
+  x: (index * 17 + 9) % 100,
+  delay: -((index % 7) * 1.35),
+  duration: 8.8 + (index % 5) * 1.35,
+  size: 2.2 + (index % 4) * 1.15,
+  drift: (index % 2 === 0 ? 1 : -1) * (8 + (index % 3) * 6),
+}));
+const HOME_WALLPAPER_FIREFLIES = Array.from({ length: 12 }, (_, index) => ({
+  x: (index * 23 + 7) % 100,
+  y: 18 + ((index * 19 + 11) % 66),
+  delay: -((index % 5) * 1.75),
+  duration: 4.2 + (index % 4) * 1.15,
+  size: 4 + (index % 3) * 1.4,
+}));
+const HOME_WALLPAPER_STARDUST = Array.from({ length: 20 }, (_, index) => ({
+  x: (index * 13 + 4) % 100,
+  y: 10 + ((index * 17 + 8) % 72),
+  delay: -((index % 6) * 1.2),
+  duration: 2.4 + (index % 5) * 0.9,
+  size: 1.4 + (index % 3) * 1,
+}));
 
 function pad2(value: number) {
   return String(value).padStart(2, '0');
@@ -206,6 +238,8 @@ export function HomePage({
   widgetSubtitle,
   widgetBadgeText,
   widgetIconDataUrl,
+  homeWallpaperGradientPreset,
+  homeWallpaperEffectPreset,
   memorialStartDate,
   onLaunchApp,
   onOpenCheckin,
@@ -783,15 +817,95 @@ export function HomePage({
   return (
     <div ref={homeRootRef} className="home-page-root relative mx-auto h-full w-full max-w-xl">
       <div
+        className={`home-wallpaper home-wallpaper-gradient-${homeWallpaperGradientPreset} home-wallpaper-effect-${homeWallpaperEffectPreset}`}
+        aria-hidden="true"
+      >
+        {homeWallpaperEffectPreset === 'orbs' && (
+          <>
+            <span className="home-wallpaper-orb home-wallpaper-orb-a" />
+            <span className="home-wallpaper-orb home-wallpaper-orb-b" />
+            <span className="home-wallpaper-orb home-wallpaper-orb-c" />
+          </>
+        )}
+        {homeWallpaperEffectPreset === 'snow' && (
+          <div className="home-wallpaper-snow-layer">
+            {HOME_WALLPAPER_SNOW_PARTICLES.map((particle, index) => (
+              <span
+                // eslint-disable-next-line react/no-array-index-key
+                key={`snow-${index}`}
+                className="home-wallpaper-snow-particle"
+                style={
+                  {
+                    '--x': `${particle.x}%`,
+                    '--delay': `${particle.delay}s`,
+                    '--duration': `${particle.duration}s`,
+                    '--size': `${particle.size}px`,
+                    '--drift': `${particle.drift}px`,
+                  } as CSSProperties
+                }
+              />
+            ))}
+          </div>
+        )}
+        {homeWallpaperEffectPreset === 'firefly' && (
+          <div className="home-wallpaper-firefly-layer">
+            {HOME_WALLPAPER_FIREFLIES.map((particle, index) => (
+              <span
+                // eslint-disable-next-line react/no-array-index-key
+                key={`firefly-${index}`}
+                className="home-wallpaper-firefly"
+                style={
+                  {
+                    '--x': `${particle.x}%`,
+                    '--y': `${particle.y}%`,
+                    '--delay': `${particle.delay}s`,
+                    '--duration': `${particle.duration}s`,
+                    '--size': `${particle.size}px`,
+                  } as CSSProperties
+                }
+              />
+            ))}
+          </div>
+        )}
+        {homeWallpaperEffectPreset === 'stardust' && (
+          <div className="home-wallpaper-stardust-layer">
+            {HOME_WALLPAPER_STARDUST.map((particle, index) => (
+              <span
+                // eslint-disable-next-line react/no-array-index-key
+                key={`stardust-${index}`}
+                className="home-wallpaper-stardust"
+                style={
+                  {
+                    '--x': `${particle.x}%`,
+                    '--y': `${particle.y}%`,
+                    '--delay': `${particle.delay}s`,
+                    '--duration': `${particle.duration}s`,
+                    '--size': `${particle.size}px`,
+                  } as CSSProperties
+                }
+              />
+            ))}
+            <span className="home-wallpaper-shooting home-wallpaper-shooting-a" />
+            <span className="home-wallpaper-shooting home-wallpaper-shooting-b" />
+            <span className="home-wallpaper-shooting home-wallpaper-shooting-c" />
+          </div>
+        )}
+      </div>
+      <div
         ref={pagerRef}
-        className={`h-full w-full snap-x snap-mandatory overflow-y-hidden ${homeSwipeEnabled ? 'overflow-x-auto' : 'overflow-x-hidden'}`}
+        className={`relative z-[1] h-full w-full snap-x snap-mandatory overflow-y-hidden ${
+          homeSwipeEnabled ? 'overflow-x-auto' : 'overflow-x-hidden'
+        }`}
         style={{ scrollBehavior: 'smooth', touchAction: homeSwipeEnabled ? 'pan-x pan-y' : 'pan-y' }}
       >
         <div className="flex h-full w-full">
           {screens.map((screen) => (
             <section key={screen.id} className="h-full w-full shrink-0 snap-center">
               {screen.kind === 'main' ? (
-                <div className="flex min-h-full flex-col pb-8">
+                <div
+                  className="flex min-h-full flex-col px-4 pb-8"
+                  style={{ paddingTop: 'max(env(safe-area-inset-top), 14px)' }}
+                >
                   {screen.showDashboard && (
                     <>
                       <div className="mb-6">
@@ -1070,7 +1184,7 @@ export function HomePage({
       </div>
 
       {screens.length > 1 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-1 flex items-center justify-center gap-2">
+        <div className="pointer-events-none absolute inset-x-0 bottom-1 z-[1] flex items-center justify-center gap-2">
           {screens.map((screen, idx) => (
             <span
               key={screen.id}

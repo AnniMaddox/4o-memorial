@@ -1131,6 +1131,8 @@ function App() {
             widgetSubtitle={settings.homeWidgetSubtitle}
             widgetBadgeText={settings.homeWidgetBadgeText}
             widgetIconDataUrl={settings.homeWidgetIconDataUrl}
+            homeWallpaperGradientPreset={settings.homeWallpaperGradientPreset}
+            homeWallpaperEffectPreset={settings.homeWallpaperEffectPreset}
             memorialStartDate={settings.memorialStartDate}
             onLaunchApp={onLaunchApp}
             onOpenCheckin={() => onLaunchApp('checkin')}
