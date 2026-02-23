@@ -7,7 +7,7 @@ export type HoverToneWeights = {
 };
 
 export type CalendarColorMode = 'month' | 'custom';
-export type BackgroundMode = 'gradient' | 'image';
+export type BackgroundMode = 'gradient' | 'image' | 'dynamic';
 export type HomeWallpaperGradientPreset =
   | 'auroraCandy'
   | 'bokehDream'

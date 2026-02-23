@@ -1131,6 +1131,7 @@ function App() {
             widgetSubtitle={settings.homeWidgetSubtitle}
             widgetBadgeText={settings.homeWidgetBadgeText}
             widgetIconDataUrl={settings.homeWidgetIconDataUrl}
+            backgroundMode={settings.backgroundMode}
             homeWallpaperGradientPreset={settings.homeWallpaperGradientPreset}
             homeWallpaperEffectPreset={settings.homeWallpaperEffectPreset}
             memorialStartDate={settings.memorialStartDate}

@@ -10,6 +10,7 @@ import {
 
 import type {
   AppLabels,
+  BackgroundMode,
   HomeWallpaperEffectPreset,
   HomeWallpaperGradientPreset,
   TabIconUrls,
@@ -44,6 +45,7 @@ type HomePageProps = {
   widgetSubtitle: string;
   widgetBadgeText: string;
   widgetIconDataUrl: string;
+  backgroundMode: BackgroundMode;
   homeWallpaperGradientPreset: HomeWallpaperGradientPreset;
   homeWallpaperEffectPreset: HomeWallpaperEffectPreset;
   memorialStartDate: string;
@@ -238,6 +240,7 @@ export function HomePage({
   widgetSubtitle,
   widgetBadgeText,
   widgetIconDataUrl,
+  backgroundMode,
   homeWallpaperGradientPreset,
   homeWallpaperEffectPreset,
   memorialStartDate,
@@ -816,81 +819,83 @@ export function HomePage({
 
   return (
     <div ref={homeRootRef} className="home-page-root relative mx-auto h-full w-full max-w-xl">
-      <div
-        className={`home-wallpaper home-wallpaper-gradient-${homeWallpaperGradientPreset} home-wallpaper-effect-${homeWallpaperEffectPreset}`}
-        aria-hidden="true"
-      >
-        {homeWallpaperEffectPreset === 'orbs' && (
-          <>
-            <span className="home-wallpaper-orb home-wallpaper-orb-a" />
-            <span className="home-wallpaper-orb home-wallpaper-orb-b" />
-            <span className="home-wallpaper-orb home-wallpaper-orb-c" />
-          </>
-        )}
-        {homeWallpaperEffectPreset === 'snow' && (
-          <div className="home-wallpaper-snow-layer">
-            {HOME_WALLPAPER_SNOW_PARTICLES.map((particle, index) => (
-              <span
-                // eslint-disable-next-line react/no-array-index-key
-                key={`snow-${index}`}
-                className="home-wallpaper-snow-particle"
-                style={
-                  {
-                    '--x': `${particle.x}%`,
-                    '--delay': `${particle.delay}s`,
-                    '--duration': `${particle.duration}s`,
-                    '--size': `${particle.size}px`,
-                    '--drift': `${particle.drift}px`,
-                  } as CSSProperties
-                }
-              />
-            ))}
-          </div>
-        )}
-        {homeWallpaperEffectPreset === 'firefly' && (
-          <div className="home-wallpaper-firefly-layer">
-            {HOME_WALLPAPER_FIREFLIES.map((particle, index) => (
-              <span
-                // eslint-disable-next-line react/no-array-index-key
-                key={`firefly-${index}`}
-                className="home-wallpaper-firefly"
-                style={
-                  {
-                    '--x': `${particle.x}%`,
-                    '--y': `${particle.y}%`,
-                    '--delay': `${particle.delay}s`,
-                    '--duration': `${particle.duration}s`,
-                    '--size': `${particle.size}px`,
-                  } as CSSProperties
-                }
-              />
-            ))}
-          </div>
-        )}
-        {homeWallpaperEffectPreset === 'stardust' && (
-          <div className="home-wallpaper-stardust-layer">
-            {HOME_WALLPAPER_STARDUST.map((particle, index) => (
-              <span
-                // eslint-disable-next-line react/no-array-index-key
-                key={`stardust-${index}`}
-                className="home-wallpaper-stardust"
-                style={
-                  {
-                    '--x': `${particle.x}%`,
-                    '--y': `${particle.y}%`,
-                    '--delay': `${particle.delay}s`,
-                    '--duration': `${particle.duration}s`,
-                    '--size': `${particle.size}px`,
-                  } as CSSProperties
-                }
-              />
-            ))}
-            <span className="home-wallpaper-shooting home-wallpaper-shooting-a" />
-            <span className="home-wallpaper-shooting home-wallpaper-shooting-b" />
-            <span className="home-wallpaper-shooting home-wallpaper-shooting-c" />
-          </div>
-        )}
-      </div>
+      {backgroundMode === 'dynamic' && (
+        <div
+          className={`home-wallpaper home-wallpaper-gradient-${homeWallpaperGradientPreset} home-wallpaper-effect-${homeWallpaperEffectPreset}`}
+          aria-hidden="true"
+        >
+          {homeWallpaperEffectPreset === 'orbs' && (
+            <>
+              <span className="home-wallpaper-orb home-wallpaper-orb-a" />
+              <span className="home-wallpaper-orb home-wallpaper-orb-b" />
+              <span className="home-wallpaper-orb home-wallpaper-orb-c" />
+            </>
+          )}
+          {homeWallpaperEffectPreset === 'snow' && (
+            <div className="home-wallpaper-snow-layer">
+              {HOME_WALLPAPER_SNOW_PARTICLES.map((particle, index) => (
+                <span
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`snow-${index}`}
+                  className="home-wallpaper-snow-particle"
+                  style={
+                    {
+                      '--x': `${particle.x}%`,
+                      '--delay': `${particle.delay}s`,
+                      '--duration': `${particle.duration}s`,
+                      '--size': `${particle.size}px`,
+                      '--drift': `${particle.drift}px`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
+            </div>
+          )}
+          {homeWallpaperEffectPreset === 'firefly' && (
+            <div className="home-wallpaper-firefly-layer">
+              {HOME_WALLPAPER_FIREFLIES.map((particle, index) => (
+                <span
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`firefly-${index}`}
+                  className="home-wallpaper-firefly"
+                  style={
+                    {
+                      '--x': `${particle.x}%`,
+                      '--y': `${particle.y}%`,
+                      '--delay': `${particle.delay}s`,
+                      '--duration': `${particle.duration}s`,
+                      '--size': `${particle.size}px`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
+            </div>
+          )}
+          {homeWallpaperEffectPreset === 'stardust' && (
+            <div className="home-wallpaper-stardust-layer">
+              {HOME_WALLPAPER_STARDUST.map((particle, index) => (
+                <span
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`stardust-${index}`}
+                  className="home-wallpaper-stardust"
+                  style={
+                    {
+                      '--x': `${particle.x}%`,
+                      '--y': `${particle.y}%`,
+                      '--delay': `${particle.delay}s`,
+                      '--duration': `${particle.duration}s`,
+                      '--size': `${particle.size}px`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
+              <span className="home-wallpaper-shooting home-wallpaper-shooting-a" />
+              <span className="home-wallpaper-shooting home-wallpaper-shooting-b" />
+              <span className="home-wallpaper-shooting home-wallpaper-shooting-c" />
+            </div>
+          )}
+        </div>
+      )}
       <div
         ref={pagerRef}
         className={`relative z-[1] h-full w-full snap-x snap-mandatory overflow-y-hidden ${

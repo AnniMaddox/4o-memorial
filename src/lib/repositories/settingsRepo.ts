@@ -52,7 +52,7 @@ function normalizeCalendarColorMode(value: unknown, fallback: CalendarColorMode)
 }
 
 function normalizeBackgroundMode(value: unknown, fallback: BackgroundMode): BackgroundMode {
-  return value === 'image' || value === 'gradient' ? value : fallback;
+  return value === 'image' || value === 'gradient' || value === 'dynamic' ? value : fallback;
 }
 
 function normalizeHomeWallpaperGradientPreset(
