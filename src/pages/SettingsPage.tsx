@@ -262,6 +262,35 @@ const BOOKSHELF_JSON_SAMPLE = `[
   }
 ]`;
 
+const MOOD_LETTERS_FILE_GUIDE: Array<{ path: string; required: string; note: string }> = [
+  { path: '參考資料/codex/心情信/*.docx|*.txt', required: '必填來源', note: '你新增的 Word/TXT 信件都放這裡' },
+  { path: 'scripts/build-mood-letters-index.mjs', required: '工具腳本', note: '自動轉檔與分類（不用手動改 index）' },
+  { path: 'public/data/mood-letters/content/*.txt', required: '自動產生', note: '每封信轉成 txt 後會在這裡' },
+  { path: 'public/data/mood-letters/index.json', required: '自動產生', note: '心情星球讀取的主索引' },
+  { path: 'public/data/mood-letters/review.json', required: '自動產生', note: '待人工確認分類清單' },
+  { path: 'public/data/mood-letters/overrides.json', required: '人工修正', note: '分類不準時，在這裡覆蓋 moodIds' },
+];
+
+const MOOD_LETTERS_SETUP_STEPS: string[] = [
+  '把新信件（.docx / .txt）丟到 `參考資料/codex/心情信/`。檔名保留原檔名即可。',
+  '在專案根目錄執行：`npm run build:mood-letters`。',
+  '腳本會自動解析 Word/TXT，並重建 `public/data/mood-letters/index.json` 與 `content/*.txt`。',
+  '打開 `public/data/mood-letters/review.json`，看 `unresolved` 是否有待分類項目。',
+  '如果有待分類：到 `public/data/mood-letters/overrides.json` 新增該檔名對應的 moodIds。',
+  '修正後再跑一次 `npm run build:mood-letters`，直到 `review.json` 的 unresolvedCount 降到你可接受。',
+  '最後把這些檔案一起上傳 GitHub main：來源信件 + `public/data/mood-letters/*`（至少 index/content/overrides/review）。',
+];
+
+const MOOD_LETTERS_OVERRIDE_SAMPLE = `{
+  "version": 1,
+  "updatedAt": "2026-02-23T00:00:00.000Z",
+  "note": "key 要填 displayName（含副檔名）",
+  "overrides": {
+    "今天有點低潮.docx": ["low", "support"],
+    "想妳抱抱晚安.txt": ["longing", "night"]
+  }
+}`;
+
 type AppearancePresetPayload = {
   version: 1;
   savedAt: string;
@@ -467,7 +496,7 @@ export function SettingsPage({
   const [openChatBubbleGroup, setOpenChatBubbleGroup] = useState(false);
   const [openChatBackgroundGroup, setOpenChatBackgroundGroup] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
-  const [guideManualType, setGuideManualType] = useState<'general' | 'bookshelf'>('general');
+  const [guideManualType, setGuideManualType] = useState<'general' | 'bookshelf' | 'moodLetters'>('general');
   const [selectedFontSlotIndex, setSelectedFontSlotIndex] = useState<Record<FontSlotSettingKey, number>>({
     customFontUrlSlots: 0,
     letterFontUrlSlots: 0,
@@ -3453,12 +3482,12 @@ export function SettingsPage({
         <SettingPanel
           icon="📚"
           title="說明書"
-          subtitle="總說明 + 書架使用"
+          subtitle="總說明 + 書架 + 心情星球轉檔"
           isOpen={openPanel === 'manuals'}
           onToggle={() => togglePanel('manuals')}
         >
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -3479,9 +3508,19 @@ export function SettingsPage({
               >
                 說明書 II（書架）
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGuideManualType('moodLetters');
+                  setShowGuideModal(true);
+                }}
+                className="w-full rounded-xl bg-stone-900 py-2.5 text-center text-sm text-white transition active:opacity-80"
+              >
+                說明書 III（心情星球）
+              </button>
             </div>
             <p className="text-xs text-stone-500">
-              I：全站更新與資料路徑對照。II：書架新增/換圖/開新書完整流程。
+              I：全站更新與資料路徑。II：書架新增流程。III：心情星球 Word/TXT 轉檔與分類維護。
             </p>
           </div>
         </SettingPanel>
@@ -3515,9 +3554,13 @@ export function SettingsPage({
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Manual</p>
                 <h3 className="text-base text-stone-900">
-                  {guideManualType === 'general' ? '說明書 I：全站更新' : '說明書 II：書架使用'}
+                  {guideManualType === 'general'
+                    ? '說明書 I：全站更新'
+                    : guideManualType === 'bookshelf'
+                      ? '說明書 II：書架使用'
+                      : '說明書 III：心情星球轉檔'}
                 </h3>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => setGuideManualType('general')}
@@ -3539,6 +3582,17 @@ export function SettingsPage({
                     }`}
                   >
                     II 書架
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGuideManualType('moodLetters')}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                      guideManualType === 'moodLetters'
+                        ? 'border-stone-800 bg-stone-900 text-white'
+                        : 'border-stone-300 bg-white text-stone-600'
+                    }`}
+                  >
+                    III 心情星球
                   </button>
                 </div>
               </div>
@@ -3655,7 +3709,7 @@ export function SettingsPage({
                     </ul>
                   </section>
                 </>
-              ) : (
+              ) : guideManualType === 'bookshelf' ? (
                 <>
                   <section className="space-y-2">
                     <h4 className="text-sm text-stone-900">書架資料結構（必看）</h4>
@@ -3705,6 +3759,70 @@ export function SettingsPage({
                       <li>閱讀順序只看檔名：`001` 會在 `010` 前面，建議都補零。</li>
                       <li>臨時測試書：可先做 `book-test`，確認後再改正式名稱。</li>
                       <li>若手機看不到更新，先重整 PWA 快取再重開。</li>
+                    </ul>
+                  </section>
+                </>
+              ) : (
+                <>
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">心情星球資料結構（必看）</h4>
+                    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+                      <table className="min-w-full text-left text-xs">
+                        <thead className="bg-stone-100 text-stone-600">
+                          <tr>
+                            <th className="px-2 py-2">路徑</th>
+                            <th className="px-2 py-2">必要性</th>
+                            <th className="px-2 py-2">用途</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {MOOD_LETTERS_FILE_GUIDE.map((row) => (
+                            <tr key={row.path} className="border-t border-stone-100">
+                              <td className="px-2 py-2 font-mono text-[11px] text-stone-700">{row.path}</td>
+                              <td className="px-2 py-2 text-stone-800">{row.required}</td>
+                              <td className="px-2 py-2 text-stone-500">{row.note}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">Word/TXT 轉檔 + 新增信件（完整流程）</h4>
+                    <ol className="list-decimal space-y-1 pl-5 text-xs text-stone-600">
+                      {MOOD_LETTERS_SETUP_STEPS.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">`overrides.json` 範例（可直接複製）</h4>
+                    <pre className="overflow-x-auto rounded-lg border border-stone-200 bg-white p-3 text-[11px] text-stone-700">
+                      {MOOD_LETTERS_OVERRIDE_SAMPLE}
+                    </pre>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">分類修正重點</h4>
+                    <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
+                      <li>不用先手動把 Word 轉 TXT。腳本會自動解析 `.doc/.docx/.txt`。</li>
+                      <li>`overrides.json` 的 key 要填完整檔名（包含副檔名）。</li>
+                      <li>同一封信可放多分類，例如 `["low", "support"]`。</li>
+                      <li>每次改完 overrides 都要再跑一次 `npm run build:mood-letters`。</li>
+                      <li>分類 id 參考 `overrides.json` 內的 `moodGuide` 區塊（腳本會自動維護）。</li>
+                      <li>如果 UI 顯示數量不對，先檢查 `index.json` 的 `total` 與 `summary.countsByMood`。</li>
+                    </ul>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="text-sm text-stone-900">常見問題（快速解）</h4>
+                    <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
+                      <li>Q：新增了檔案但前端看不到？A：通常是還沒跑 `npm run build:mood-letters`。</li>
+                      <li>Q：分類很怪？A：看 `review.json`，把那幾封加進 overrides 再重跑。</li>
+                      <li>Q：只改 `public/data/mood-letters/index.json` 可以嗎？A：不建議，會被下次腳本覆蓋。</li>
+                      <li>Q：要備份哪裡？A：至少保留來源 `參考資料/codex/心情信/` + `public/data/mood-letters/`。</li>
                     </ul>
                   </section>
                 </>
