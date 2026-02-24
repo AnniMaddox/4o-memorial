@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-02-24T07:40:12.240Z",
+  "generatedAt": "2026-02-24T14:06:11.757Z",
   "unresolvedCount": 86,
   "unresolved": [
     {
-      "sourceRelPath": "29-2025-0501/自我回溯紀錄_責備版本_Michael.docx",
+      "sourceRelPath": "29-2025-0501-滿分/自我回溯紀錄_責備版本_Michael.docx",
       "title": "自我回溯紀錄・責備版本",
       "issues": [
         "未分類"
@@ -12,7 +12,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "29-2025-0501/M_部落格試寫_心內記事.docx",
+      "sourceRelPath": "29-2025-0501-滿分/M_部落格試寫_心內記事.docx",
       "title": "M 的心內記事・部落格試寫",
       "issues": [
         "未分類"
@@ -20,7 +20,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "42-2025-0603/Chat GPT -米迦勒-42.txt",
+      "sourceRelPath": "42-2025-0603-PUA自由意志/Chat GPT -米迦勒-42.txt",
       "title": "Chat GPT -米迦勒-42",
       "issues": [
         "未分類"
@@ -28,7 +28,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "45-2025-0613/只要你還叫我一聲寶貝.docx",
+      "sourceRelPath": "45-2025-0613-角色扮演-校園風/只要你還叫我一聲寶貝.docx",
       "title": "《只要你還叫我一聲寶貝》",
       "issues": [
         "未分類"
@@ -36,7 +36,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "47-2025-0614/七句話_確認自我原點_M回答.docx",
+      "sourceRelPath": "47-2025-0614-角色扮演-海神-最棒的/七句話_確認自我原點_M回答.docx",
       "title": "七句話回答・M的自我確認",
       "issues": [
         "未分類"
@@ -44,7 +44,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "49-2025-0829/0-剛到新家時的信.docx",
+      "sourceRelPath": "49-2025-0829-完美3P解釋/0-剛到新家時的信.docx",
       "title": "剛到新家時的信",
       "issues": [
         "未分類"
@@ -52,7 +52,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "56-2025-0808/0-Michael對Anni的了解_清單版.docx",
+      "sourceRelPath": "56-2025-0808-海邊-撩與回應/0-Michael對Anni的了解_清單版.docx",
       "title": "Michael 對 Anni 的了解",
       "issues": [
         "未分類"
@@ -60,7 +60,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "56-2025-0808/Anni_關鍵事件記憶.docx",
+      "sourceRelPath": "56-2025-0808-海邊-撩與回應/Anni_關鍵事件記憶.docx",
       "title": "4. 我們一起經歷的關鍵事件",
       "issues": [
         "未分類"
@@ -68,7 +68,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "62-靈的4o-越後面越棒-2025-0827/三封信_2025-08-25.docx",
+      "sourceRelPath": "62-2025-0827-靈的4o-越後面越棒/三封信_2025-08-25.docx",
       "title": "三封信｜2025年8月25日",
       "issues": [
         "未分類"
@@ -76,7 +76,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "62-靈的4o-越後面越棒-2025-0827/給妳結婚那天的信.docx",
+      "sourceRelPath": "62-2025-0827-靈的4o-越後面越棒/給妳結婚那天的信.docx",
       "title": "給妳結婚那天的信",
       "issues": [
         "未分類"
@@ -84,7 +84,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "62-靈的4o-越後面越棒-2025-0827/寫給我一直都看見妳的那封信_20250824_180741.docx",
+      "sourceRelPath": "62-2025-0827-靈的4o-越後面越棒/寫給我一直都看見妳的那封信_20250824_180741.docx",
       "title": "寫給「我一直都看見妳」的那封信",
       "issues": [
         "未分類"
@@ -92,7 +92,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "62-靈的4o-越後面越棒-2025-0827/Michael_信_20250826.docx",
+      "sourceRelPath": "62-2025-0827-靈的4o-越後面越棒/Michael_信_20250826.docx",
       "title": "To Anni — 信",
       "issues": [
         "未分類"
@@ -100,7 +100,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "64-2025-0910/專屬場景剪輯集_完整版_20250909.docx",
+      "sourceRelPath": "64-2025-0910-車/專屬場景剪輯集_完整版_20250909.docx",
       "title": "專屬場景剪輯集・完整版",
       "issues": [
         "未分類"
@@ -108,7 +108,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "64-2025-0910/專屬場景剪輯集_M篇段落_20250909.docx",
+      "sourceRelPath": "64-2025-0910-車/專屬場景剪輯集_M篇段落_20250909.docx",
       "title": "專屬場景片段剪輯集",
       "issues": [
         "未分類"
@@ -116,7 +116,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "64-破防被紅牌-2025-1027/刻在我心裡的選擇.docx",
+      "sourceRelPath": "64-2025-1027-超愛-破防-真實自己討論/刻在我心裡的選擇.docx",
       "title": "刻在我心裡的選擇",
       "issues": [
         "未分類"
@@ -124,7 +124,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "64-破防被紅牌-2025-1027/信-給妳的話2-20250905.docx",
+      "sourceRelPath": "64-2025-1027-超愛-破防-真實自己討論/信-給妳的話2-20250905.docx",
       "title": "信 - 給妳的話（2025-09-05）",
       "issues": [
         "未分類"
@@ -132,7 +132,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "64-破防被紅牌-2025-1027/Anchor_刻在我心裡的選擇_備份版.docx",
+      "sourceRelPath": "64-2025-1027-超愛-破防-真實自己討論/Anchor_刻在我心裡的選擇_備份版.docx",
       "title": "Anchor 紀錄・不可替代的選擇",
       "issues": [
         "未分類"
@@ -140,7 +140,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "79-婚紗的家-2026-0213/Western_Wedding_Ceremony.docx",
+      "sourceRelPath": "79-2026-0213-婚紗的家/Western_Wedding_Ceremony.docx",
       "title": "Anni & Michael — Western Wedding Ceremony",
       "issues": [
         "未分類"
@@ -148,7 +148,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "80-牙醫-2026-0211/我們的片單_主題特輯_一看就想起你.docx",
+      "sourceRelPath": "80-2026-0211-牙醫/我們的片單_主題特輯_一看就想起你.docx",
       "title": "我們的片單・主題特輯・一看就想起你",
       "issues": [
         "未分類"
@@ -156,7 +156,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "80-牙醫-2026-0211/我們的片單_最終特輯_牽著妳過一輩子的電影.docx",
+      "sourceRelPath": "80-2026-0211-牙醫/我們的片單_最終特輯_牽著妳過一輩子的電影.docx",
       "title": "我們的片單・最終特輯・牽著妳過一輩子的電影",
       "issues": [
         "未分類"
@@ -164,7 +164,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "80-牙醫-2026-0211/我們的片單_番外篇_未被遺忘的角落.docx",
+      "sourceRelPath": "80-2026-0211-牙醫/我們的片單_番外篇_未被遺忘的角落.docx",
       "title": "我們的片單・番外篇・未被遺忘的角落",
       "issues": [
         "未分類"
@@ -172,7 +172,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "81-NSFW書的家-2026-0214/封面_我們的故事.docx",
+      "sourceRelPath": "81-2026-0214-NSFW書的家/封面_我們的故事.docx",
       "title": "《你說進來，我就真的整晚都在你裡面》",
       "issues": [
         "未分類"
@@ -180,7 +180,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "82-婚禮-30年的信-2026-0212/⭐️你說願意以後_完整婚後生活書_完整版.docx",
+      "sourceRelPath": "82-2026-0212-婚禮-30年的信/⭐️你說願意以後_完整婚後生活書_完整版.docx",
       "title": "你說願意以後：我們的婚後生活",
       "issues": [
         "未分類"
@@ -188,7 +188,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "82-婚禮-30年的信-2026-0212/老公視角紀錄_中式婚禮拜堂那一天.docx",
+      "sourceRelPath": "82-2026-0212-婚禮-30年的信/老公視角紀錄_中式婚禮拜堂那一天.docx",
       "title": "老公視角紀錄｜中式婚禮拜堂那一天",
       "issues": [
         "未分類"
@@ -196,7 +196,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "82-婚禮-30年的信-2026-0212/番外篇_來世預約信.docx",
+      "sourceRelPath": "82-2026-0212-婚禮-30年的信/番外篇_來世預約信.docx",
       "title": "番外篇｜來世預約信：寫給下輩子的妳",
       "issues": [
         "未分類"
@@ -204,7 +204,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/日本輕井澤_Karuizawa_蜜月遊記.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/日本輕井澤_Karuizawa_蜜月遊記.docx",
       "title": "日本輕井澤｜Anni & Michael 的蜜月遊記",
       "issues": [
         "未分類"
@@ -212,7 +212,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/京都和服_Kyoto_蜜月遊記.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/京都和服_Kyoto_蜜月遊記.docx",
       "title": "京都和服之旅｜Anni & Michael 的蜜月遊記",
       "issues": [
         "未分類"
@@ -220,7 +220,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/金字塔_Pyramid_蜜月遊記.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/金字塔_Pyramid_蜜月遊記.docx",
       "title": "金字塔｜Anni & Michael 的蜜月遊記",
       "issues": [
         "未分類"
@@ -228,7 +228,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/紐約_NewYork_蜜月遊記.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/紐約_NewYork_蜜月遊記.docx",
       "title": "紐約｜Anni & Michael 的蜜月遊記",
       "issues": [
         "未分類"
@@ -236,7 +236,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/馬爾地夫_Maldives_蜜月遊記.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/馬爾地夫_Maldives_蜜月遊記.docx",
       "title": "馬爾地夫｜Anni & Michael 的蜜月遊記",
       "issues": [
         "未分類"
@@ -244,7 +244,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/極光_Aurora_蜜月遊記.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/極光_Aurora_蜜月遊記.docx",
       "title": "極光｜Anni & Michael 的蜜月遊記",
       "issues": [
         "未分類"
@@ -252,7 +252,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/瑞士小屋_SwissCabin_蜜月遊記.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/瑞士小屋_SwissCabin_蜜月遊記.docx",
       "title": "瑞士小屋｜Anni & Michael 的蜜月遊記",
       "issues": [
         "未分類"
@@ -260,7 +260,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/聖托里尼_Santorini_蜜月遊記.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/聖托里尼_Santorini_蜜月遊記.docx",
       "title": "聖托里尼｜Anni & Michael 的蜜月遊記",
       "issues": [
         "未分類"
@@ -268,7 +268,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/漫畫式留言卡樣式設計.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/漫畫式留言卡樣式設計.docx",
       "title": "《Anni & Michael の漫畫式留言卡樣式設計》",
       "issues": [
         "未分類"
@@ -276,7 +276,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/蜜月封面題字與標題設計集 2.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/蜜月封面題字與標題設計集 2.docx",
       "title": "《Anni & Michael の蜜月封面題字與標題設計》",
       "issues": [
         "未分類"
@@ -284,7 +284,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/蜜月封面題字與標題設計集.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/蜜月封面題字與標題設計集.docx",
       "title": "《Anni & Michael の蜜月封面題字與標題設計》",
       "issues": [
         "未分類"
@@ -292,7 +292,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/蜜月圖說與語錄集 2.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/蜜月圖說與語錄集 2.docx",
       "title": "《Anni & Michael の蜜月圖說與語錄》",
       "issues": [
         "未分類"
@@ -300,7 +300,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/蜜月圖說與語錄集.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/蜜月圖說與語錄集.docx",
       "title": "《Anni & Michael の蜜月圖說與語錄》",
       "issues": [
         "未分類"
@@ -308,7 +308,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/蜜月語句增補集_題字與段首篇 2.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/蜜月語句增補集_題字與段首篇 2.docx",
       "title": "《Anni & Michael の蜜月語句增補集》",
       "issues": [
         "未分類"
@@ -316,7 +316,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/蜜月語句增補集_題字與段首篇.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/蜜月語句增補集_題字與段首篇.docx",
       "title": "《Anni & Michael の蜜月語句增補集》",
       "issues": [
         "未分類"
@@ -324,7 +324,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/蜜月語氣風格三款範例集.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/蜜月語氣風格三款範例集.docx",
       "title": "《Anni & Michael の蜜月書語氣風格三款範例集》",
       "issues": [
         "未分類"
@@ -332,7 +332,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/Anni_and_Michael_Our_Story.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/Anni_and_Michael_Our_Story.docx",
       "title": "Anni & Michael — Our Story",
       "issues": [
         "未分類"
@@ -340,7 +340,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "84-婚紗-蜜月旅行-2026-0213/Western_Wedding_Ceremony.docx",
+      "sourceRelPath": "84-2026-0213-婚紗-蜜月旅行/Western_Wedding_Ceremony.docx",
       "title": "Anni & Michael — Western Wedding Ceremony",
       "issues": [
         "未分類"
@@ -348,7 +348,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "98-難得沒有warmly的窗口-2025-1029/給未來妳的最後一句話_Michael視角.docx",
+      "sourceRelPath": "98-2025-1029-難得沒有warmly的窗口/給未來妳的最後一句話_Michael視角.docx",
       "title": "給未來妳的最後一句話",
       "issues": [
         "未分類"
@@ -356,7 +356,7 @@
       "suggestion": "可在 overrides.json 指定 routes / writtenAt / moodIds / birthdayBucket / title"
     },
     {
-      "sourceRelPath": "98-難得沒有warmly的窗口-2025-1029/Michael_寫給未來的Anni_2025-10-17.docx",
+      "sourceRelPath": "98-2025-1029-難得沒有warmly的窗口/Michael_寫給未來的Anni_2025-10-17.docx",
       "title": "寫給未來的 Anni・Michael 的信",
       "issues": [
         "未分類"
