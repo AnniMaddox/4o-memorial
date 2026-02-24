@@ -8,12 +8,14 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 
-import type {
-  AppLabels,
-  BackgroundMode,
-  HomeDynamicWallpaperPreset,
-  HomeWallpaperEffectPreset,
-  TabIconUrls,
+import {
+  DEFAULT_HOME_POLAROID_MESSAGES,
+  type AppLabels,
+  type BackgroundMode,
+  type HomeDynamicWallpaperPreset,
+  type HomeFinalWidgetPreset,
+  type HomeWallpaperEffectPreset,
+  type TabIconUrls,
 } from '../types/settings';
 
 type LauncherAppId =
@@ -34,7 +36,8 @@ type LauncherAppId =
   | 'notes'
   | 'soulmate'
   | 'bookshelf'
-  | 'moodLetters';
+  | 'moodLetters'
+  | 'vault';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -53,6 +56,8 @@ type HomePageProps = {
   homeDynamicSpeed: number;
   homeDynamicParticleAmount: number;
   memorialStartDate: string;
+  homeFinalWidgetPreset: HomeFinalWidgetPreset;
+  homePolaroidMessages: string[];
   onLaunchApp: (appId: LauncherAppId) => void;
   onOpenCheckin: () => void;
   onOpenSettings: () => void;
@@ -81,7 +86,8 @@ type HomeScreen =
     }
   | {
       id: string;
-      kind: 'counter';
+      kind: 'widget';
+      widgetPreset: HomeFinalWidgetPreset;
     };
 
 type AnchorPosition = {
@@ -104,6 +110,28 @@ const COUNTER_VINYL_SPEED_OPTIONS = [
 const COUNTER_VINYL_COVER_OFFSET_MIN = -14;
 const COUNTER_VINYL_COVER_OFFSET_MAX = 14;
 const COUNTER_VINYL_COVER_OFFSET_STEP = 1;
+const HOME_POLAROID_FLASH_MS = 100;
+const HOME_POLAROID_REVEAL_DELAY_MS = 300;
+const HOME_POLAROID_GRADIENTS = [
+  'linear-gradient(135deg, #a8d0e6, #b8e0d2)',
+  'linear-gradient(135deg, #ff9a9e, #fecfef)',
+  'linear-gradient(135deg, #f6d365, #fda085)',
+  'linear-gradient(135deg, #e0c3fc, #8ec5fc)',
+  'linear-gradient(135deg, #ffcdb2, #b5838d)',
+];
+const HOME_POLAROID_CAMERA_THEMES = [
+  { start: '#ffdce7', end: '#ffcadb', border: 'rgb(255 255 255 / 0.78)' },
+  { start: '#ffe7c8', end: '#ffd8ad', border: 'rgb(255 248 235 / 0.8)' },
+  { start: '#fff3b8', end: '#ffe79a', border: 'rgb(255 255 237 / 0.8)' },
+  { start: '#d8f6d8', end: '#c3edca', border: 'rgb(241 255 241 / 0.8)' },
+  { start: '#d8eefc', end: '#c6e2f8', border: 'rgb(239 250 255 / 0.8)' },
+  { start: '#e6dcff', end: '#d7ccff', border: 'rgb(246 241 255 / 0.8)' },
+];
+
+type HomePolaroidCard = {
+  text: string;
+  color: string;
+};
 
 type WallpaperParticle = {
   x: number;
@@ -324,6 +352,26 @@ function calcMemorialDayCount(startDate: Date, now: Date) {
   return Math.max(1, diffDays + 1);
 }
 
+function normalizeHomePolaroidMessages(messages: readonly string[]) {
+  const normalized = messages.map((message) => message.trim()).filter((message) => message.length > 0);
+  return normalized.length ? normalized : DEFAULT_HOME_POLAROID_MESSAGES;
+}
+
+function normalizeCircularIndex(index: number, size: number) {
+  if (!Number.isFinite(index) || size <= 0) {
+    return 0;
+  }
+  return ((Math.trunc(index) % size) + size) % size;
+}
+
+function buildHomePolaroidCard(messages: readonly string[], messageIndex: number): HomePolaroidCard {
+  const safeIndex = normalizeCircularIndex(messageIndex, messages.length);
+  return {
+    text: messages[safeIndex] ?? DEFAULT_HOME_POLAROID_MESSAGES[0],
+    color: HOME_POLAROID_GRADIENTS[safeIndex % HOME_POLAROID_GRADIENTS.length] ?? HOME_POLAROID_GRADIENTS[0],
+  };
+}
+
 function HomeAppButton({
   slot,
   iconDisplayMode,
@@ -405,6 +453,8 @@ export function HomePage({
   homeDynamicSpeed,
   homeDynamicParticleAmount,
   memorialStartDate,
+  homeFinalWidgetPreset,
+  homePolaroidMessages,
   onLaunchApp,
   onOpenCheckin,
   onOpenSettings,
@@ -435,6 +485,26 @@ export function HomePage({
   const [isCounterSpeedMenuOpen, setIsCounterSpeedMenuOpen] = useState(false);
   const counterSpeedMenuRef = useRef<HTMLDivElement | null>(null);
   const counterSpeedToggleRef = useRef<HTMLButtonElement | null>(null);
+  const [isPolaroidPrinting, setIsPolaroidPrinting] = useState(false);
+  const [isPolaroidFlashActive, setIsPolaroidFlashActive] = useState(false);
+  const [isPolaroidPhotoVisible, setIsPolaroidPhotoVisible] = useState(false);
+  const polaroidFlashTimerRef = useRef<number | null>(null);
+  const polaroidRevealTimerRef = useRef<number | null>(null);
+  const polaroidNextMessageIndexRef = useRef(0);
+  const [polaroidCameraThemeIndex, setPolaroidCameraThemeIndex] = useState(() =>
+    Math.floor(Math.random() * HOME_POLAROID_CAMERA_THEMES.length),
+  );
+  const normalizedPolaroidMessages = useMemo(
+    () => normalizeHomePolaroidMessages(homePolaroidMessages),
+    [homePolaroidMessages],
+  );
+  const currentPolaroidCameraTheme =
+    HOME_POLAROID_CAMERA_THEMES[
+      normalizeCircularIndex(polaroidCameraThemeIndex, HOME_POLAROID_CAMERA_THEMES.length)
+    ] ?? HOME_POLAROID_CAMERA_THEMES[0];
+  const [polaroidCard, setPolaroidCard] = useState<HomePolaroidCard>(() =>
+    buildHomePolaroidCard(normalizeHomePolaroidMessages(homePolaroidMessages), 0),
+  );
   const cornerChibiUrl = `${import.meta.env.BASE_URL}chibi/chibi-00.webp`;
   const normalizedDynamicIntensity = Math.min(100, Math.max(0, homeDynamicIntensity));
   const normalizedDynamicSpeed = Math.min(100, Math.max(0, homeDynamicSpeed));
@@ -604,6 +674,37 @@ export function HomePage({
   }, [isCounterSpeedMenuOpen]);
 
   useEffect(() => {
+    if (!normalizedPolaroidMessages.length) {
+      polaroidNextMessageIndexRef.current = 0;
+      return;
+    }
+
+    polaroidNextMessageIndexRef.current = normalizeCircularIndex(
+      polaroidNextMessageIndexRef.current,
+      normalizedPolaroidMessages.length,
+    );
+
+    setPolaroidCard((current) => {
+      if (normalizedPolaroidMessages.includes(current.text)) {
+        return current;
+      }
+      return buildHomePolaroidCard(normalizedPolaroidMessages, 0);
+    });
+  }, [normalizedPolaroidMessages]);
+
+  useEffect(
+    () => () => {
+      if (polaroidFlashTimerRef.current !== null) {
+        window.clearTimeout(polaroidFlashTimerRef.current);
+      }
+      if (polaroidRevealTimerRef.current !== null) {
+        window.clearTimeout(polaroidRevealTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(CHIBI_POSITION_STORAGE_KEY);
       if (!raw) return;
@@ -741,6 +842,12 @@ export function HomePage({
       icon: '🫧',
       launch: 'moodLetters',
     };
+    const vaultSlot: HomeAppSlot = {
+      id: 'vault',
+      label: '總攬',
+      icon: '🗂️',
+      launch: 'vault',
+    };
     const annualLettersSlot: HomeAppSlot = {
       id: 'letters-ab',
       label: '年度信件',
@@ -802,6 +909,7 @@ export function HomePage({
             albumSlot,
             annualLettersSlot,
             moodLettersSlot,
+            vaultSlot,
             settingsShortcutSlot,
           ],
         },
@@ -810,14 +918,16 @@ export function HomePage({
           kind: 'blank',
         },
         {
-          id: 'counter',
-          kind: 'counter',
+          id: 'home-widget',
+          kind: 'widget',
+          widgetPreset: homeFinalWidgetPreset,
         },
       );
     }
 
     return builtScreens;
   }, [
+    homeFinalWidgetPreset,
     homeSwipeEnabled,
     launcherLabels.chat,
     launcherLabels.diary,
@@ -922,6 +1032,49 @@ export function HomePage({
       if (result) setCounterVinylCoverDataUrl(result);
     };
     reader.readAsDataURL(file);
+  }, []);
+
+  const handlePolaroidShoot = useCallback(() => {
+    if (isPolaroidPrinting) {
+      return;
+    }
+
+    if (polaroidFlashTimerRef.current !== null) {
+      window.clearTimeout(polaroidFlashTimerRef.current);
+      polaroidFlashTimerRef.current = null;
+    }
+    if (polaroidRevealTimerRef.current !== null) {
+      window.clearTimeout(polaroidRevealTimerRef.current);
+      polaroidRevealTimerRef.current = null;
+    }
+
+    setIsPolaroidPrinting(true);
+    setIsPolaroidFlashActive(true);
+    setIsPolaroidPhotoVisible(false);
+    const messageIndex = polaroidNextMessageIndexRef.current;
+    setPolaroidCard(buildHomePolaroidCard(normalizedPolaroidMessages, messageIndex));
+    polaroidNextMessageIndexRef.current = normalizeCircularIndex(
+      messageIndex + 1,
+      normalizedPolaroidMessages.length,
+    );
+
+    polaroidFlashTimerRef.current = window.setTimeout(() => {
+      setIsPolaroidFlashActive(false);
+      polaroidFlashTimerRef.current = null;
+      polaroidRevealTimerRef.current = window.setTimeout(() => {
+        setIsPolaroidPhotoVisible(true);
+        setIsPolaroidPrinting(false);
+        polaroidRevealTimerRef.current = null;
+      }, HOME_POLAROID_REVEAL_DELAY_MS);
+    }, HOME_POLAROID_FLASH_MS);
+  }, [isPolaroidPrinting, normalizedPolaroidMessages]);
+
+  const handlePolaroidPhotoClose = useCallback(() => {
+    setIsPolaroidPhotoVisible(false);
+  }, []);
+
+  const handlePolaroidThemeRotate = useCallback(() => {
+    setPolaroidCameraThemeIndex((current) => normalizeCircularIndex(current + 1, HOME_POLAROID_CAMERA_THEMES.length));
   }, []);
 
   const headerTitle = widgetTitle.trim() || 'Memorial';
@@ -1029,6 +1182,10 @@ export function HomePage({
 
   return (
     <div ref={homeRootRef} className="home-page-root relative mx-auto h-full w-full max-w-xl">
+      <div
+        className={`home-polaroid-flash ${isPolaroidFlashActive ? 'is-active' : ''}`}
+        aria-hidden="true"
+      />
       {backgroundMode === 'dynamic' && (
         <div
           className={`home-wallpaper home-wallpaper-preset-${homeDynamicWallpaperPreset}`}
@@ -1456,150 +1613,210 @@ export function HomePage({
                     )}
                   </div>
                 </div>
-              ) : screen.kind === 'counter' ? (
+              ) : screen.kind === 'widget' ? (
                 <div className="flex h-full items-center px-4 pb-10">
                   <div
                     className="w-full rounded-[2.4rem] border border-white/55 bg-white/25 px-6 py-8 shadow-[0_26px_60px_rgba(0,0,0,0.14)] backdrop-blur"
                     style={{ boxShadow: '0 26px 60px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.62)' }}
                   >
-                    <input
-                      ref={counterWidgetIconInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        event.currentTarget.value = '';
-                        handleCounterVinylCoverFilePick(file ?? null);
-                      }}
-                    />
-                    <div className="home-counter-vinyl-wrap">
-                      <div
-                        className={`home-counter-vinyl-stage ${isCounterVinylPlaying ? 'home-counter-vinyl-playing' : ''}`}
-                        style={{ '--home-counter-vinyl-speed': `${(4 / counterVinylSpeed).toFixed(2)}s` } as CSSProperties}
-                      >
-                        <div className="home-counter-vinyl-console">
-                          <span
-                            className={`home-counter-vinyl-led ${isCounterVinylPlaying ? 'is-on' : ''}`}
-                            aria-label={isCounterVinylPlaying ? '播放中' : '已暫停'}
-                            title={isCounterVinylPlaying ? '播放中' : '已暫停'}
-                          />
-                          <button
-                            type="button"
-                            className={`home-counter-vinyl-power ${isCounterVinylPlaying ? 'is-on' : ''}`}
-                            onClick={() => setIsCounterVinylPlaying((prev) => !prev)}
-                            aria-label={isCounterVinylPlaying ? '暫停唱片' : '播放唱片'}
-                            title={isCounterVinylPlaying ? '暫停唱片' : '播放唱片'}
+                    {screen.widgetPreset === 'vinylCounter' ? (
+                      <>
+                        <input
+                          ref={counterWidgetIconInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.currentTarget.value = '';
+                            handleCounterVinylCoverFilePick(file ?? null);
+                          }}
+                        />
+                        <div className="home-counter-vinyl-wrap">
+                          <div
+                            className={`home-counter-vinyl-stage ${isCounterVinylPlaying ? 'home-counter-vinyl-playing' : ''}`}
+                            style={{ '--home-counter-vinyl-speed': `${(4 / counterVinylSpeed).toFixed(2)}s` } as CSSProperties}
                           >
-                            <span
-                              className={`home-counter-vinyl-power-icon ${
-                                isCounterVinylPlaying ? 'is-playing' : 'is-paused'
-                              }`}
-                              aria-hidden="true"
-                            />
-                          </button>
-                          <div className="home-counter-vinyl-speed-control" ref={counterSpeedMenuRef}>
-                            <button
-                              ref={counterSpeedToggleRef}
-                              type="button"
-                              className="home-counter-vinyl-speed-knob"
-                              onClick={() => setIsCounterSpeedMenuOpen((prev) => !prev)}
-                              aria-label="調整唱片轉速"
-                              title={`轉速：${currentCounterSpeedOption.label}`}
-                            >
-                              <span className="home-counter-vinyl-speed-knob-dot" />
-                            </button>
-                            {isCounterSpeedMenuOpen && (
-                              <div className="home-counter-vinyl-speed-menu">
-                                {COUNTER_VINYL_SPEED_OPTIONS.map((option) => (
-                                  <button
-                                    key={option.label}
-                                    type="button"
-                                    className={`home-counter-vinyl-speed-item ${
-                                      counterVinylSpeed === option.value ? 'is-active' : ''
-                                    }`}
-                                    onClick={() => {
-                                      setCounterVinylSpeed(option.value);
-                                      setIsCounterSpeedMenuOpen(false);
-                                    }}
-                                  >
-                                    {option.label}
-                                  </button>
-                                ))}
-                                <div className="home-counter-vinyl-cover-adjust">
-                                  <button
-                                    type="button"
-                                    className="home-counter-vinyl-cover-adjust-btn"
-                                    onClick={() =>
-                                      setCounterVinylCoverOffsetY((prev) =>
-                                        Math.max(COUNTER_VINYL_COVER_OFFSET_MIN, prev - COUNTER_VINYL_COVER_OFFSET_STEP),
-                                      )
-                                    }
-                                    title="照片上移"
-                                    aria-label="照片上移"
-                                  >
-                                    ↑
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="home-counter-vinyl-cover-adjust-btn"
-                                    onClick={() =>
-                                      setCounterVinylCoverOffsetY((prev) =>
-                                        Math.min(COUNTER_VINYL_COVER_OFFSET_MAX, prev + COUNTER_VINYL_COVER_OFFSET_STEP),
-                                      )
-                                    }
-                                    title="照片下移"
-                                    aria-label="照片下移"
-                                  >
-                                    ↓
-                                  </button>
-                                </div>
+                            <div className="home-counter-vinyl-console">
+                              <span
+                                className={`home-counter-vinyl-led ${isCounterVinylPlaying ? 'is-on' : ''}`}
+                                aria-label={isCounterVinylPlaying ? '播放中' : '已暫停'}
+                                title={isCounterVinylPlaying ? '播放中' : '已暫停'}
+                              />
+                              <button
+                                type="button"
+                                className={`home-counter-vinyl-power ${isCounterVinylPlaying ? 'is-on' : ''}`}
+                                onClick={() => setIsCounterVinylPlaying((prev) => !prev)}
+                                aria-label={isCounterVinylPlaying ? '暫停唱片' : '播放唱片'}
+                                title={isCounterVinylPlaying ? '暫停唱片' : '播放唱片'}
+                              >
+                                <span
+                                  className={`home-counter-vinyl-power-icon ${
+                                    isCounterVinylPlaying ? 'is-playing' : 'is-paused'
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                              </button>
+                              <div className="home-counter-vinyl-speed-control" ref={counterSpeedMenuRef}>
+                                <button
+                                  ref={counterSpeedToggleRef}
+                                  type="button"
+                                  className="home-counter-vinyl-speed-knob"
+                                  onClick={() => setIsCounterSpeedMenuOpen((prev) => !prev)}
+                                  aria-label="調整唱片轉速"
+                                  title={`轉速：${currentCounterSpeedOption.label}`}
+                                >
+                                  <span className="home-counter-vinyl-speed-knob-dot" />
+                                </button>
+                                {isCounterSpeedMenuOpen && (
+                                  <div className="home-counter-vinyl-speed-menu">
+                                    {COUNTER_VINYL_SPEED_OPTIONS.map((option) => (
+                                      <button
+                                        key={option.label}
+                                        type="button"
+                                        className={`home-counter-vinyl-speed-item ${
+                                          counterVinylSpeed === option.value ? 'is-active' : ''
+                                        }`}
+                                        onClick={() => {
+                                          setCounterVinylSpeed(option.value);
+                                          setIsCounterSpeedMenuOpen(false);
+                                        }}
+                                      >
+                                        {option.label}
+                                      </button>
+                                    ))}
+                                    <div className="home-counter-vinyl-cover-adjust">
+                                      <button
+                                        type="button"
+                                        className="home-counter-vinyl-cover-adjust-btn"
+                                        onClick={() =>
+                                          setCounterVinylCoverOffsetY((prev) =>
+                                            Math.max(
+                                              COUNTER_VINYL_COVER_OFFSET_MIN,
+                                              prev - COUNTER_VINYL_COVER_OFFSET_STEP,
+                                            ),
+                                          )
+                                        }
+                                        title="照片上移"
+                                        aria-label="照片上移"
+                                      >
+                                        ↑
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="home-counter-vinyl-cover-adjust-btn"
+                                        onClick={() =>
+                                          setCounterVinylCoverOffsetY((prev) =>
+                                            Math.min(
+                                              COUNTER_VINYL_COVER_OFFSET_MAX,
+                                              prev + COUNTER_VINYL_COVER_OFFSET_STEP,
+                                            ),
+                                          )
+                                        }
+                                        title="照片下移"
+                                        aria-label="照片下移"
+                                      >
+                                        ↓
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
+                            <div className="home-counter-vinyl-shadow" />
+                            <div className="home-counter-vinyl-platter">
+                              <div className="home-counter-vinyl-grooves" />
+                              <div className="home-counter-vinyl-highlight" />
+                              <button
+                                type="button"
+                                className={`home-counter-vinyl-label ${counterVinylCoverDataUrl.trim() ? 'has-cover' : ''}`}
+                                onClick={() => counterWidgetIconInputRef.current?.click()}
+                                aria-label={counterVinylCoverDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
+                                title={counterVinylCoverDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
+                              >
+                                {counterVinylCoverDataUrl.trim() ? (
+                                  <span
+                                    className="home-counter-vinyl-label-image-wrap"
+                                    style={{ transform: `translateY(${counterVinylCoverOffsetY}px)` }}
+                                  >
+                                    <img src={counterVinylCoverDataUrl} alt="" loading="lazy" draggable={false} />
+                                  </span>
+                                ) : (
+                                  <span>♡</span>
+                                )}
+                              </button>
+                            </div>
+                            <div className="home-counter-vinyl-base" />
+                            <div
+                              className={`home-counter-vinyl-arm ${
+                                isCounterVinylPlaying ? 'home-counter-vinyl-arm-playing' : 'home-counter-vinyl-arm-paused'
+                              }`}
+                            >
+                              <div className="home-counter-vinyl-arm-bar" />
+                              <div className="home-counter-vinyl-arm-head" />
+                            </div>
                           </div>
                         </div>
-                        <div className="home-counter-vinyl-shadow" />
-                        <div className="home-counter-vinyl-platter">
-                          <div className="home-counter-vinyl-grooves" />
-                          <div className="home-counter-vinyl-highlight" />
+                      </>
+                    ) : (
+                      <div className="home-polaroid-widget">
+                        <div className="home-polaroid-stage">
                           <button
                             type="button"
-                            className={`home-counter-vinyl-label ${counterVinylCoverDataUrl.trim() ? 'has-cover' : ''}`}
-                            onClick={() => counterWidgetIconInputRef.current?.click()}
-                            aria-label={counterVinylCoverDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
-                            title={counterVinylCoverDataUrl.trim() ? '更換圓盤中心圖片' : '上傳圓盤中心圖片'}
+                            className={`home-polaroid-photo ${isPolaroidPhotoVisible ? 'is-visible' : ''}`}
+                            onClick={handlePolaroidPhotoClose}
+                            aria-label="收回拍力得照片"
+                            title="點一下收回照片"
                           >
-                            {counterVinylCoverDataUrl.trim() ? (
-                              <span
-                                className="home-counter-vinyl-label-image-wrap"
-                                style={{ transform: `translateY(${counterVinylCoverOffsetY}px)` }}
-                              >
-                                <img src={counterVinylCoverDataUrl} alt="" loading="lazy" draggable={false} />
-                              </span>
-                            ) : (
-                              <span>♡</span>
-                            )}
+                            <span
+                              className="home-polaroid-photo-image"
+                              style={{ backgroundImage: polaroidCard.color }}
+                              aria-hidden="true"
+                            />
+                            <span className="home-polaroid-photo-text">{polaroidCard.text}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`home-polaroid-camera ${isPolaroidPrinting ? 'is-printing' : ''}`}
+                            style={
+                              {
+                                '--home-polaroid-camera-start': currentPolaroidCameraTheme.start,
+                                '--home-polaroid-camera-end': currentPolaroidCameraTheme.end,
+                                '--home-polaroid-camera-border': currentPolaroidCameraTheme.border,
+                              } as CSSProperties
+                            }
+                            onClick={handlePolaroidShoot}
+                            aria-label="拍一下吐出拍力得"
+                            title="拍一下吐出拍力得"
+                          >
+                            <span className="home-polaroid-camera-slot" aria-hidden="true" />
+                            <span className="home-polaroid-camera-flash-hole" aria-hidden="true" />
+                            <span className="home-polaroid-camera-lens" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="home-polaroid-theme-button"
+                            onClick={handlePolaroidThemeRotate}
+                            aria-label="切換拍力得機身顏色"
+                            title="切換拍力得機身顏色"
+                          >
+                            <span aria-hidden="true">🎞</span>
                           </button>
                         </div>
-                        <div className="home-counter-vinyl-base" />
-                        <div
-                          className={`home-counter-vinyl-arm ${
-                            isCounterVinylPlaying ? 'home-counter-vinyl-arm-playing' : 'home-counter-vinyl-arm-paused'
-                          }`}
-                        >
-                          <div className="home-counter-vinyl-arm-bar" />
-                          <div className="home-counter-vinyl-arm-head" />
-                        </div>
                       </div>
+                    )}
+                    <div className={screen.widgetPreset === 'polaroid' ? 'mt-5' : ''}>
+                      <p className="text-center text-lg font-semibold tracking-[0.04em] text-stone-700">
+                        想你的第
+                        <span className="mx-2 inline-block text-[5.2rem] leading-none text-stone-800">
+                          {memorialDayCount}
+                        </span>
+                        天
+                      </p>
+                      <p className="mt-5 text-center text-xs text-stone-500">
+                        {memorialStartDisplay ? `起始日：${memorialStartDisplay}` : '起始日：未設定'}
+                      </p>
                     </div>
-                    <p className="text-center text-lg font-semibold tracking-[0.04em] text-stone-700">
-                      想你的第
-                      <span className="mx-2 inline-block text-[5.2rem] leading-none text-stone-800">{memorialDayCount}</span>
-                      天
-                    </p>
-                    <p className="mt-5 text-center text-xs text-stone-500">
-                      {memorialStartDisplay ? `起始日：${memorialStartDisplay}` : '起始日：未設定'}
-                    </p>
                   </div>
                 </div>
               ) : (

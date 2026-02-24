@@ -631,6 +631,191 @@ h3 {
   box-shadow: 0 2px 4px rgb(0 0 0 / 0.26);
 }
 
+.home-polaroid-flash {
+  position: fixed;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 80;
+  transition: opacity 0.1s ease-out;
+}
+
+.home-polaroid-flash.is-active {
+  opacity: 0.82;
+  transition-duration: 0.05s;
+}
+
+.home-polaroid-widget {
+  margin: 0 auto;
+  width: min(100%, 340px);
+}
+
+.home-polaroid-stage {
+  position: relative;
+  min-height: 230px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.home-polaroid-photo {
+  position: absolute;
+  left: 50%;
+  bottom: 56px;
+  width: 138px;
+  min-height: 172px;
+  border-radius: 8px;
+  border: 1px solid rgb(255 255 255 / 0.84);
+  background: #fff;
+  box-shadow: 0 14px 30px rgb(0 0 0 / 0.22);
+  padding: 10px 10px 16px;
+  transform: translateX(-50%) translateY(0) rotate(0deg);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 0.6s ease;
+  cursor: pointer;
+  text-align: center;
+}
+
+.home-polaroid-photo.is-visible {
+  transform: translateX(-50%) translateY(-106px) rotate(-8deg);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.home-polaroid-photo.is-visible:hover {
+  transform: translateX(-50%) translateY(-114px) rotate(-5deg) scale(1.04);
+}
+
+.home-polaroid-photo-image {
+  display: block;
+  width: 100%;
+  height: 96px;
+  border-radius: 4px;
+  background-size: cover;
+  background-position: center;
+}
+
+.home-polaroid-photo-text {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgb(68 68 68 / 0.92);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.home-polaroid-camera {
+  position: relative;
+  width: 122px;
+  height: 102px;
+  border: 1px solid var(--home-polaroid-camera-border, rgb(255 248 235 / 0.8));
+  padding: 0;
+  border-radius: 18px;
+  background: linear-gradient(
+    150deg,
+    var(--home-polaroid-camera-start, #ffe7c8) 0%,
+    var(--home-polaroid-camera-end, #ffd8ad) 100%
+  );
+  box-shadow:
+    0 12px 22px rgb(0 0 0 / 0.22),
+    inset 0 6px 10px rgb(255 255 255 / 0.55);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.home-polaroid-camera:hover {
+  transform: translateY(-3px) scale(1.03);
+}
+
+.home-polaroid-camera:active {
+  transform: scale(0.94);
+}
+
+.home-polaroid-camera.is-printing {
+  filter: saturate(0.9);
+}
+
+.home-polaroid-theme-button {
+  position: absolute;
+  right: clamp(18px, 12%, 40px);
+  bottom: 18px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  line-height: 1;
+  transform: rotate(30deg);
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.home-polaroid-theme-button:hover {
+  transform: rotate(30deg) translateY(-2px) scale(1.06);
+  filter: saturate(1.06);
+}
+
+.home-polaroid-theme-button:active {
+  transform: rotate(30deg) scale(0.9);
+}
+
+.home-polaroid-camera-slot {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 5px;
+  border-radius: 0 0 6px 6px;
+  background: rgb(24 24 24 / 0.85);
+}
+
+.home-polaroid-camera-flash-hole {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: inset 0 0 4px rgb(204 204 204 / 0.9);
+}
+
+.home-polaroid-camera-lens {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 4px solid rgb(255 255 255 / 0.94);
+  background: #555;
+  box-shadow: inset 0 0 12px rgb(0 0 0 / 0.95);
+  position: relative;
+}
+
+.home-polaroid-camera-lens::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.64);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-corner-chibi-float {
     animation: none;
@@ -638,6 +823,13 @@ h3 {
 
   .home-counter-vinyl-playing .home-counter-vinyl-platter {
     animation: none;
+  }
+
+  .home-polaroid-flash,
+  .home-polaroid-photo,
+  .home-polaroid-camera,
+  .home-polaroid-theme-button {
+    transition: none;
   }
 }
 

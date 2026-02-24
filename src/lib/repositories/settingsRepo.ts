@@ -9,13 +9,14 @@ import type {
   ChatBubbleStyle,
   DiaryCoverFitMode,
   HomeDynamicWallpaperPreset,
+  HomeFinalWidgetPreset,
   HomeWallpaperEffectPreset,
   HomeWallpaperGradientPreset,
   LetterUiMode,
   TabIconDisplayMode,
   TabIconUrls,
 } from '../../types/settings';
-import { DEFAULT_SETTINGS } from '../../types/settings';
+import { DEFAULT_SETTINGS, LEGACY_HOME_POLAROID_MESSAGES } from '../../types/settings';
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
   if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -42,6 +43,21 @@ function normalizeStringSlots(value: unknown, fallback: string[], length = fallb
     normalized.push(typeof input[i] === 'string' ? input[i] : fallback[i] ?? '');
   }
   return normalized;
+}
+
+function normalizeHomePolaroidMessages(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) {
+    return [...fallback];
+  }
+
+  const normalized = value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0);
+  return normalized.length ? normalized : [...fallback];
+}
+
+function isSameStringArray(left: readonly string[], right: readonly string[]) {
+  return left.length === right.length && left.every((item, index) => item === right[index]);
 }
 
 function normalizeBoolean(value: unknown, fallback: boolean) {
@@ -102,6 +118,13 @@ function normalizeHomeDynamicWallpaperPreset(
     value === 'prismDepth'
     ? value
     : fallback;
+}
+
+function normalizeHomeFinalWidgetPreset(
+  value: unknown,
+  fallback: HomeFinalWidgetPreset,
+): HomeFinalWidgetPreset {
+  return value === 'vinylCounter' || value === 'polaroid' ? value : fallback;
 }
 
 function deriveLegacyHomeDynamicWallpaperPreset(
@@ -203,6 +226,16 @@ export async function getSettings() {
     persisted.homeWallpaperEffectPreset,
     DEFAULT_SETTINGS.homeWallpaperEffectPreset,
   );
+  const normalizedHomePolaroidMessages = normalizeHomePolaroidMessages(
+    persisted.homePolaroidMessages,
+    DEFAULT_SETTINGS.homePolaroidMessages,
+  );
+  const migratedHomePolaroidMessages = isSameStringArray(
+    normalizedHomePolaroidMessages,
+    LEGACY_HOME_POLAROID_MESSAGES,
+  )
+    ? [...DEFAULT_SETTINGS.homePolaroidMessages]
+    : normalizedHomePolaroidMessages;
 
   return {
     ...DEFAULT_SETTINGS,
@@ -295,6 +328,11 @@ export async function getSettings() {
     homeWidgetIconDataUrl: normalizeString(persisted.homeWidgetIconDataUrl, DEFAULT_SETTINGS.homeWidgetIconDataUrl),
     inboxTitle: normalizeString(persisted.inboxTitle, DEFAULT_SETTINGS.inboxTitle),
     memorialStartDate: normalizeString(persisted.memorialStartDate, DEFAULT_SETTINGS.memorialStartDate),
+    homeFinalWidgetPreset: normalizeHomeFinalWidgetPreset(
+      persisted.homeFinalWidgetPreset,
+      DEFAULT_SETTINGS.homeFinalWidgetPreset,
+    ),
+    homePolaroidMessages: migratedHomePolaroidMessages,
     tarotGalleryImageUrl: normalizeString(persisted.tarotGalleryImageUrl, DEFAULT_SETTINGS.tarotGalleryImageUrl),
     tarotNameColor: normalizeString(persisted.tarotNameColor, DEFAULT_SETTINGS.tarotNameColor),
     tarotNameScale: clampNumber(persisted.tarotNameScale, 0.8, 2, DEFAULT_SETTINGS.tarotNameScale),

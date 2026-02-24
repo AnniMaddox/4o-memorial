@@ -69,6 +69,7 @@ type PanelKey =
   | 'wallpaper'
   | 'fontCenter'
   | 'home'
+  | 'homeWidget'
   | 'labels'
   | 'tabIcons'
   | 'notification'
@@ -117,6 +118,14 @@ function stripLetterExtension(name: string) {
 function normalizeLetterTimestamp(value: unknown) {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null;
   return value;
+}
+
+function normalizePolaroidMessagesInput(input: string, fallback: string[]) {
+  const normalized = input
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  return normalized.length ? normalized : [...fallback];
 }
 
 function formatLetterDateForList(letter: StoredLetter) {
@@ -173,7 +182,14 @@ const HOME_DYNAMIC_EFFECT_OPTIONS: Array<{
   { value: 'stardust', label: '星塵流星', hint: '細亮點 + 流星掠過，動感較強' },
   { value: 'bubbles', label: '上飄泡泡', hint: '參考手札 C：小泡泡由下往上慢慢飄移' },
 ];
-
+const HOME_FINAL_WIDGET_OPTIONS: Array<{
+  value: AppSettings['homeFinalWidgetPreset'];
+  label: string;
+  hint: string;
+}> = [
+  { value: 'vinylCounter', label: '唱片機', hint: '保留現在的唱片機外觀與控制鈕。' },
+  { value: 'polaroid', label: '拍力得', hint: '改成拍立得相機。' },
+];
 const TAB_ICON_FALLBACK: Record<TabIconKey, string> = {
   home: '🏠',
   inbox: '📮',
@@ -407,6 +423,8 @@ type AppearancePresetPayload = {
     homeWidgetIconDataUrl: string;
     inboxTitle: string;
     memorialStartDate: string;
+    homeFinalWidgetPreset: AppSettings['homeFinalWidgetPreset'];
+    homePolaroidMessages: string[];
     diaryCoverFitMode: AppSettings['diaryCoverFitMode'];
     tarotNameColor: string;
     tarotNameScale: number;
@@ -530,6 +548,10 @@ export function SettingsPage({
   const [homeWidgetSubtitleDraft, setHomeWidgetSubtitleDraft] = useState(settings.homeWidgetSubtitle);
   const [inboxTitleDraft, setInboxTitleDraft] = useState(settings.inboxTitle);
   const [memorialStartDateDraft, setMemorialStartDateDraft] = useState(settings.memorialStartDate);
+  const [homeFinalWidgetDraft, setHomeFinalWidgetDraft] = useState(settings.homeFinalWidgetPreset);
+  const [homePolaroidMessagesDraft, setHomePolaroidMessagesDraft] = useState(
+    settings.homePolaroidMessages.join('\n'),
+  );
   const [newProfileDraft, setNewProfileDraft] = useState<Omit<ChatProfile, 'id'>>({
     name: '',
     leftNick: 'M',
@@ -549,6 +571,8 @@ export function SettingsPage({
   const [appearancePresetStatus, setAppearancePresetStatus] = useState('');
   const [chibiPoolStatus, setChibiPoolStatus] = useState('');
   const [homeTextStatus, setHomeTextStatus] = useState('');
+  const [homeWidgetStatus, setHomeWidgetStatus] = useState('');
+  const [homePolaroidStatus, setHomePolaroidStatus] = useState('');
   const [labelStatus, setLabelStatus] = useState('');
   const [aboutMeBackupStatus, setAboutMeBackupStatus] = useState('');
   const [aboutMBackupStatus, setAboutMBackupStatus] = useState('');
@@ -630,6 +654,8 @@ export function SettingsPage({
     setHomeWidgetSubtitleDraft(settings.homeWidgetSubtitle);
     setInboxTitleDraft(settings.inboxTitle);
     setMemorialStartDateDraft(settings.memorialStartDate);
+    setHomeFinalWidgetDraft(settings.homeFinalWidgetPreset);
+    setHomePolaroidMessagesDraft(settings.homePolaroidMessages.join('\n'));
   }, [
     settings.backgroundImageUrl,
     settings.homeDynamicWallpaperPreset,
@@ -644,6 +670,8 @@ export function SettingsPage({
     settings.homeWidgetSubtitle,
     settings.inboxTitle,
     settings.memorialStartDate,
+    settings.homeFinalWidgetPreset,
+    settings.homePolaroidMessages,
   ]);
 
   useEffect(() => {
@@ -1115,6 +1143,8 @@ export function SettingsPage({
         homeWidgetIconDataUrl: settings.homeWidgetIconDataUrl,
         inboxTitle: settings.inboxTitle,
         memorialStartDate: settings.memorialStartDate,
+        homeFinalWidgetPreset: settings.homeFinalWidgetPreset,
+        homePolaroidMessages: settings.homePolaroidMessages,
         diaryCoverFitMode: settings.diaryCoverFitMode,
         tarotNameColor: settings.tarotNameColor,
         tarotNameScale: settings.tarotNameScale,
@@ -1372,6 +1402,17 @@ export function SettingsPage({
       if (typeof source.memorialStartDate === 'string') {
         next.memorialStartDate = source.memorialStartDate;
       }
+      if (source.homeFinalWidgetPreset === 'vinylCounter' || source.homeFinalWidgetPreset === 'polaroid') {
+        next.homeFinalWidgetPreset = source.homeFinalWidgetPreset;
+      }
+      if (Array.isArray(source.homePolaroidMessages)) {
+        const normalizedPolaroidMessages = source.homePolaroidMessages
+          .map((item) => (typeof item === 'string' ? item.trim() : ''))
+          .filter((item) => item.length > 0);
+        if (normalizedPolaroidMessages.length) {
+          next.homePolaroidMessages = normalizedPolaroidMessages;
+        }
+      }
       if (source.diaryCoverFitMode === 'cover' || source.diaryCoverFitMode === 'contain') {
         next.diaryCoverFitMode = source.diaryCoverFitMode;
       }
@@ -1473,6 +1514,27 @@ export function SettingsPage({
     setHomeTextStatus('已儲存');
     emitActionToast({ kind: 'success', message: '首頁與信箱設定已儲存' });
     window.setTimeout(() => setHomeTextStatus(''), 1200);
+  }
+
+  function applyHomeWidgetSettings() {
+    onSettingChange({
+      homeFinalWidgetPreset: homeFinalWidgetDraft,
+    });
+    setHomeWidgetStatus('已儲存');
+    emitActionToast({ kind: 'success', message: '首頁小組件類型已儲存' });
+    window.setTimeout(() => setHomeWidgetStatus(''), 1200);
+  }
+
+  function applyHomePolaroidMessages() {
+    onSettingChange({
+      homePolaroidMessages: normalizePolaroidMessagesInput(
+        homePolaroidMessagesDraft,
+        settings.homePolaroidMessages,
+      ),
+    });
+    setHomePolaroidStatus('已儲存');
+    emitActionToast({ kind: 'success', message: '拍力得句子已儲存' });
+    window.setTimeout(() => setHomePolaroidStatus(''), 1200);
   }
 
   function handleHomeWidgetIconUpload(file: File | null) {
@@ -2793,6 +2855,81 @@ export function SettingsPage({
               儲存
             </button>
             {homeTextStatus && <p className="text-xs text-stone-500">{homeTextStatus}</p>}
+          </div>
+        </SettingPanel>
+
+        <SettingPanel
+          icon="🧩"
+          title="首頁小組件"
+          subtitle="唱片機位子的插件選擇"
+          isOpen={openPanel === 'homeWidget'}
+          onToggle={() => togglePanel('homeWidget')}
+        >
+          <div className="space-y-3">
+            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+              <p className="text-sm text-stone-800">唱片機位子要放的組件</p>
+              <label className="block space-y-1">
+                <span className="text-xs text-stone-600">組件類型</span>
+                <select
+                  value={homeFinalWidgetDraft}
+                  onChange={(event) => {
+                    setHomeFinalWidgetDraft(event.target.value as AppSettings['homeFinalWidgetPreset']);
+                    setHomeWidgetStatus('');
+                    setHomePolaroidStatus('');
+                  }}
+                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                >
+                  {HOME_FINAL_WIDGET_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="text-xs text-stone-500">
+                {HOME_FINAL_WIDGET_OPTIONS.find((option) => option.value === homeFinalWidgetDraft)?.hint ?? ''}
+              </p>
+            </div>
+
+            {homeFinalWidgetDraft === 'polaroid' && (
+              <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
+                <label className="block space-y-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-stone-600">拍力得句子（每行一句）</span>
+                    <button
+                      type="button"
+                      onClick={applyHomePolaroidMessages}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-stone-300 bg-white text-sm text-stone-700 transition hover:bg-stone-100 active:scale-95"
+                      aria-label="儲存拍力得句子"
+                      title="儲存拍力得句子"
+                    >
+                      <span aria-hidden="true">💾</span>
+                    </button>
+                  </span>
+                  <textarea
+                    value={homePolaroidMessagesDraft}
+                    onChange={(event) => {
+                      setHomePolaroidMessagesDraft(event.target.value);
+                      setHomePolaroidStatus('');
+                    }}
+                    rows={6}
+                    className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+                    placeholder={'今天也辛苦啦！\n想妳的第 N 天\n不准熬夜寫 Code！'}
+                  />
+                </label>
+                <p className="text-xs text-stone-500">可以改句子；留空會自動改回預設句子，顯示時會逐句輪換。</p>
+                {homePolaroidStatus && <p className="text-xs text-stone-500">{homePolaroidStatus}</p>}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={applyHomeWidgetSettings}
+              className="w-full rounded-xl bg-stone-900 py-2.5 text-sm text-white transition active:opacity-80"
+            >
+              儲存組件類型
+            </button>
+            {homeWidgetStatus && <p className="text-xs text-stone-500">{homeWidgetStatus}</p>}
           </div>
         </SettingPanel>
 
