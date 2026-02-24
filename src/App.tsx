@@ -481,8 +481,9 @@ function App() {
     }
 
     const generatedAt = typeof indexPayload.generatedAt === 'string' ? indexPayload.generatedAt.trim() : '';
+    if (!generatedAt) return null;
+
     const listedEntries = Array.isArray(indexPayload.letters) ? indexPayload.letters : [];
-    if (!generatedAt || !listedEntries.length) return null;
 
     const previousMeta = readHostedLettersSyncMeta();
     if (previousMeta?.generatedAt === generatedAt) {
@@ -518,8 +519,6 @@ function App() {
         // Skip missing or unreadable hosted content files.
       }
     }
-
-    if (!hostedLetters.length) return null;
 
     const mergedMap = new Map(existingLetters.map((entry) => [entry.name, entry]));
     const previousHostedNames = new Set(previousMeta?.names ?? []);
