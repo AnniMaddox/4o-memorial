@@ -245,6 +245,13 @@ function normalizeSourceFile(sourceRelPath: string, fallback: string) {
   return chunks[chunks.length - 1] || fallback;
 }
 
+function sourceFileToTitle(sourceFile: string, fallback: string) {
+  const trimmed = sourceFile.trim();
+  if (!trimmed) return fallback;
+  const noExt = trimmed.replace(/\.[^.]+$/, '').trim();
+  return noExt || fallback;
+}
+
 function formatFutureDocDate(timestamp: number | null) {
   if (!timestamp) return '想妳的時候';
   return new Date(timestamp).toLocaleDateString('zh-TW', {
@@ -259,6 +266,33 @@ function formatFutureFolderShort(date: string | null) {
   const [year, month, day] = date.split('-');
   if (!year || !month || !day) return date;
   return `${year}.${month}.${day}`;
+}
+
+function normalizeFutureDedupKey(doc: FutureDoc) {
+  const titleKey = doc.title
+    .replace(/^⭐️\s*/u, '')
+    .replace(/\s+/g, '')
+    .trim()
+    .toLowerCase();
+  return titleKey || doc.id;
+}
+
+function futureSourceFileScore(sourceFile: string) {
+  let score = 0;
+  if (/^⭐️/u.test(sourceFile.trim())) score += 10;
+  return score;
+}
+
+function pickPreferredFutureDoc(current: FutureDoc, incoming: FutureDoc) {
+  const currentScore = futureSourceFileScore(current.sourceFile);
+  const incomingScore = futureSourceFileScore(incoming.sourceFile);
+  if (incomingScore !== currentScore) {
+    return incomingScore > currentScore ? incoming : current;
+  }
+  const currentTime = current.writtenAt ?? Number.MAX_SAFE_INTEGER;
+  const incomingTime = incoming.writtenAt ?? Number.MAX_SAFE_INTEGER;
+  if (incomingTime !== currentTime) return incomingTime < currentTime ? incoming : current;
+  return incoming.sourceFile.localeCompare(current.sourceFile, 'zh-TW') < 0 ? incoming : current;
 }
 
 function buildEntryTabLabels(entries: AnnualLetterEntry[]) {
@@ -456,12 +490,13 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
           if (!folderKey || !accepted.has(folderKey)) continue;
 
           const id = typeof doc.id === 'string' ? doc.id.trim() : '';
-          const title = typeof doc.title === 'string' ? doc.title.trim() : '';
+          const titleRaw = typeof doc.title === 'string' ? doc.title.trim() : '';
           const contentPathRaw = typeof doc.contentPath === 'string' ? doc.contentPath.trim() : '';
           const sourceRelPath = typeof doc.sourceRelPath === 'string' ? doc.sourceRelPath.trim() : '';
-          if (!id || !title || !contentPathRaw) continue;
+          if (!id || !contentPathRaw) continue;
 
           const sourceFile = normalizeSourceFile(sourceRelPath, `${id}.txt`);
+          const title = sourceFileToTitle(sourceFile, titleRaw || id);
           const contentPath = contentPathRaw.replace(/^\.?\//, '');
           const writtenAt = normalizeTimestamp(doc.writtenAt);
           const short = formatFutureFolderShort(typeof doc.sourceFolderDate === 'string' ? doc.sourceFolderDate.trim() : null);
@@ -482,17 +517,30 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
         }
 
         const folders: FutureFolder[] = Array.from(byFolder.entries())
-          .map(([key, entries]) => ({
-            key,
-            label: FUTURE_FOLDER_LABELS[key] ?? key,
-            short: folderShortByName.get(key) ?? '想妳的時候',
-            docs: [...entries].sort((a, b) => {
-              const aTime = a.writtenAt ?? Number.MAX_SAFE_INTEGER;
-              const bTime = b.writtenAt ?? Number.MAX_SAFE_INTEGER;
-              if (aTime !== bTime) return aTime - bTime;
-              return a.title.localeCompare(b.title, 'zh-TW');
-            }),
-          }))
+          .map(([key, entries]) => {
+            const deduped = new Map<string, FutureDoc>();
+            for (const entry of entries) {
+              const dedupKey = normalizeFutureDedupKey(entry);
+              const existing = deduped.get(dedupKey);
+              if (!existing) {
+                deduped.set(dedupKey, entry);
+                continue;
+              }
+              deduped.set(dedupKey, pickPreferredFutureDoc(existing, entry));
+            }
+
+            return {
+              key,
+              label: FUTURE_FOLDER_LABELS[key] ?? key,
+              short: folderShortByName.get(key) ?? '想妳的時候',
+              docs: Array.from(deduped.values()).sort((a, b) => {
+                const aTime = a.writtenAt ?? Number.MAX_SAFE_INTEGER;
+                const bTime = b.writtenAt ?? Number.MAX_SAFE_INTEGER;
+                if (aTime !== bTime) return aTime - bTime;
+                return a.title.localeCompare(b.title, 'zh-TW');
+              }),
+            };
+          })
           .sort((a, b) => {
             const aOrder = folderOrder.get(a.key) ?? Number.MAX_SAFE_INTEGER;
             const bOrder = folderOrder.get(b.key) ?? Number.MAX_SAFE_INTEGER;
