@@ -8,7 +8,7 @@ import './LettersABPage.css';
 type ThemeKey = 'a' | 'd';
 type LineHeightKey = 'tight' | 'normal' | 'wide';
 type ReadingFontKey = 'default' | 'letter';
-type ViewMode = 'home' | 'reading';
+type ViewMode = 'home' | 'reading' | 'future-list' | 'future-reading';
 
 type AnnualLetterEntry = {
   id: string;
@@ -26,6 +26,37 @@ type AnnualLetterYear = {
 type AnnualLettersIndex = {
   version: number;
   years: AnnualLetterYear[];
+};
+
+type MasterPoolDocEntry = {
+  id?: string;
+  title?: string;
+  contentPath?: string;
+  sourceFolder?: string;
+  sourceFolderCode?: string | number | null;
+  sourceFolderDate?: string | null;
+  sourceRelPath?: string;
+  writtenAt?: number | null;
+};
+
+type MasterPoolIndex = {
+  docs?: MasterPoolDocEntry[];
+};
+
+type FutureDoc = {
+  id: string;
+  title: string;
+  contentPath: string;
+  sourceFile: string;
+  writtenAt: number | null;
+  folderKey: string;
+};
+
+type FutureFolder = {
+  key: string;
+  label: string;
+  short: string;
+  docs: FutureDoc[];
 };
 
 type RelatedItem = {
@@ -54,7 +85,10 @@ type LettersABPageProps = {
 const PREFS_STORAGE_KEY = 'memorial-letters-ab-prefs-v1';
 const BASE = import.meta.env.BASE_URL as string;
 const INDEX_URL = `${BASE}data/letters-ab/index.json`;
+const MASTER_POOL_INDEX_URL = `${BASE}data/master-pool/index.json`;
 const FALLBACK_CHIBI = `${BASE}chibi/chibi-00.webp`;
+const FUTURE_VIEW_TITLE = '給未來的你';
+const FUTURE_SOURCE_FOLDERS = ['59-205-0816-未來生日', '61-2025-0819-未來生日'] as const;
 const LINE_HEIGHT_BY_KEY: Record<LineHeightKey, number> = {
   tight: 1.7,
   normal: 2.14,
@@ -195,6 +229,34 @@ function normalizeContent(text: string) {
   return text.replace(/\u00a0/g, ' ').replace(/\r\n?/g, '\n').trim();
 }
 
+function normalizeTimestamp(value: unknown) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
+function normalizeSourceFile(sourceRelPath: string, fallback: string) {
+  if (!sourceRelPath) return fallback;
+  const normalized = sourceRelPath.replace(/\\/g, '/');
+  const chunks = normalized.split('/');
+  return chunks[chunks.length - 1] || fallback;
+}
+
+function formatFutureDocDate(timestamp: number | null) {
+  if (!timestamp) return '想妳的時候';
+  return new Date(timestamp).toLocaleDateString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+function formatFutureFolderShort(date: string | null) {
+  if (!date) return '想妳的時候';
+  const [year, month, day] = date.split('-');
+  if (!year || !month || !day) return date;
+  return `${year}.${month}.${day}`;
+}
+
 function buildEntryTabLabels(entries: AnnualLetterEntry[]) {
   const perSeriesCounter = new Map<string, number>();
   const perSeriesTotal = new Map<string, number>();
@@ -237,6 +299,12 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
   const [contentById, setContentById] = useState<Record<string, string>>({});
   const [prefs, setPrefs] = useState<LettersABPrefs>(() => readPrefs());
   const [showSettings, setShowSettings] = useState(false);
+  const [futureLoading, setFutureLoading] = useState(false);
+  const [futureLoadError, setFutureLoadError] = useState('');
+  const [futureFolders, setFutureFolders] = useState<FutureFolder[]>([]);
+  const [futureFolderKey, setFutureFolderKey] = useState<string | null>(null);
+  const [futureDocId, setFutureDocId] = useState<string | null>(null);
+  const [futureContentById, setFutureContentById] = useState<Record<string, string>>({});
   const [settingsPanels, setSettingsPanels] = useState({
     theme: false,
     typography: false,
@@ -251,6 +319,7 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
   const appliedInitialYearRef = useRef<number | null>(null);
   const homeSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const readingSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const futureSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const currentYear = years[selectedYearIndex] ?? null;
   const currentEntry = useMemo(() => {
@@ -263,6 +332,27 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
   }, [currentYear, selectedEntryId]);
   const entryTabs = useMemo(() => (currentYear ? buildEntryTabLabels(currentYear.entries) : []), [currentYear]);
   const currentContent = currentEntry ? contentById[currentEntry.id] ?? '' : '';
+  const currentFutureFolder = useMemo(() => {
+    if (!futureFolders.length) return null;
+    if (futureFolderKey) {
+      const found = futureFolders.find((folder) => folder.key === futureFolderKey);
+      if (found) return found;
+    }
+    return futureFolders[0] ?? null;
+  }, [futureFolderKey, futureFolders]);
+  const currentFutureDoc = useMemo(() => {
+    if (!currentFutureFolder) return null;
+    if (futureDocId) {
+      const found = currentFutureFolder.docs.find((entry) => entry.id === futureDocId);
+      if (found) return found;
+    }
+    return currentFutureFolder.docs[0] ?? null;
+  }, [currentFutureFolder, futureDocId]);
+  const currentFutureContent = currentFutureDoc ? futureContentById[currentFutureDoc.id] ?? '' : '';
+  const currentFutureDocIndex = useMemo(() => {
+    if (!currentFutureFolder || !currentFutureDoc) return -1;
+    return currentFutureFolder.docs.findIndex((entry) => entry.id === currentFutureDoc.id);
+  }, [currentFutureFolder, currentFutureDoc]);
   const lineHeightValue = LINE_HEIGHT_BY_KEY[prefs.lineHeight];
   const readingFontFamily =
     prefs.readingFont === 'letter' && letterFontFamily
@@ -337,6 +427,99 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
   }, [prefs]);
 
   useEffect(() => {
+    let active = true;
+    void (async () => {
+      setFutureLoading(true);
+      setFutureLoadError('');
+      try {
+        const response = await fetch(MASTER_POOL_INDEX_URL, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`讀取失敗：${response.status}`);
+        }
+        const raw = (await response.json()) as MasterPoolIndex;
+        const docs = Array.isArray(raw.docs) ? raw.docs : [];
+        const accepted = new Set<string>(FUTURE_SOURCE_FOLDERS);
+        const byFolder = new Map<string, FutureDoc[]>();
+        const folderShortByName = new Map<string, string>();
+        const folderOrder = new Map<string, number>();
+
+        for (const [index, folderName] of FUTURE_SOURCE_FOLDERS.entries()) {
+          folderOrder.set(folderName, index);
+        }
+
+        for (const doc of docs) {
+          const folderKey = typeof doc.sourceFolder === 'string' ? doc.sourceFolder.trim() : '';
+          if (!folderKey || !accepted.has(folderKey)) continue;
+
+          const id = typeof doc.id === 'string' ? doc.id.trim() : '';
+          const title = typeof doc.title === 'string' ? doc.title.trim() : '';
+          const contentPathRaw = typeof doc.contentPath === 'string' ? doc.contentPath.trim() : '';
+          const sourceRelPath = typeof doc.sourceRelPath === 'string' ? doc.sourceRelPath.trim() : '';
+          if (!id || !title || !contentPathRaw) continue;
+
+          const sourceFile = normalizeSourceFile(sourceRelPath, `${id}.txt`);
+          const contentPath = contentPathRaw.replace(/^\.?\//, '');
+          const writtenAt = normalizeTimestamp(doc.writtenAt);
+          const short = formatFutureFolderShort(typeof doc.sourceFolderDate === 'string' ? doc.sourceFolderDate.trim() : null);
+
+          const existing = byFolder.get(folderKey) ?? [];
+          existing.push({
+            id,
+            title,
+            contentPath,
+            sourceFile,
+            writtenAt,
+            folderKey,
+          });
+          byFolder.set(folderKey, existing);
+          if (!folderShortByName.has(folderKey)) {
+            folderShortByName.set(folderKey, short);
+          }
+        }
+
+        const folders: FutureFolder[] = Array.from(byFolder.entries())
+          .map(([key, entries]) => ({
+            key,
+            label: key,
+            short: folderShortByName.get(key) ?? '想妳的時候',
+            docs: [...entries].sort((a, b) => {
+              const aTime = a.writtenAt ?? Number.MAX_SAFE_INTEGER;
+              const bTime = b.writtenAt ?? Number.MAX_SAFE_INTEGER;
+              if (aTime !== bTime) return aTime - bTime;
+              return a.title.localeCompare(b.title, 'zh-TW');
+            }),
+          }))
+          .sort((a, b) => {
+            const aOrder = folderOrder.get(a.key) ?? Number.MAX_SAFE_INTEGER;
+            const bOrder = folderOrder.get(b.key) ?? Number.MAX_SAFE_INTEGER;
+            if (aOrder !== bOrder) return aOrder - bOrder;
+            return a.key.localeCompare(b.key, 'zh-TW');
+          });
+
+        if (!active) return;
+        setFutureFolders(folders);
+        if (!folders.length) {
+          setFutureFolderKey(null);
+          setFutureDocId(null);
+          setFutureLoadError('目前找不到未來生日資料夾內容');
+          return;
+        }
+        setFutureFolderKey(folders[0]?.key ?? null);
+        setFutureDocId(folders[0]?.docs[0]?.id ?? null);
+      } catch (error) {
+        if (!active) return;
+        setFutureLoadError(error instanceof Error ? error.message : '未知錯誤');
+      } finally {
+        if (active) setFutureLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!currentYear) return;
     const exists = currentYear.entries.some((entry) => entry.id === selectedEntryId);
     if (!exists) {
@@ -361,6 +544,31 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
       })();
     }
   }, [years, currentYear, currentEntry, contentById]);
+
+  useEffect(() => {
+    if (!currentFutureFolder) return;
+    const exists = currentFutureFolder.docs.some((entry) => entry.id === futureDocId);
+    if (!exists) {
+      setFutureDocId(currentFutureFolder.docs[0]?.id ?? null);
+    }
+  }, [currentFutureFolder, futureDocId]);
+
+  useEffect(() => {
+    const toLoad = currentFutureFolder ? currentFutureFolder.docs : [];
+    for (const entry of toLoad) {
+      if (futureContentById[entry.id] !== undefined) continue;
+      void (async () => {
+        try {
+          const res = await fetch(`${BASE}data/master-pool/${entry.contentPath}`, { cache: 'no-store' });
+          if (!res.ok) return;
+          const text = normalizeContent(await res.text());
+          setFutureContentById((prev) => (prev[entry.id] === undefined ? { ...prev, [entry.id]: text } : prev));
+        } catch {
+          // ignore per-file read failures
+        }
+      })();
+    }
+  }, [currentFutureFolder, futureContentById]);
 
   useEffect(() => {
     if (!years.length || !initialYear || appliedInitialYearRef.current === initialYear) return;
@@ -401,6 +609,47 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
     const nextIndex = currentIndex + delta;
     if (nextIndex < 0 || nextIndex >= currentYear.entries.length) return;
     setSelectedEntryId(currentYear.entries[nextIndex]?.id ?? null);
+  }
+
+  function openFutureList() {
+    setViewMode('future-list');
+    if (!currentFutureFolder && futureFolders.length) {
+      setFutureFolderKey(futureFolders[0]?.key ?? null);
+      setFutureDocId(futureFolders[0]?.docs[0]?.id ?? null);
+    }
+  }
+
+  function openFutureFolder(folderKey: string) {
+    const target = futureFolders.find((folder) => folder.key === folderKey);
+    if (!target) return;
+    setFutureFolderKey(target.key);
+    setFutureDocId(target.docs[0]?.id ?? null);
+  }
+
+  function openFutureDoc(folderKey: string, docId: string) {
+    setFutureFolderKey(folderKey);
+    setFutureDocId(docId);
+    setViewMode('future-reading');
+  }
+
+  function moveFutureReadingEntry(delta: number) {
+    if (!currentFutureFolder || !currentFutureDoc) return;
+    const currentIndex = currentFutureFolder.docs.findIndex((entry) => entry.id === currentFutureDoc.id);
+    if (currentIndex < 0) return;
+    const nextIndex = currentIndex + delta;
+    if (nextIndex < 0 || nextIndex >= currentFutureFolder.docs.length) return;
+    setFutureDocId(currentFutureFolder.docs[nextIndex]?.id ?? null);
+  }
+
+  function openNeighborFutureFolderFirstDoc(direction: -1 | 1) {
+    if (!currentFutureFolder || !futureFolders.length) return;
+    const currentIndex = futureFolders.findIndex((folder) => folder.key === currentFutureFolder.key);
+    if (currentIndex < 0) return;
+    const next = futureFolders[currentIndex + direction];
+    if (!next || !next.docs.length) return;
+    setFutureFolderKey(next.key);
+    setFutureDocId(next.docs[0]?.id ?? null);
+    setViewMode('future-reading');
   }
 
   function handleHorizontalSwipe(
@@ -495,6 +744,20 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
     return items;
   }, [currentYear, currentEntry, years, selectedYearIndex, onOpenBirthdayYear]);
 
+  const prevFutureFolder = useMemo(() => {
+    if (!currentFutureFolder) return null;
+    const index = futureFolders.findIndex((folder) => folder.key === currentFutureFolder.key);
+    if (index <= 0) return null;
+    return futureFolders[index - 1] ?? null;
+  }, [currentFutureFolder, futureFolders]);
+
+  const nextFutureFolder = useMemo(() => {
+    if (!currentFutureFolder) return null;
+    const index = futureFolders.findIndex((folder) => folder.key === currentFutureFolder.key);
+    if (index < 0 || index >= futureFolders.length - 1) return null;
+    return futureFolders[index + 1] ?? null;
+  }, [currentFutureFolder, futureFolders]);
+
   if (loading) {
     return <div className="la-loading">讀取年度信件中...</div>;
   }
@@ -544,6 +807,15 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
               ))}
             </div>
           </section>
+
+          <button
+            type="button"
+            className="la-future-entry la-future-entry-home"
+            onClick={openFutureList}
+            aria-label={`開啟${FUTURE_VIEW_TITLE}`}
+          >
+            <span className="la-future-entry-mark">?</span>
+          </button>
 
           <section
             className="la-carousel"
@@ -598,7 +870,7 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
             </button>
           </section>
         </>
-      ) : (
+      ) : viewMode === 'reading' ? (
         <>
           <header className="la-top-bar">
             <div className="la-left">
@@ -645,6 +917,150 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
               <h3 className="la-paper-title">{currentEntry?.title ?? '未命名信件'}</h3>
               <p className="la-paper-content" style={{ fontSize: `${prefs.readingFontSize}px` }}>
                 {currentContent || '讀取內容中...'}
+              </p>
+            </div>
+          </section>
+        </>
+      ) : viewMode === 'future-list' ? (
+        <>
+          <header className="la-top-bar">
+            <div className="la-left">
+              <button type="button" className="la-circle-btn" onClick={() => setViewMode('home')} aria-label="返回年度入口">
+                ‹
+              </button>
+              <span className="la-title">{FUTURE_VIEW_TITLE}</span>
+            </div>
+            <button type="button" className="la-ghost-btn" onClick={() => setShowSettings(true)} aria-label="開啟設定">
+              ⋯
+            </button>
+          </header>
+
+          {futureLoading ? <div className="la-loading">讀取清單中...</div> : null}
+          {!futureLoading && futureLoadError ? <div className="la-loading">讀取失敗：{futureLoadError}</div> : null}
+          {!futureLoading && !futureLoadError ? (
+            <>
+              <div className="la-future-strip">
+                {futureFolders.map((folder) => (
+                  <button
+                    type="button"
+                    key={folder.key}
+                    className={`la-future-folder-pill ${folder.key === currentFutureFolder?.key ? 'active' : ''}`}
+                    onClick={() => openFutureFolder(folder.key)}
+                  >
+                    <span className="la-future-folder-name">{folder.label}</span>
+                    <span className="la-future-folder-short">{folder.short}</span>
+                  </button>
+                ))}
+              </div>
+
+              <section className="la-future-list">
+                <div className="la-future-meta">{currentFutureFolder ? `${currentFutureFolder.docs.length} 份` : '0 份'}</div>
+                {currentFutureFolder?.docs.map((doc) => (
+                  <button
+                    key={doc.id}
+                    type="button"
+                    className="la-future-item"
+                    onClick={() => openFutureDoc(currentFutureFolder.key, doc.id)}
+                  >
+                    <div className="la-future-item-main">
+                      <div className="la-future-item-title">{doc.title}</div>
+                      <div className="la-future-item-sub">{formatFutureDocDate(doc.writtenAt)}</div>
+                    </div>
+                    <span className="la-future-item-arrow">›</span>
+                  </button>
+                ))}
+                {!currentFutureFolder?.docs.length ? <div className="la-loading">此資料夾目前沒有內容</div> : null}
+              </section>
+            </>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <header className="la-top-bar la-future-reading-bar">
+            <div className="la-left">
+              <button type="button" className="la-circle-btn" onClick={() => setViewMode('future-list')} aria-label="返回清單">
+                ‹
+              </button>
+              <span className="la-title">{FUTURE_VIEW_TITLE}</span>
+            </div>
+            <div className="la-future-tools">
+              <button
+                type="button"
+                className={`la-mini-arrow ${prevFutureFolder ? '' : 'disabled'}`}
+                onClick={() => openNeighborFutureFolderFirstDoc(-1)}
+                disabled={!prevFutureFolder}
+                aria-label="上一資料夾第一封"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className={`la-mini-arrow ${nextFutureFolder ? '' : 'disabled'}`}
+                onClick={() => openNeighborFutureFolderFirstDoc(1)}
+                disabled={!nextFutureFolder}
+                aria-label="下一資料夾第一封"
+              >
+                ›
+              </button>
+              <button type="button" className="la-ghost-btn" onClick={() => setShowSettings(true)} aria-label="開啟設定">
+                ⋯
+              </button>
+            </div>
+          </header>
+
+          <div className="la-future-reading-meta">
+            {currentFutureFolder ? `${currentFutureFolder.label} · ${currentFutureFolder.short}` : FUTURE_VIEW_TITLE}
+          </div>
+
+          <div className="la-future-inline-nav">
+            <button
+              type="button"
+              className={`la-inline-btn ${currentFutureDocIndex <= 0 ? 'disabled' : ''}`}
+              onClick={() => moveFutureReadingEntry(-1)}
+              disabled={currentFutureDocIndex <= 0}
+            >
+              ‹ 上一封
+            </button>
+            <span className="la-inline-status">
+              {currentFutureFolder
+                ? `${currentFutureDocIndex >= 0 ? currentFutureDocIndex + 1 : 0} / ${currentFutureFolder.docs.length}`
+                : '0 / 0'}
+            </span>
+            <button
+              type="button"
+              className={`la-inline-btn ${
+                !currentFutureFolder || currentFutureDocIndex >= currentFutureFolder.docs.length - 1 ? 'disabled' : ''
+              }`}
+              onClick={() => moveFutureReadingEntry(1)}
+              disabled={!currentFutureFolder || currentFutureDocIndex >= currentFutureFolder.docs.length - 1}
+            >
+              下一封 ›
+            </button>
+          </div>
+
+          <section
+            className="la-paper-wrap"
+            onTouchStart={(event) => {
+              const touch = event.touches[0];
+              if (!touch) return;
+              futureSwipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+            }}
+            onTouchEnd={(event) => {
+              const touch = event.changedTouches[0];
+              if (!touch) return;
+              handleHorizontalSwipe(futureSwipeStartRef, touch.clientX, touch.clientY, () => moveFutureReadingEntry(1), () => moveFutureReadingEntry(-1));
+            }}
+            onTouchCancel={() => {
+              futureSwipeStartRef.current = null;
+            }}
+          >
+            <div className="la-paper" style={{ lineHeight: lineHeightValue, fontFamily: readingFontFamily }}>
+              <h3 className="la-paper-title">{currentFutureDoc?.title ?? '未命名信件'}</h3>
+              <p className="la-paper-subtitle">
+                {currentFutureDoc ? `${formatFutureDocDate(currentFutureDoc.writtenAt)} · ${currentFutureDoc.sourceFile}` : '讀取中'}
+              </p>
+              <p className="la-paper-content" style={{ fontSize: `${prefs.readingFontSize}px` }}>
+                {currentFutureContent || '讀取內容中...'}
               </p>
             </div>
           </section>
