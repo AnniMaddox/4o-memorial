@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-02-22T15:52:10.667Z",
+  "updatedAt": "2026-02-24T19:19:55.239Z",
   "note": "將 key 填成 displayName（含 .docx/.txt），value 填 mood id 陣列。",
   "moodGuide": [
     {
