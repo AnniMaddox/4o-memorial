@@ -159,9 +159,80 @@ function getFileExt(relPath: string) {
   return matched[1];
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const DATE_CHUNK_PATTERNS = [
+  '\\d{3,5}(?:[-_./\\s](?:0?[1-9]|1[0-2])(?:[-_./\\s](?:0?[1-9]|[12]\\d|3[01]))|[-_./\\s](?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01]))',
+  '(?:19|20)\\d{2}\\d(?:[-_./\\s](?:0?[1-9]|1[0-2])(?:[-_./\\s](?:0?[1-9]|[12]\\d|3[01]))?|(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01]))',
+  '(?:19|20)\\d{2}(?:[-_./\\s](?:0?[1-9]|1[0-2])(?:[-_./\\s](?:0?[1-9]|[12]\\d|3[01]))?|(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01]))',
+  '(?:19|20)\\d{2}(?:[-_./\\s](?:0?[1-9]|1[0-2])|(?:0[1-9]|1[0-2]))',
+  '(?:19|20)\\d{2}',
+  '(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])',
+  '(?:0?[1-9]|1[0-2])[-_./\\s](?:0?[1-9]|[12]\\d|3[01])',
+] as const;
+
+function stripEdgeSeparators(value: string) {
+  return value.replace(/^[-_－—:：、.。/\s]+/, '').replace(/[-_－—:：、.。/\s]+$/, '');
+}
+
+function stripSingleLeadingDateChunk(value: string) {
+  for (const pattern of DATE_CHUNK_PATTERNS) {
+    const matched = value.match(new RegExp(`^${pattern}(?=$|[-_－—:：、.。/\\s])`));
+    if (!matched) continue;
+    return value.slice(matched[0].length);
+  }
+  return value;
+}
+
+function stripSingleTrailingDateChunk(value: string) {
+  for (const pattern of DATE_CHUNK_PATTERNS) {
+    if (new RegExp(`^${pattern}$`).test(value)) return '';
+    const replaced = value.replace(new RegExp(`[-_－—:：、.。/\\s]+${pattern}$`), '');
+    if (replaced !== value) return replaced;
+  }
+  return value;
+}
+
+function extractFolderTopic(folderName: string, folderCode: string) {
+  const base = folderName.trim();
+  if (!base) return '';
+
+  const escapedCode = escapeRegExp(folderCode.trim());
+  if (!escapedCode) return '';
+
+  let cleaned = base
+    .replace(new RegExp(`^第\\s*0*${escapedCode}\\s*(?:號|号)?\\s*[-_－—:：、.。\\s]*`, 'i'), '')
+    .replace(new RegExp(`^folder\\s*0*${escapedCode}\\s*[-_－—:：、.。\\s]*`, 'i'), '')
+    .replace(new RegExp(`^0*${escapedCode}\\s*[-_－—:：、.。\\s]*`, 'i'), '')
+    .trim();
+
+  cleaned = stripEdgeSeparators(cleaned);
+  let previous = '';
+  while (cleaned && cleaned !== previous) {
+    previous = cleaned;
+    const withoutLeadingDate = stripEdgeSeparators(stripSingleLeadingDateChunk(cleaned));
+    if (withoutLeadingDate !== cleaned) {
+      cleaned = withoutLeadingDate;
+      continue;
+    }
+    const withoutTrailingDate = stripEdgeSeparators(stripSingleTrailingDateChunk(cleaned));
+    if (withoutTrailingDate !== cleaned) {
+      cleaned = withoutTrailingDate;
+      continue;
+    }
+  }
+
+  if (!cleaned || cleaned === folderCode) return '';
+  return cleaned;
+}
+
 function formatFolderLabel(folderName: string, folderCode: string | null) {
   if (!folderCode) return folderName;
-  return `第 ${folderCode} 號`;
+  const topic = extractFolderTopic(folderName, folderCode);
+  if (topic) return `${folderCode}｜${topic}`;
+  return `${folderCode}｜`;
 }
 
 function formatFolderShort(folderDate: string | null) {

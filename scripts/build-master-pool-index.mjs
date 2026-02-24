@@ -421,7 +421,7 @@ async function main() {
   const fullDateByCodeAndMonthDay = new Map();
 
   for (const folderName of topFolders) {
-    const folderCodeMatch = folderName.match(/^(\d{1,3})/);
+    const folderCodeMatch = folderName.match(/^(\d{1,4})(?=[-_－—:：、.。\s]|$)/);
     const folderCode = folderCodeMatch ? folderCodeMatch[1] : null;
     const parsedDate = parseDateFromText(folderName);
     const monthDay = parsedDate
