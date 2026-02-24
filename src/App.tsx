@@ -88,8 +88,7 @@ type LauncherAppId =
   | 'bookshelf'
   | 'notes'
   | 'soulmate'
-  | 'moodLetters'
-  | 'vault';
+  | 'moodLetters';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -145,7 +144,6 @@ const FitnessPage = lazy(() => import('./pages/FitnessPage').then((m) => ({ defa
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const TarotPage = lazy(() => import('./pages/TarotPage').then((m) => ({ default: m.TarotPage })));
 const MoodLettersPage = lazy(() => import('./pages/MoodLettersPage').then((m) => ({ default: m.MoodLettersPage })));
-const VaultPage = lazy(() => import('./pages/VaultPage').then((m) => ({ default: m.VaultPage })));
 
 function toRgbTriplet(hex: string) {
   const matched = hex.trim().match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
@@ -1906,13 +1904,6 @@ function App() {
             </div>
           )}
 
-          {launcherApp === 'vault' && (
-            <div className="fixed inset-0 z-30" style={{ background: '#13131f' }}>
-              <div className="mx-auto h-full w-full max-w-xl">
-                <VaultPage onExit={() => setLauncherApp(null)} />
-              </div>
-            </div>
-          )}
           </>
         </Suspense>
       )}
