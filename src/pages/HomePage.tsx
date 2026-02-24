@@ -36,7 +36,8 @@ type LauncherAppId =
   | 'notes'
   | 'soulmate'
   | 'bookshelf'
-  | 'moodLetters';
+  | 'moodLetters'
+  | 'archive';
 
 type HomePageProps = {
   tabIconUrls: TabIconUrls;
@@ -847,6 +848,12 @@ export function HomePage({
       icon: '📜',
       launch: 'lettersAB',
     };
+    const archiveSlot: HomeAppSlot = {
+      id: 'archive',
+      label: '總攬',
+      icon: '🗂',
+      launch: 'archive',
+    };
     const settingsShortcutSlot: HomeAppSlot = {
       id: 'settings-shortcut',
       label: launcherLabels.settings,
@@ -901,6 +908,7 @@ export function HomePage({
             bookshelfSlot,
             albumSlot,
             annualLettersSlot,
+            archiveSlot,
             moodLettersSlot,
             settingsShortcutSlot,
           ],

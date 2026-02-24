@@ -61,8 +61,12 @@ const LETTERS_AB_CHIBI_MODULES = import.meta.glob('../../public/letters-ab-chibi
   eager: true,
   import: 'default',
 }) as Record<string, string>;
+const ARCHIVE_CHIBI_MODULES = import.meta.glob('../../public/archive-chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>;
 
-export type ScopedChibiPoolKey = 'mdiary' | 'fitness' | 'pomodoro' | 'notes' | 'calendar' | 'lettersAB';
+export type ScopedChibiPoolKey = 'mdiary' | 'fitness' | 'pomodoro' | 'notes' | 'calendar' | 'lettersAB' | 'archive';
 
 const SCOPED_CHIBI_SOURCES: Record<ScopedChibiPoolKey, string[]> = {
   mdiary: toSortedSources(MDIARY_CHIBI_MODULES),
@@ -71,6 +75,7 @@ const SCOPED_CHIBI_SOURCES: Record<ScopedChibiPoolKey, string[]> = {
   notes: toSortedSources(NOTES_CHIBI_MODULES),
   calendar: toSortedSources(CALENDAR_CHIBI_MODULES),
   lettersAB: toSortedSources(LETTERS_AB_CHIBI_MODULES),
+  archive: toSortedSources(ARCHIVE_CHIBI_MODULES),
 };
 
 type ChibiPoolInfo = {

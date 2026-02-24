@@ -278,6 +278,7 @@ export type AppSettings = {
   soulmateFontUrl: string;
   soulmateFontUrlSlots: string[];
   soulmateFontUrlSlotNames: string[];
+  archiveFontUrl: string;
   diaryCoverFitMode: DiaryCoverFitMode;
   mDiaryLineHeight: number;
   mDiaryContentFontSize: number;
@@ -378,6 +379,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   soulmateFontUrl: '',
   soulmateFontUrlSlots: ['', '', '', '', '', '', '', '', '', ''],
   soulmateFontUrlSlotNames: ['', '', '', '', '', '', '', '', '', ''],
+  archiveFontUrl: '',
   diaryCoverFitMode: 'cover',
   mDiaryLineHeight: 2.16,
   mDiaryContentFontSize: 14,

@@ -90,6 +90,7 @@ const FALLBACK_CHIBI = `${BASE}chibi/chibi-00.webp`;
 const ALL_MOODS_KEY = 'all';
 const PREFS_KEY = 'memorial-mood-letters-prefs-v1';
 const FAVORITES_KEY = 'memorial-mood-letters-favorites-v1';
+const FAVORITES_URL_PARAM = 'mlFav';
 const ORB_COUNT_MIN = 11;
 const ORB_COUNT_MAX = 15;
 
@@ -234,6 +235,23 @@ function savePrefs(prefs: MoodLettersPrefs) {
 }
 
 function loadFavoriteIds() {
+  if (typeof window !== 'undefined') {
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has(FAVORITES_URL_PARAM)) {
+        const raw = url.searchParams.get(FAVORITES_URL_PARAM) ?? '';
+        if (!raw.trim()) return new Set<string>();
+        const fromUrl = raw
+          .split(',')
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0);
+        return new Set(fromUrl);
+      }
+    } catch {
+      // Ignore URL parse failures and fallback to storage.
+    }
+  }
+
   if (typeof window === 'undefined') return new Set<string>();
   try {
     const raw = window.localStorage.getItem(FAVORITES_KEY);
@@ -248,7 +266,20 @@ function loadFavoriteIds() {
 
 function saveFavoriteIds(ids: Set<string>) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(ids)));
+  const serialized = Array.from(ids);
+  window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(serialized));
+  try {
+    const url = new URL(window.location.href);
+    if (serialized.length) {
+      url.searchParams.set(FAVORITES_URL_PARAM, serialized.join(','));
+    } else {
+      url.searchParams.delete(FAVORITES_URL_PARAM);
+    }
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, '', nextUrl);
+  } catch {
+    // Ignore URL write failures and keep storage as fallback.
+  }
 }
 
 function pickRandom<T>(items: readonly T[]) {
@@ -501,6 +532,23 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
   useEffect(() => {
     saveFavoriteIds(favoriteIds);
   }, [favoriteIds]);
+
+  useEffect(() => {
+    if (!index) return;
+    const validIds = new Set(index.letters.map((letter) => letter.id));
+    setFavoriteIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (!validIds.has(id)) {
+          changed = true;
+          continue;
+        }
+        next.add(id);
+      }
+      return changed ? next : prev;
+    });
+  }, [index]);
 
   useEffect(
     () => () => {

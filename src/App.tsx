@@ -28,6 +28,7 @@ import { readLetterContent } from './lib/letterReader';
 import { pickLetterWrittenAt } from './lib/letterDate';
 import { detectBestChatProfileId } from './lib/chatProfileMatcher';
 import {
+  ARCHIVE_CUSTOM_FONT_FAMILY,
   APP_CUSTOM_FONT_FAMILY,
   DIARY_CUSTOM_FONT_FAMILY,
   LETTER_CUSTOM_FONT_FAMILY,
@@ -88,7 +89,8 @@ type LauncherAppId =
   | 'bookshelf'
   | 'notes'
   | 'soulmate'
-  | 'moodLetters';
+  | 'moodLetters'
+  | 'archive';
 
 const UNLOCK_CHECK_INTERVAL_MS = 30_000;
 const notificationIconUrl = `${import.meta.env.BASE_URL}icons/icon-192.png`;
@@ -144,6 +146,7 @@ const FitnessPage = lazy(() => import('./pages/FitnessPage').then((m) => ({ defa
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const TarotPage = lazy(() => import('./pages/TarotPage').then((m) => ({ default: m.TarotPage })));
 const MoodLettersPage = lazy(() => import('./pages/MoodLettersPage').then((m) => ({ default: m.MoodLettersPage })));
+const ArchivePage = lazy(() => import('./pages/ArchivePage').then((m) => ({ default: m.ArchivePage })));
 
 function toRgbTriplet(hex: string) {
   const matched = hex.trim().match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
@@ -383,6 +386,7 @@ function App() {
   const letterFontFamily = settings.letterFontUrl.trim() ? LETTER_CUSTOM_FONT_FAMILY : '';
   const diaryFontFamily = settings.diaryFontUrl.trim() ? DIARY_CUSTOM_FONT_FAMILY : '';
   const soulmateFontFamily = settings.soulmateFontUrl.trim() ? SOULMATE_CUSTOM_FONT_FAMILY : '';
+  const archiveFontFamily = settings.archiveFontUrl.trim() ? ARCHIVE_CUSTOM_FONT_FAMILY : '';
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [starredEmailIds, setStarredEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
@@ -632,6 +636,23 @@ function App() {
     }
     style.textContent = buildFontFaceRule(SOULMATE_CUSTOM_FONT_FAMILY, href);
   }, [settings.soulmateFontUrl]);
+
+  // Load archive custom font
+  useEffect(() => {
+    const href = settings.archiveFontUrl.trim();
+    const styleId = 'archive-custom-font-style';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!href) {
+      style?.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = buildFontFaceRule(ARCHIVE_CUSTOM_FONT_FAMILY, href);
+  }, [settings.archiveFontUrl]);
 
   const handleImportLetterFiles = useCallback(async (files: File[]) => {
     const now = Date.now();
@@ -1900,6 +1921,19 @@ function App() {
             <div className="fixed inset-0 z-30" style={{ background: '#0b1023' }}>
               <div className="mx-auto h-full w-full max-w-xl">
                 <MoodLettersPage onExit={() => setLauncherApp(null)} letterFontFamily={letterFontFamily} />
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'archive' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#0a0a0a' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <ArchivePage
+                  onExit={() => setLauncherApp(null)}
+                  archiveFontFamily={archiveFontFamily}
+                  diaryContentFontSize={settings.mDiaryContentFontSize}
+                  diaryLineHeight={settings.mDiaryLineHeight}
+                />
               </div>
             </div>
           )}

@@ -89,7 +89,7 @@ type FontSlotNameSettingKey =
   | 'letterFontUrlSlotNames'
   | 'diaryFontUrlSlotNames'
   | 'soulmateFontUrlSlotNames';
-type FontApplyTargetKey = 'app' | 'letter' | 'diary' | 'soulmate';
+type FontApplyTargetKey = 'app' | 'letter' | 'diary' | 'soulmate' | 'archive';
 type UiSizeSettingKey =
   | 'uiHeaderTitleSize'
   | 'uiTabLabelSize'
@@ -143,6 +143,7 @@ const FONT_TARGET_OPTIONS: Array<{ key: FontApplyTargetKey; label: string; hint:
   { key: 'letter', label: '情書', hint: '情書頁閱讀文字' },
   { key: 'diary', label: '日記', hint: 'M 日記 / Anni 日記 / 願望' },
   { key: 'soulmate', label: '家頁', hint: '家閱讀頁' },
+  { key: 'archive', label: '總攬', hint: '總攬入口閱讀文字' },
 ];
 const UI_SIZE_CONTROLS: Array<{ key: UiSizeSettingKey; label: string; hint: string; min: number; max: number; step: number }> = [
   { key: 'uiHeaderTitleSize', label: '頁首標題', hint: 'M日記 / Anni日記 / 經期 / 願望 / 對話頁標題', min: 14, max: 24, step: 1 },
@@ -393,6 +394,7 @@ type AppearancePresetPayload = {
     soulmateFontUrl: string;
     soulmateFontUrlSlots: string[];
     soulmateFontUrlSlotNames: string[];
+    archiveFontUrl: string;
     fontScale: number;
     uiHeaderTitleSize: number;
     uiTabLabelSize: number;
@@ -606,6 +608,7 @@ export function SettingsPage({
     letter: true,
     diary: true,
     soulmate: false,
+    archive: false,
   });
   const [fontSlotNameDrafts, setFontSlotNameDrafts] = useState<Record<FontSlotSettingKey, string>>({
     customFontUrlSlots: settings.customFontUrlSlotNames[0] ?? '',
@@ -756,6 +759,7 @@ export function SettingsPage({
       letter: checked,
       diary: checked,
       soulmate: checked,
+      archive: checked,
     });
   }
 
@@ -768,6 +772,9 @@ export function SettingsPage({
     }
     if (target === 'diary') {
       return settings.diaryFontUrl.trim();
+    }
+    if (target === 'archive') {
+      return settings.archiveFontUrl.trim();
     }
     return settings.soulmateFontUrl.trim();
   }
@@ -852,6 +859,8 @@ export function SettingsPage({
         next.diaryFontUrl = url;
       } else if (target.key === 'soulmate') {
         next.soulmateFontUrl = url;
+      } else if (target.key === 'archive') {
+        next.archiveFontUrl = url;
       }
     }
 
@@ -871,6 +880,7 @@ export function SettingsPage({
       letter: true,
       diary: true,
       soulmate: false,
+      archive: false,
     });
 
     const slots = getFontSlots(FONT_PRESET_KEY).map((item) => item.trim());
@@ -1113,6 +1123,7 @@ export function SettingsPage({
         soulmateFontUrl: settings.soulmateFontUrl,
         soulmateFontUrlSlots: [...settings.soulmateFontUrlSlots],
         soulmateFontUrlSlotNames: [...settings.soulmateFontUrlSlotNames],
+        archiveFontUrl: settings.archiveFontUrl,
         fontScale: settings.fontScale,
         uiHeaderTitleSize: settings.uiHeaderTitleSize,
         uiTabLabelSize: settings.uiTabLabelSize,
@@ -1240,6 +1251,9 @@ export function SettingsPage({
       }
       if (typeof source.soulmateFontUrl === 'string') {
         next.soulmateFontUrl = source.soulmateFontUrl;
+      }
+      if (typeof source.archiveFontUrl === 'string') {
+        next.archiveFontUrl = source.archiveFontUrl;
       }
       if (Array.isArray(source.customFontUrlSlots)) {
         next.customFontUrlSlots = normalizeFontSlotArray(source.customFontUrlSlots, settings.customFontUrlSlots);
@@ -2578,7 +2592,7 @@ export function SettingsPage({
                 />
                 <span className="min-w-0">
                   <span className="block text-sm text-stone-800">全部套用</span>
-                  <span className="block text-xs text-stone-500">一次更新整站、情書、日記、家頁</span>
+                  <span className="block text-xs text-stone-500">一次更新整站、情書、日記、家頁、總攬</span>
                 </span>
               </label>
               <div className="grid gap-2 sm:grid-cols-2">
