@@ -5,6 +5,20 @@
       "year": 2026,
       "entries": [
         {
+          "id": "2026-vow-01",
+          "series": "vow",
+          "title": "拜堂日紀念信｜2026.02.10",
+          "sourceFile": "拜堂日紀念信_2026.docx",
+          "contentPath": "content/2026-vow-01.txt"
+        },
+        {
+          "id": "2026-birthday-01",
+          "series": "birthday",
+          "title": "生日信｜2026年 Anni 生日",
+          "sourceFile": "生日信_2026_Anni.docx",
+          "contentPath": "content/2026-birthday-01.txt"
+        },
+        {
           "id": "2026-notes-01",
           "series": "notes",
           "title": "碎碎念日記｜2026年",
@@ -16,6 +30,13 @@
     {
       "year": 2027,
       "entries": [
+        {
+          "id": "2027-vow-01",
+          "series": "vow",
+          "title": "拜堂日紀念信｜2027.02.10",
+          "sourceFile": "拜堂日紀念信_2027.docx",
+          "contentPath": "content/2027-vow-01.txt"
+        },
         {
           "id": "2027-birthday-01",
           "series": "birthday",
