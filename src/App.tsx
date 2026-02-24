@@ -32,6 +32,7 @@ import {
   APP_CUSTOM_FONT_FAMILY,
   DIARY_CUSTOM_FONT_FAMILY,
   LETTER_CUSTOM_FONT_FAMILY,
+  NOTES_CUSTOM_FONT_FAMILY,
   SOULMATE_CUSTOM_FONT_FAMILY,
   buildFontFaceRule,
 } from './lib/font';
@@ -88,6 +89,7 @@ type LauncherAppId =
   | 'album'
   | 'bookshelf'
   | 'notes'
+  | 'memo'
   | 'soulmate'
   | 'moodLetters'
   | 'archive';
@@ -137,6 +139,7 @@ const PeriodPage = lazy(() => import('./pages/PeriodPage').then((m) => ({ defaul
 const AlbumPage = lazy(() => import('./pages/AlbumPage').then((m) => ({ default: m.AlbumPage })));
 const BookshelfPage = lazy(() => import('./pages/BookshelfPage').then((m) => ({ default: m.BookshelfPage })));
 const NotesPage = lazy(() => import('./pages/NotesPage').then((m) => ({ default: m.NotesPage })));
+const MemoPage = lazy(() => import('./pages/MemoPage').then((m) => ({ default: m.MemoPage })));
 const SoulmateHousePage = lazy(() => import('./pages/SoulmateHousePage'));
 const HeartWallPage = lazy(() => import('./pages/HeartWallPage').then((m) => ({ default: m.HeartWallPage })));
 const ListPage = lazy(() => import('./pages/ListPage').then((m) => ({ default: m.ListPage })));
@@ -473,6 +476,7 @@ function App() {
   const diaryFontFamily = settings.diaryFontUrl.trim() ? DIARY_CUSTOM_FONT_FAMILY : '';
   const soulmateFontFamily = settings.soulmateFontUrl.trim() ? SOULMATE_CUSTOM_FONT_FAMILY : '';
   const archiveFontFamily = settings.archiveFontUrl.trim() ? ARCHIVE_CUSTOM_FONT_FAMILY : '';
+  const notesFontFamily = settings.notesFontUrl.trim() ? NOTES_CUSTOM_FONT_FAMILY : '';
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [starredEmailIds, setStarredEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
@@ -866,6 +870,23 @@ function App() {
     }
     style.textContent = buildFontFaceRule(ARCHIVE_CUSTOM_FONT_FAMILY, href);
   }, [settings.archiveFontUrl]);
+
+  // Load notes custom font
+  useEffect(() => {
+    const href = settings.notesFontUrl.trim();
+    const styleId = 'notes-custom-font-style';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!href) {
+      style?.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = buildFontFaceRule(NOTES_CUSTOM_FONT_FAMILY, href);
+  }, [settings.notesFontUrl]);
 
   const handleImportLetterFiles = useCallback(async (files: File[]) => {
     const now = Date.now();
@@ -2124,6 +2145,14 @@ function App() {
             <div className="fixed inset-0 z-30" style={{ background: '#fdf6ee' }}>
               <div className="mx-auto h-full w-full max-w-xl">
                 <NotesPage onExit={() => setLauncherApp(null)} />
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'memo' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#f2f1ec' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <MemoPage onExit={() => setLauncherApp(null)} notesFontFamily={notesFontFamily} />
               </div>
             </div>
           )}

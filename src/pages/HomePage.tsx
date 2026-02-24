@@ -34,6 +34,7 @@ type LauncherAppId =
   | 'diaryB'
   | 'album'
   | 'notes'
+  | 'memo'
   | 'soulmate'
   | 'bookshelf'
   | 'moodLetters'
@@ -818,6 +819,12 @@ export function HomePage({
       iconUrl: tabIconUrls.notes.trim() || undefined,
       launch: 'notes',
     };
+    const memoSlot: HomeAppSlot = {
+      id: 'memo',
+      label: "M's memo",
+      icon: '🧷',
+      launch: 'memo',
+    };
     const dailyTaskPlaceholder: HomeAppSlot = {
       id: 'wishlist',
       label: '願望',
@@ -909,6 +916,7 @@ export function HomePage({
             albumSlot,
             annualLettersSlot,
             archiveSlot,
+            memoSlot,
             moodLettersSlot,
             settingsShortcutSlot,
           ],

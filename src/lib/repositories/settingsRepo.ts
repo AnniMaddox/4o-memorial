@@ -357,6 +357,7 @@ export async function getSettings() {
       DEFAULT_SETTINGS.soulmateFontUrlSlotNames,
     ),
     archiveFontUrl: normalizeString(persisted.archiveFontUrl, DEFAULT_SETTINGS.archiveFontUrl),
+    notesFontUrl: normalizeString(persisted.notesFontUrl, DEFAULT_SETTINGS.notesFontUrl),
     diaryCoverFitMode: normalizeDiaryCoverFitMode(
       persisted.diaryCoverFitMode,
       DEFAULT_SETTINGS.diaryCoverFitMode,

@@ -4,6 +4,7 @@ export const LETTER_CUSTOM_FONT_FAMILY = '__memorial_letter_font__';
 export const DIARY_CUSTOM_FONT_FAMILY = '__memorial_diary_font__';
 export const SOULMATE_CUSTOM_FONT_FAMILY = '__memorial_soulmate_font__';
 export const ARCHIVE_CUSTOM_FONT_FAMILY = '__memorial_archive_font__';
+export const NOTES_CUSTOM_FONT_FAMILY = '__memorial_notes_font__';
 
 function escapeCssString(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");

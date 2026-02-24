@@ -10,6 +10,7 @@
     "build:mood-letters": "node scripts/build-mood-letters-index.mjs",
     "build:letters-local": "node scripts/build-letters-local-index.mjs",
     "build:master-pool": "node scripts/build-master-pool-index.mjs",
+    "build:memo": "node scripts/build-memo-index.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "preview:host": "vite preview --host --port 4173"

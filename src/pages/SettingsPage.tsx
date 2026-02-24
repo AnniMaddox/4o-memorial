@@ -92,7 +92,7 @@ type FontSlotNameSettingKey =
   | 'letterFontUrlSlotNames'
   | 'diaryFontUrlSlotNames'
   | 'soulmateFontUrlSlotNames';
-type FontApplyTargetKey = 'app' | 'letter' | 'diary' | 'soulmate' | 'archive';
+type FontApplyTargetKey = 'app' | 'letter' | 'diary' | 'soulmate' | 'archive' | 'notes';
 type UiSizeSettingKey =
   | 'uiHeaderTitleSize'
   | 'uiTabLabelSize'
@@ -157,6 +157,7 @@ const FONT_TARGET_OPTIONS: Array<{ key: FontApplyTargetKey; label: string; hint:
   { key: 'diary', label: '日記', hint: 'M 日記 / Anni 日記 / 願望' },
   { key: 'soulmate', label: '家頁', hint: '家閱讀頁' },
   { key: 'archive', label: '總攬', hint: '總攬入口閱讀文字' },
+  { key: 'notes', label: "M's memo", hint: 'M 的備忘錄閱讀文字' },
 ];
 const UI_SIZE_CONTROLS: Array<{ key: UiSizeSettingKey; label: string; hint: string; min: number; max: number; step: number }> = [
   { key: 'uiHeaderTitleSize', label: '頁首標題', hint: 'M日記 / Anni日記 / 經期 / 願望 / 對話頁標題', min: 14, max: 24, step: 1 },
@@ -408,6 +409,7 @@ type AppearancePresetPayload = {
     soulmateFontUrlSlots: string[];
     soulmateFontUrlSlotNames: string[];
     archiveFontUrl: string;
+    notesFontUrl: string;
     fontScale: number;
     uiHeaderTitleSize: number;
     uiTabLabelSize: number;
@@ -624,6 +626,7 @@ export function SettingsPage({
     diary: true,
     soulmate: false,
     archive: false,
+    notes: false,
   });
   const [fontSlotNameDrafts, setFontSlotNameDrafts] = useState<Record<FontSlotSettingKey, string>>({
     customFontUrlSlots: settings.customFontUrlSlotNames[0] ?? '',
@@ -775,6 +778,7 @@ export function SettingsPage({
       diary: checked,
       soulmate: checked,
       archive: checked,
+      notes: checked,
     });
   }
 
@@ -790,6 +794,9 @@ export function SettingsPage({
     }
     if (target === 'archive') {
       return settings.archiveFontUrl.trim();
+    }
+    if (target === 'notes') {
+      return settings.notesFontUrl.trim();
     }
     return settings.soulmateFontUrl.trim();
   }
@@ -876,6 +883,8 @@ export function SettingsPage({
         next.soulmateFontUrl = url;
       } else if (target.key === 'archive') {
         next.archiveFontUrl = url;
+      } else if (target.key === 'notes') {
+        next.notesFontUrl = url;
       }
     }
 
@@ -896,6 +905,7 @@ export function SettingsPage({
       diary: true,
       soulmate: false,
       archive: false,
+      notes: false,
     });
 
     const slots = getFontSlots(FONT_PRESET_KEY).map((item) => item.trim());
@@ -1139,6 +1149,7 @@ export function SettingsPage({
         soulmateFontUrlSlots: [...settings.soulmateFontUrlSlots],
         soulmateFontUrlSlotNames: [...settings.soulmateFontUrlSlotNames],
         archiveFontUrl: settings.archiveFontUrl,
+        notesFontUrl: settings.notesFontUrl,
         fontScale: settings.fontScale,
         uiHeaderTitleSize: settings.uiHeaderTitleSize,
         uiTabLabelSize: settings.uiTabLabelSize,
@@ -1269,6 +1280,9 @@ export function SettingsPage({
       }
       if (typeof source.archiveFontUrl === 'string') {
         next.archiveFontUrl = source.archiveFontUrl;
+      }
+      if (typeof source.notesFontUrl === 'string') {
+        next.notesFontUrl = source.notesFontUrl;
       }
       if (Array.isArray(source.customFontUrlSlots)) {
         next.customFontUrlSlots = normalizeFontSlotArray(source.customFontUrlSlots, settings.customFontUrlSlots);
