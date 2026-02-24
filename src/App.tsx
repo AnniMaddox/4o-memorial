@@ -20,7 +20,7 @@ import { getSettings, saveSettings } from './lib/repositories/settingsRepo';
 import { HomePage } from './pages/HomePage';
 import { clearAllChatLogs, deleteChatLog, loadChatLogs, saveChatLogs } from './lib/chatLogDB';
 import type { StoredChatLog } from './lib/chatLogDB';
-import { clearAllMDiaries, loadMDiaries, parseMDiaryFile, saveMDiaries } from './lib/mDiaryDB';
+import { clearAllMDiaries, deleteMDiary, loadMDiaries, parseMDiaryFile, saveMDiaries } from './lib/mDiaryDB';
 import type { StoredMDiary } from './lib/mDiaryDB';
 import { clearAllLetters, deleteLetter, loadLetters, saveLetters } from './lib/letterDB';
 import type { StoredLetter } from './lib/letterDB';
@@ -190,6 +190,11 @@ function getNotificationPermission(): BrowserNotificationPermission {
 
 const HOSTED_LETTERS_INDEX_URL = `${import.meta.env.BASE_URL}data/letters-local/index.json`;
 const HOSTED_LETTERS_SYNC_META_KEY = 'memorial-hosted-letters-sync-v1';
+const HOSTED_M_DIARY_INDEX_URL = `${import.meta.env.BASE_URL}data/master-pool/index.json`;
+const HOSTED_M_DIARY_SYNC_META_KEY = 'memorial-hosted-m-diary-sync-v1';
+const HOSTED_M_DIARY_SYNC_POLICY = 3;
+const MASTER_POOL_ANNUAL_SOURCE_PREFIXES = ['參考資料/codex/年度信件/', '重要-參考資料-勿刪/年度信件/'];
+const MASTER_POOL_ANNUAL_FOLDER_PREFIX = '82-2026-0212-婚禮-30年的信';
 
 type HostedLettersIndexEntry = {
   name?: string;
@@ -206,6 +211,28 @@ type HostedLettersIndexPayload = {
 type HostedLettersSyncMeta = {
   generatedAt: string;
   names: string[];
+};
+
+type HostedMasterPoolDocEntry = {
+  id?: string;
+  title?: string;
+  routes?: string[];
+  contentPath?: string;
+  writtenAt?: number | null;
+  sourcePath?: string;
+  sourceFolder?: string;
+  sourceFolderCode?: string | null;
+};
+
+type HostedMasterPoolIndexPayload = {
+  generatedAt?: string;
+  docs?: HostedMasterPoolDocEntry[];
+};
+
+type HostedMDiarySyncMeta = {
+  generatedAt: string;
+  names: string[];
+  syncPolicy: number;
 };
 
 function normalizeTimestamp(value: unknown) {
@@ -248,6 +275,65 @@ function writeHostedLettersSyncMeta(meta: HostedLettersSyncMeta) {
   } catch {
     // ignore storage failures
   }
+}
+
+function normalizeHostedMDiaryName(entry: HostedMasterPoolDocEntry, fallbackIndex: number) {
+  const id = typeof entry.id === 'string' ? entry.id.trim() : '';
+  if (!id) {
+    return `hosted-m-diary-${String(fallbackIndex + 1).padStart(3, '0')}.txt`;
+  }
+  return /\.txt$/i.test(id) ? id : `${id}.txt`;
+}
+
+function toHostedDiaryTitle(name: string) {
+  return name.replace(/\.(txt|md|docx?|json)$/i, '').trim() || name;
+}
+
+function readHostedMDiarySyncMeta(): HostedMDiarySyncMeta | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(HOSTED_M_DIARY_SYNC_META_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<HostedMDiarySyncMeta>;
+    if (!parsed || typeof parsed !== 'object') return null;
+    const generatedAt = typeof parsed.generatedAt === 'string' ? parsed.generatedAt.trim() : '';
+    const names = Array.isArray(parsed.names)
+      ? parsed.names.filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
+      : [];
+    const syncPolicyRaw = Number(parsed.syncPolicy);
+    const syncPolicy = Number.isFinite(syncPolicyRaw) && syncPolicyRaw > 0 ? Math.trunc(syncPolicyRaw) : 1;
+    if (!generatedAt) return null;
+    return { generatedAt, names, syncPolicy };
+  } catch {
+    return null;
+  }
+}
+
+function writeHostedMDiarySyncMeta(meta: HostedMDiarySyncMeta) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(HOSTED_M_DIARY_SYNC_META_KEY, JSON.stringify(meta));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function isAnnualLettersMirrorDoc(entry: HostedMasterPoolDocEntry) {
+  const sourcePath = typeof entry.sourcePath === 'string' ? entry.sourcePath.trim() : '';
+  if (MASTER_POOL_ANNUAL_SOURCE_PREFIXES.some((prefix) => sourcePath.startsWith(prefix))) return true;
+
+  const sourceFolder = typeof entry.sourceFolder === 'string' ? entry.sourceFolder.trim() : '';
+  if (sourceFolder.startsWith(MASTER_POOL_ANNUAL_FOLDER_PREFIX)) return true;
+
+  const sourceFolderCode =
+    typeof entry.sourceFolderCode === 'string'
+      ? entry.sourceFolderCode.trim()
+      : typeof entry.sourceFolderCode === 'number'
+        ? String(entry.sourceFolderCode)
+        : '';
+  if (sourceFolderCode === '82') return true;
+
+  return false;
 }
 
 function formatNotificationBody(email: EmailViewRecord) {
@@ -491,7 +577,11 @@ function App() {
 
     const previousMeta = readHostedLettersSyncMeta();
     if (previousMeta?.generatedAt === generatedAt) {
-      return null;
+      const existingNameSet = new Set(existingLetters.map((entry) => entry.name));
+      const allHostedPresent = previousMeta.names.every((name) => existingNameSet.has(name));
+      if (allHostedPresent) {
+        return null;
+      }
     }
 
     const now = Date.now();
@@ -544,6 +634,115 @@ function App() {
     return loadLetters();
   }, []);
 
+  const syncHostedMDiaries = useCallback(async (existingDiaries: StoredMDiary[]) => {
+    let indexResponse: Response;
+    try {
+      indexResponse = await fetch(HOSTED_M_DIARY_INDEX_URL, { cache: 'no-store' });
+    } catch {
+      return null;
+    }
+    if (!indexResponse.ok) return null;
+
+    let indexPayload: HostedMasterPoolIndexPayload;
+    try {
+      indexPayload = (await indexResponse.json()) as HostedMasterPoolIndexPayload;
+    } catch {
+      return null;
+    }
+
+    const generatedAt = typeof indexPayload.generatedAt === 'string' ? indexPayload.generatedAt.trim() : '';
+    if (!generatedAt) return null;
+
+    const previousMeta = readHostedMDiarySyncMeta();
+    if (previousMeta?.generatedAt === generatedAt && previousMeta.syncPolicy === HOSTED_M_DIARY_SYNC_POLICY) {
+      const existingNameSet = new Set(existingDiaries.map((entry) => entry.name));
+      const allHostedPresent = previousMeta.names.every((name) => existingNameSet.has(name));
+      if (allHostedPresent) {
+        return null;
+      }
+    }
+
+    const docs = Array.isArray(indexPayload.docs) ? indexPayload.docs : [];
+    const isDiaryDoc = (doc: HostedMasterPoolDocEntry) => Array.isArray(doc.routes) && doc.routes.includes('diary');
+    const diaryDocs = docs.filter((doc) => isDiaryDoc(doc) && !isAnnualLettersMirrorDoc(doc));
+    const excludedAnnualDiaryNames = new Set<string>();
+    const excludedAnnualDiaryTitles = new Set<string>();
+    for (let index = 0; index < docs.length; index += 1) {
+      const doc = docs[index];
+      if (!doc || typeof doc !== 'object') continue;
+      if (!isDiaryDoc(doc) || !isAnnualLettersMirrorDoc(doc)) continue;
+      excludedAnnualDiaryNames.add(normalizeHostedMDiaryName(doc, index));
+      const excludedTitle = typeof doc.title === 'string' ? doc.title.trim() : '';
+      if (excludedTitle) {
+        excludedAnnualDiaryTitles.add(excludedTitle);
+      }
+    }
+
+    const now = Date.now();
+    const hostedNameSet = new Set<string>();
+    const hostedDiaries: StoredMDiary[] = [];
+
+    for (let index = 0; index < diaryDocs.length; index += 1) {
+      const doc = diaryDocs[index];
+      if (!doc || typeof doc !== 'object') continue;
+      const contentPathRaw = typeof doc.contentPath === 'string' ? doc.contentPath.trim() : '';
+      if (!contentPathRaw) continue;
+      const contentPath = contentPathRaw.replace(/^\.?\//, '');
+      const contentUrl = `${import.meta.env.BASE_URL}data/master-pool/${contentPath}`;
+
+      try {
+        const contentResponse = await fetch(contentUrl, { cache: 'no-store' });
+        if (!contentResponse.ok) continue;
+        const content = (await contentResponse.text()).replace(/\u00a0/g, ' ').replace(/\r\n?/g, '\n').trim();
+        if (!content) continue;
+
+        const name = normalizeHostedMDiaryName(doc, index);
+        const title = typeof doc.title === 'string' && doc.title.trim() ? doc.title.trim() : toHostedDiaryTitle(name);
+        const importedAt = normalizeTimestamp(doc.writtenAt) ?? now + index;
+        hostedNameSet.add(name);
+        hostedDiaries.push({
+          name,
+          title,
+          content,
+          htmlContent: '',
+          importedAt,
+        });
+      } catch {
+        // Skip missing or unreadable hosted content files.
+      }
+    }
+
+    const mergedMap = new Map(existingDiaries.map((entry) => [entry.name, entry]));
+    for (const excludedName of excludedAnnualDiaryNames) {
+      mergedMap.delete(excludedName);
+    }
+    for (const [entryName, entry] of mergedMap.entries()) {
+      const existingTitle = typeof entry.title === 'string' ? entry.title.trim() : '';
+      if (!existingTitle) continue;
+      if (excludedAnnualDiaryTitles.has(existingTitle)) {
+        mergedMap.delete(entryName);
+      }
+    }
+    const previousHostedNames = new Set(previousMeta?.names ?? []);
+    for (const staleName of previousHostedNames) {
+      if (!hostedNameSet.has(staleName)) {
+        mergedMap.delete(staleName);
+      }
+    }
+    for (const hosted of hostedDiaries) {
+      mergedMap.set(hosted.name, hosted);
+    }
+
+    const mergedDiaries = Array.from(mergedMap.values());
+    await saveMDiaries(mergedDiaries);
+    writeHostedMDiarySyncMeta({
+      generatedAt,
+      names: Array.from(hostedNameSet),
+      syncPolicy: HOSTED_M_DIARY_SYNC_POLICY,
+    });
+    return loadMDiaries();
+  }, []);
+
   // Load persisted letters from IndexedDB on startup
   useEffect(() => {
     let active = true;
@@ -581,10 +780,24 @@ function App() {
 
   // Load persisted diaries
   useEffect(() => {
-    loadMDiaries()
-      .then(setDiaries)
-      .catch(() => {});
-  }, []);
+    let active = true;
+    void (async () => {
+      try {
+        const persistedDiaries = await loadMDiaries();
+        if (!active) return;
+        setDiaries(persistedDiaries);
+
+        const hostedMerged = await syncHostedMDiaries(persistedDiaries);
+        if (!active || !hostedMerged) return;
+        setDiaries(hostedMerged);
+      } catch {
+        // ignore startup loading failures
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [syncHostedMDiaries]);
 
   // Load letter custom font
   useEffect(() => {
@@ -808,6 +1021,12 @@ function App() {
   const handleClearAllDiaries = useCallback(async () => {
     await clearAllMDiaries();
     setDiaries([]);
+  }, []);
+
+  const handleDeleteDiary = useCallback(async (name: string) => {
+    await deleteMDiary(name);
+    const updated = await loadMDiaries();
+    setDiaries(updated);
   }, []);
 
   const handleExportAboutMeBackup = useCallback(async () => {
@@ -1390,6 +1609,7 @@ function App() {
               letterCount={letters.length}
               letters={letters}
               diaryCount={diaries.length}
+              diaries={diaries}
               chatLogCount={chatLogs.length}
               chatProfiles={chatProfiles}
               chibiPoolInfo={chibiPoolInfo}
@@ -1404,6 +1624,7 @@ function App() {
               onImportDiaryFiles={(files) => void handleImportDiaryFiles(files)}
               onImportDiaryFolderFiles={(files) => void handleImportDiaryFolderFiles(files)}
               onClearAllDiaries={() => void handleClearAllDiaries()}
+              onDeleteDiary={(name) => void handleDeleteDiary(name)}
               onImportChatLogFiles={(files) => void handleImportChatLogFiles(files)}
               onImportChatLogFolderFiles={(files) => void handleImportChatLogFolderFiles(files)}
               onClearAllChatLogs={() => void handleClearAllChatLogs()}
@@ -1470,6 +1691,7 @@ function App() {
       handleImportDiaryFiles,
       handleImportDiaryFolderFiles,
       handleClearAllDiaries,
+      handleDeleteDiary,
       handleExportAboutMeBackup,
       handleExportAboutMBackup,
       handleExportAboutMBackupPart,

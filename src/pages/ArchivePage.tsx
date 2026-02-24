@@ -96,6 +96,7 @@ type ArchiveDoc = {
   ext: string;
   sourceRelPath: string;
   routes: string[];
+  tags: string[];
   writtenAt: number | null;
   contentPath: string;
 };
@@ -276,6 +277,14 @@ function buildFolderTags(routes: string[]) {
     .map((entry) => entry.label);
   const merged = uniqueStrings(tags);
   return merged.length ? merged.slice(0, 4) : ['其他'];
+}
+
+function buildDocTags(routes: string[]) {
+  const tags = ROUTE_TO_TAG
+    .filter((entry) => routes.includes(entry.route))
+    .map((entry) => entry.label);
+  const merged = uniqueStrings(tags);
+  return merged.length ? merged.slice(0, 2) : ['其他'];
 }
 
 function compareFolderDates(a: ArchiveFolder, b: ArchiveFolder) {
@@ -526,6 +535,7 @@ export function ArchivePage({
             ext: getFileExt(doc.sourceRelPath),
             sourceRelPath: doc.sourceRelPath,
             routes: doc.routes,
+            tags: buildDocTags(doc.routes),
             writtenAt: doc.writtenAt,
             contentPath: doc.contentPath,
           }));
@@ -1034,11 +1044,17 @@ export function ArchivePage({
                 <div className={`fp-file-icon ${doc.ext}`}>{doc.ext === 'docx' ? '📄' : '📃'}</div>
                 <div className="fp-file-info">
                   <div className="fp-file-name">{doc.title}</div>
-                  <div className="fp-file-sub">
-                    {formatShortDate(doc.writtenAt)} · {doc.ext.toUpperCase()}
+                  <div className="fp-file-sub">{formatShortDate(doc.writtenAt)}</div>
+                </div>
+                <div className="fp-file-right">
+                  <div className="fp-file-tags">
+                    {doc.tags.map((tag) => (
+                      <span key={`${doc.id}-${tag}`} className={`cat-tag fp-file-tag ${TAG_CLASS[tag] ?? 'ct-other'}`}>
+                        {tag}
+                      </span>
+                    ))}
                   </div>
                 </div>
-                <span className={`file-badge ${doc.ext}`}>{doc.ext.toUpperCase()}</span>
               </button>
             ))}
             {activeFolder && !activeFolder.docs.length && <div className="empty-state">此資料夾目前沒有檔案</div>}
@@ -1315,7 +1331,6 @@ export function ArchivePage({
                     closeFolderSheet();
                   }}
                 >
-                  <span className={`file-badge ${doc.ext}`}>{doc.ext.toUpperCase()}</span>
                   <span className="sf-name">{doc.title}</span>
                 </button>
               ))
