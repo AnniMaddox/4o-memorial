@@ -108,6 +108,11 @@ export async function clearAllMDiaries(): Promise<void> {
   await db.clear(STORE);
 }
 
+export async function deleteMDiary(name: string): Promise<void> {
+  const db = await getDB();
+  await db.delete(STORE, name);
+}
+
 /** Parse a File into a StoredMDiary. Supports .txt and .docx */
 export async function parseMDiaryFile(file: File): Promise<StoredMDiary> {
   const name = file.name;
