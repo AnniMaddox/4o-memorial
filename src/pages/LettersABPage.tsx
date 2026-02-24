@@ -89,6 +89,10 @@ const MASTER_POOL_INDEX_URL = `${BASE}data/master-pool/index.json`;
 const FALLBACK_CHIBI = `${BASE}chibi/chibi-00.webp`;
 const FUTURE_VIEW_TITLE = '給未來的你';
 const FUTURE_SOURCE_FOLDERS = ['59-205-0816-未來生日', '61-2025-0819-未來生日'] as const;
+const FUTURE_FOLDER_LABELS: Record<string, string> = {
+  '59-205-0816-未來生日': '人生建議信',
+  '61-2025-0819-未來生日': '我在',
+};
 const LINE_HEIGHT_BY_KEY: Record<LineHeightKey, number> = {
   tight: 1.7,
   normal: 2.14,
@@ -480,7 +484,7 @@ export function LettersABPage({ onExit, initialYear = null, onOpenBirthdayYear, 
         const folders: FutureFolder[] = Array.from(byFolder.entries())
           .map(([key, entries]) => ({
             key,
-            label: key,
+            label: FUTURE_FOLDER_LABELS[key] ?? key,
             short: folderShortByName.get(key) ?? '想妳的時候',
             docs: [...entries].sort((a, b) => {
               const aTime = a.writtenAt ?? Number.MAX_SAFE_INTEGER;
