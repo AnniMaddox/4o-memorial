@@ -46,11 +46,11 @@ type SettingsPageProps = {
   onClearAllChatLogs: () => void;
   onExportAboutMeBackup: () => Promise<string> | string;
   onExportAboutMBackup: () => Promise<string> | string;
-  onExportAboutMBackupPart: (part: 'mDiary' | 'letters' | 'chatLogs' | 'inbox' | 'soulmate') => Promise<string> | string;
+  onExportAboutMBackupPart: (part: 'mDiary' | 'letters' | 'chatLogs' | 'inbox' | 'soulmate' | 'other') => Promise<string> | string;
   onImportAboutMeBackup: (files: File[], mode: 'merge' | 'overwrite') => Promise<string> | string;
   onImportAboutMBackup: (files: File[], mode: 'merge' | 'overwrite') => Promise<string> | string;
   onImportAboutMBackupPart: (
-    part: 'mDiary' | 'letters' | 'chatLogs' | 'inbox' | 'soulmate',
+    part: 'mDiary' | 'letters' | 'chatLogs' | 'inbox' | 'soulmate' | 'other',
     files: File[],
     mode: 'merge' | 'overwrite',
   ) => Promise<string> | string;
@@ -62,7 +62,7 @@ type SettingsPageProps = {
   onRefresh: () => void;
 };
 
-type AboutMBackupPart = 'mDiary' | 'letters' | 'chatLogs' | 'inbox' | 'soulmate';
+type AboutMBackupPart = 'mDiary' | 'letters' | 'chatLogs' | 'inbox' | 'soulmate' | 'other';
 
 type PanelKey =
   | 'overview'
@@ -263,6 +263,7 @@ const ABOUT_M_PART_FIELDS: Array<{ key: AboutMBackupPart; label: string; hint: s
   { key: 'chatLogs', label: '對話紀錄', hint: 'chatLogs.json' },
   { key: 'inbox', label: 'Inbox / 月曆', hint: 'inbox.json' },
   { key: 'soulmate', label: '搬家計劃書', hint: 'soulmate.json' },
+  { key: 'other', label: "其他（M's memo / 自我介紹）", hint: 'other.json' },
 ];
 
 const CHIBI_POOL_GUIDE: Array<{ page: string; path: string; note?: string }> = [
@@ -1826,7 +1827,7 @@ export function SettingsPage({
               >
                 <span className="min-w-0">
                   <span className="block text-sm text-stone-800">關於M</span>
-                  <span className="mt-0.5 block text-xs text-stone-500">分包：mDiary / letters / chatLogs / inbox / soulmate（含 metadata）</span>
+                  <span className="mt-0.5 block text-xs text-stone-500">分包：mDiary / letters / chatLogs / inbox / soulmate / other（含 metadata）</span>
                 </span>
                 <span
                   className={`text-lg leading-none text-stone-500 transition-transform ${openBackupGroup === 'aboutM' ? 'rotate-180' : ''}`}
@@ -1960,7 +1961,7 @@ export function SettingsPage({
 
             <div className="space-y-1 text-xs text-stone-500">
               <p>完整匯入請一次選同一包的全部 JSON（包含 manifest 索引檔）。</p>
-              <p>分包匯出/匯入可單獨處理 mDiary / letters / chatLogs / inbox / soulmate。</p>
+              <p>分包匯出/匯入可單獨處理 mDiary / letters / chatLogs / inbox / soulmate / other。</p>
             </div>
           </div>
         </SettingPanel>
