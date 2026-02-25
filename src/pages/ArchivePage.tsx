@@ -49,8 +49,10 @@ const LINE_HEIGHT_OPTIONS: Array<{ key: ArchiveLineHeightKey; label: string }> =
 type ArchiveLineHeightKey = keyof typeof LINE_HEIGHT_BY_KEY;
 type RelatedMode = 'prev-folder' | 'next-folder';
 type FolderSortOrder = 'asc' | 'desc';
+type ArchiveFontMode = 'default' | 'archive';
 
 type ArchivePrefs = {
+  fontMode: ArchiveFontMode;
   lineHeight: ArchiveLineHeightKey;
   readingFontSize: number;
   showHomeChibi: boolean;
@@ -61,7 +63,6 @@ type ArchivePrefs = {
 };
 
 type SettingsPanels = {
-  typography: boolean;
   homeChibi: boolean;
   readingChibi: boolean;
   related: boolean;
@@ -345,6 +346,10 @@ function normalizeRelatedMode(value: unknown): RelatedMode {
   return value === 'prev-folder' ? 'prev-folder' : 'next-folder';
 }
 
+function normalizeArchiveFontMode(value: unknown): ArchiveFontMode {
+  return value === 'archive' ? 'archive' : 'default';
+}
+
 function pickDefaultLineHeightKey(value: number): ArchiveLineHeightKey {
   if (value <= 1.86) return 'tight';
   if (value >= 2.45) return 'wide';
@@ -353,6 +358,7 @@ function pickDefaultLineHeightKey(value: number): ArchiveLineHeightKey {
 
 function readPrefs(defaultFontSize: number, defaultLineHeight: number): ArchivePrefs {
   const fallback: ArchivePrefs = {
+    fontMode: 'default',
     lineHeight: pickDefaultLineHeightKey(defaultLineHeight),
     readingFontSize: clampReadingFontSize(defaultFontSize, 14),
     showHomeChibi: true,
@@ -369,6 +375,7 @@ function readPrefs(defaultFontSize: number, defaultLineHeight: number): ArchiveP
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<ArchivePrefs>;
     return {
+      fontMode: normalizeArchiveFontMode(parsed.fontMode),
       lineHeight: normalizeLineHeightKey(parsed.lineHeight),
       readingFontSize: clampReadingFontSize(parsed.readingFontSize, fallback.readingFontSize),
       showHomeChibi: parsed.showHomeChibi !== false,
@@ -438,8 +445,11 @@ export function ArchivePage({
 
   const [activeTab, setActiveTab] = useState<'tl' | 'crystal'>('tl');
   const [folderSortOrder, setFolderSortOrder] = useState<FolderSortOrder>('desc');
+  const [folderSearchOpen, setFolderSearchOpen] = useState(false);
+  const [folderSearchQuery, setFolderSearchQuery] = useState('');
   const [folderPanelOpen, setFolderPanelOpen] = useState(false);
   const [readingOpen, setReadingOpen] = useState(false);
+  const [readingFontPanelOpen, setReadingFontPanelOpen] = useState(false);
   const [folderSheetOpen, setFolderSheetOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -458,7 +468,6 @@ export function ArchivePage({
 
   const [prefs, setPrefs] = useState<ArchivePrefs>(() => readPrefs(diaryContentFontSize, diaryLineHeight));
   const [settingsPanels, setSettingsPanels] = useState<SettingsPanels>({
-    typography: true,
     homeChibi: false,
     readingChibi: false,
     related: false,
@@ -467,6 +476,7 @@ export function ArchivePage({
   const revealTimerRef = useRef<number | null>(null);
   const pendingLoadsRef = useRef(new Set<string>());
   const readingSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const folderSearchInputRef = useRef<HTMLInputElement | null>(null);
   const stars = useMemo(() => createStars(), []);
   const [chibiSrc] = useState(() => {
     const dedicated = getScopedChibiSources('archive');
@@ -482,6 +492,11 @@ export function ArchivePage({
   useEffect(() => {
     persistPrefs(prefs);
   }, [prefs]);
+
+  useEffect(() => {
+    if (!folderSearchOpen) return;
+    folderSearchInputRef.current?.focus();
+  }, [folderSearchOpen]);
 
   useEffect(() => {
     let active = true;
@@ -557,6 +572,23 @@ export function ArchivePage({
     return mapped.sort(folderSortOrder === 'asc' ? compareFolderDatesAsc : compareFolderDates);
   }, [docsById, folderSortOrder, indexPayload]);
 
+  const normalizedFolderSearchQuery = folderSearchQuery.trim().toLowerCase();
+  const visibleFolders = useMemo(() => {
+    if (!normalizedFolderSearchQuery) return folders;
+    return folders.filter((folder) => {
+      const haystack = [
+        folder.label,
+        folder.short,
+        ...folder.cats,
+        ...folder.docs.map((doc) => doc.title),
+        ...folder.docs.flatMap((doc) => doc.tags),
+      ]
+        .join('\n')
+        .toLowerCase();
+      return haystack.includes(normalizedFolderSearchQuery);
+    });
+  }, [folders, normalizedFolderSearchQuery]);
+
   const foldersByKey = useMemo(() => {
     const map = new Map<string, ArchiveFolder>();
     for (const folder of folders) {
@@ -567,7 +599,7 @@ export function ArchivePage({
 
   const timelineGroups = useMemo(() => {
     const grouped = new Map<string, ArchiveFolder[]>();
-    for (const folder of folders) {
+    for (const folder of visibleFolders) {
       const list = grouped.get(folder.year) ?? [];
       list.push(folder);
       grouped.set(folder.year, list);
@@ -579,7 +611,7 @@ export function ArchivePage({
         year,
         folders: list.sort(folderSortOrder === 'asc' ? compareFolderDatesAsc : compareFolderDates),
       }));
-  }, [folderSortOrder, folders]);
+  }, [folderSortOrder, visibleFolders]);
 
   const allDocRefs = useMemo(() => {
     const refs: CrystalReveal[] = [];
@@ -638,7 +670,10 @@ export function ArchivePage({
 
   const lineHeightValue = LINE_HEIGHT_BY_KEY[prefs.lineHeight];
   const readContent = activeDoc ? docContents[activeDoc.id] ?? '' : '';
-  const contentFontFamily = archiveFontFamily.trim() || "'Ma Shan Zheng', 'STKaiti', serif";
+  const followArchiveFont = prefs.fontMode === 'archive' && Boolean(archiveFontFamily.trim());
+  const contentFontFamily = followArchiveFont
+    ? archiveFontFamily.trim()
+    : "var(--app-font-family, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif)";
 
   const canPrevFolder = !!prevFolder?.docs.length;
   const canNextFolder = !!nextFolder?.docs.length;
@@ -688,6 +723,7 @@ export function ArchivePage({
       setActiveFolderKey(folderKey);
       setActiveDocId(docId);
       setReadingOpen(true);
+      setReadingFontPanelOpen(false);
       setContentError('');
       void loadDocContent(docId);
     },
@@ -697,6 +733,7 @@ export function ArchivePage({
   const closeReading = useCallback(() => {
     setFolderSheetOpen(false);
     setReadingOpen(false);
+    setReadingFontPanelOpen(false);
   }, []);
 
   const navDoc = useCallback(
@@ -900,10 +937,39 @@ export function ArchivePage({
               >
                 {folderSortOrder === 'asc' ? '▲ 正序' : '▼ 倒序'}
               </button>
+              <button
+                type="button"
+                className={`tl-sort-btn tl-search-btn ${folderSearchOpen ? 'active' : ''}`}
+                onClick={() =>
+                  setFolderSearchOpen((prev) => {
+                    const next = !prev;
+                    if (!next) setFolderSearchQuery('');
+                    return next;
+                  })
+                }
+                aria-label={folderSearchOpen ? '關閉搜尋' : '開啟搜尋'}
+                title={folderSearchOpen ? '關閉搜尋' : '開啟搜尋'}
+              >
+                ⌕
+              </button>
             </div>
+            {folderSearchOpen ? (
+              <div className="tl-search-row">
+                <input
+                  ref={folderSearchInputRef}
+                  className="tl-search-input"
+                  value={folderSearchQuery}
+                  onChange={(event) => setFolderSearchQuery(event.target.value)}
+                  placeholder="搜尋資料夾、標籤或檔案標題"
+                  aria-label="搜尋總攬資料夾"
+                />
+              </div>
+            ) : null}
             {indexError && <div className="empty-state">無法載入資料：{indexError}</div>}
             {!indexPayload && !indexError && <div className="empty-state">載入中⋯</div>}
-            {indexPayload && !timelineGroups.length && <div className="empty-state">目前沒有可顯示的資料夾</div>}
+            {indexPayload && !timelineGroups.length && (
+              <div className="empty-state">{normalizedFolderSearchQuery ? '找不到符合搜尋的資料夾' : '目前沒有可顯示的資料夾'}</div>
+            )}
 
             {timelineGroups.map((group) => (
               <div key={group.year} className="year-block">
@@ -1093,6 +1159,15 @@ export function ArchivePage({
               </button>
               <button
                 type="button"
+                className="read-aa-btn"
+                onClick={() => setReadingFontPanelOpen((prev) => !prev)}
+                aria-label="開啟閱讀字體設定"
+                title="閱讀字體設定"
+              >
+                Aa
+              </button>
+              <button
+                type="button"
                 className="read-menu-btn"
                 onClick={() => setShowSettings(true)}
                 aria-label="開啟總攬設定"
@@ -1101,6 +1176,68 @@ export function ArchivePage({
               </button>
             </div>
           </div>
+
+          {readingFontPanelOpen ? (
+            <div className="read-font-panel">
+              <p className="read-font-title">字體來源</p>
+              <div className="read-font-row">
+                <button
+                  type="button"
+                  className={`read-font-mode-btn ${prefs.fontMode === 'default' ? 'active' : ''}`}
+                  onClick={() => setPrefs((prev) => ({ ...prev, fontMode: 'default' }))}
+                >
+                  預設
+                </button>
+                <button
+                  type="button"
+                  className={`read-font-mode-btn ${prefs.fontMode === 'archive' ? 'active' : ''}`}
+                  onClick={() => setPrefs((prev) => ({ ...prev, fontMode: 'archive' }))}
+                >
+                  跟隨總攬
+                </button>
+              </div>
+
+              <div className="read-font-control">
+                <div className="read-font-control-head">
+                  <p className="read-font-title">字級</p>
+                  <p className="read-font-value">{prefs.readingFontSize.toFixed(1)}px</p>
+                </div>
+                <input
+                  type="range"
+                  min={11}
+                  max={22}
+                  step={0.5}
+                  value={prefs.readingFontSize}
+                  onChange={(event) =>
+                    setPrefs((prev) => ({
+                      ...prev,
+                      readingFontSize: clampReadingFontSize(Number(event.target.value), prev.readingFontSize),
+                    }))
+                  }
+                  className="read-font-slider"
+                />
+              </div>
+
+              <div className="read-font-control">
+                <div className="read-font-control-head">
+                  <p className="read-font-title">行距</p>
+                  <p className="read-font-value">{lineHeightValue.toFixed(2)}</p>
+                </div>
+                <div className="read-font-row">
+                  {LINE_HEIGHT_OPTIONS.map((option) => (
+                    <button
+                      key={`read-font-line-${option.key}`}
+                      type="button"
+                      className={`read-font-mode-btn ${prefs.lineHeight === option.key ? 'active' : ''}`}
+                      onClick={() => setPrefs((prev) => ({ ...prev, lineHeight: option.key }))}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="read-body" onTouchStart={onReadTouchStart} onTouchEnd={onReadTouchEnd}>
             <div className="doc-paper">
@@ -1157,47 +1294,6 @@ export function ArchivePage({
           <div className="archive-settings-overlay" onClick={() => setShowSettings(false)}>
             <div className="archive-settings-sheet" onClick={(event) => event.stopPropagation()}>
               <div className="archive-sheet-handle" />
-
-              <SettingsAccordion
-                title="排版"
-                subtitle="行距和字級"
-                isOpen={settingsPanels.typography}
-                onToggle={() => setSettingsPanels((prev) => ({ ...prev, typography: !prev.typography }))}
-                className="archive-sheet-section"
-                titleClassName="archive-sheet-label"
-                subtitleClassName="archive-sheet-subtitle"
-                chevronClassName="archive-sheet-chevron"
-                bodyClassName="mt-2"
-              >
-                <div className="archive-pill-group">
-                  {LINE_HEIGHT_OPTIONS.map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      className={`archive-pill ${prefs.lineHeight === option.key ? 'active' : ''}`}
-                      onClick={() => setPrefs((prev) => ({ ...prev, lineHeight: option.key }))}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <label className="archive-range-row">
-                  <span>內文字級：{prefs.readingFontSize.toFixed(1)}px</span>
-                  <input
-                    type="range"
-                    min={11}
-                    max={22}
-                    step={0.5}
-                    value={prefs.readingFontSize}
-                    onChange={(event) =>
-                      setPrefs((prev) => ({
-                        ...prev,
-                        readingFontSize: clampReadingFontSize(Number(event.target.value), prev.readingFontSize),
-                      }))
-                    }
-                  />
-                </label>
-              </SettingsAccordion>
 
               <SettingsAccordion
                 title="M"
