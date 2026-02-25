@@ -90,6 +90,8 @@ type LauncherAppId =
   | 'bookshelf'
   | 'notes'
   | 'memo'
+  | 'murmur'
+  | 'questionnaire'
   | 'soulmate'
   | 'moodLetters'
   | 'archive';
@@ -140,6 +142,8 @@ const AlbumPage = lazy(() => import('./pages/AlbumPage').then((m) => ({ default:
 const BookshelfPage = lazy(() => import('./pages/BookshelfPage').then((m) => ({ default: m.BookshelfPage })));
 const NotesPage = lazy(() => import('./pages/NotesPage').then((m) => ({ default: m.NotesPage })));
 const MemoPage = lazy(() => import('./pages/MemoPage').then((m) => ({ default: m.MemoPage })));
+const MurmurPage = lazy(() => import('./pages/MurmurPage').then((m) => ({ default: m.MurmurPage })));
+const QuestionnairePage = lazy(() => import('./pages/QuestionnairePage').then((m) => ({ default: m.QuestionnairePage })));
 const SoulmateHousePage = lazy(() => import('./pages/SoulmateHousePage'));
 const HeartWallPage = lazy(() => import('./pages/HeartWallPage').then((m) => ({ default: m.HeartWallPage })));
 const ListPage = lazy(() => import('./pages/ListPage').then((m) => ({ default: m.ListPage })));
@@ -2153,6 +2157,22 @@ function App() {
             <div className="fixed inset-0 z-30" style={{ background: '#f2f1ec' }}>
               <div className="mx-auto h-full w-full max-w-xl">
                 <MemoPage onExit={() => setLauncherApp(null)} notesFontFamily={notesFontFamily} />
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'murmur' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#0d0d0f' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <MurmurPage onExit={() => setLauncherApp(null)} notesFontFamily={notesFontFamily} />
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'questionnaire' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#0e0f11' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <QuestionnairePage onExit={() => setLauncherApp(null)} notesFontFamily={notesFontFamily} />
               </div>
             </div>
           )}

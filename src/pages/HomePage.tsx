@@ -35,6 +35,8 @@ type LauncherAppId =
   | 'album'
   | 'notes'
   | 'memo'
+  | 'murmur'
+  | 'questionnaire'
   | 'soulmate'
   | 'bookshelf'
   | 'moodLetters'
@@ -825,6 +827,18 @@ export function HomePage({
       icon: '🧷',
       launch: 'memo',
     };
+    const murmurSlot: HomeAppSlot = {
+      id: 'murmur',
+      label: '碎碎念',
+      icon: '💭',
+      launch: 'murmur',
+    };
+    const questionnaireSlot: HomeAppSlot = {
+      id: 'questionnaire',
+      label: '問卷',
+      icon: '📋',
+      launch: 'questionnaire',
+    };
     const dailyTaskPlaceholder: HomeAppSlot = {
       id: 'wishlist',
       label: '願望',
@@ -917,6 +931,8 @@ export function HomePage({
             annualLettersSlot,
             archiveSlot,
             memoSlot,
+            murmurSlot,
+            questionnaireSlot,
             moodLettersSlot,
             settingsShortcutSlot,
           ],
