@@ -67,6 +67,7 @@ type OrbPhysics = {
 type MoodListTab = 'all' | 'favorites';
 type PaperThemeKey = 'moon' | 'cream' | 'mint' | 'lavender' | 'peach';
 type OrbMotionMode = 'bounce' | 'rise' | 'pulse';
+type MoodFontMode = 'default' | 'campfire';
 
 type MoodLettersPrefs = {
   showChibi: boolean;
@@ -74,6 +75,7 @@ type MoodLettersPrefs = {
   orbCount: number;
   orbMode: OrbMotionMode;
   orbSpeed: number;
+  fontMode: MoodFontMode;
   contentFontSize: number;
   contentLineHeight: number;
   paperTheme: PaperThemeKey;
@@ -183,6 +185,7 @@ const DEFAULT_PREFS: MoodLettersPrefs = {
   orbCount: 13,
   orbMode: 'bounce',
   orbSpeed: 1.25,
+  fontMode: 'default',
   contentFontSize: 15,
   contentLineHeight: 2.02,
   paperTheme: 'moon',
@@ -214,12 +217,16 @@ function loadPrefs() {
     const orbMode = parsed.orbMode;
     const normalizedOrbMode: OrbMotionMode =
       orbMode === 'bounce' || orbMode === 'rise' || orbMode === 'pulse' ? orbMode : DEFAULT_PREFS.orbMode;
+    const fontMode = parsed.fontMode;
+    const normalizedFontMode: MoodFontMode =
+      fontMode === 'campfire' || fontMode === 'default' ? fontMode : DEFAULT_PREFS.fontMode;
     return {
       showChibi: parsed.showChibi !== false,
       chibiWidth: clampInt(parsed.chibiWidth, 104, 196, DEFAULT_PREFS.chibiWidth),
       orbCount: clampInt(parsed.orbCount, ORB_COUNT_MIN, ORB_COUNT_MAX, DEFAULT_PREFS.orbCount),
       orbMode: normalizedOrbMode,
       orbSpeed: clampNumber(parsed.orbSpeed, 0.7, 2.4, DEFAULT_PREFS.orbSpeed),
+      fontMode: normalizedFontMode,
       contentFontSize: clampNumber(parsed.contentFontSize, 12, 24, DEFAULT_PREFS.contentFontSize),
       contentLineHeight: clampNumber(parsed.contentLineHeight, 1.35, 2.9, DEFAULT_PREFS.contentLineHeight),
       paperTheme,
@@ -329,9 +336,11 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
   const [statusText, setStatusText] = useState('');
   const [activeLetter, setActiveLetter] = useState<ActiveLetterState | null>(null);
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const [showFontPanel, setShowFontPanel] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const [listTab, setListTab] = useState<MoodListTab>('all');
   const [listMoodFilter, setListMoodFilter] = useState<string>(ALL_MOODS_KEY);
+  const [listQuery, setListQuery] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [prefs, setPrefs] = useState<MoodLettersPrefs>(() => loadPrefs());
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => loadFavoriteIds());
@@ -464,9 +473,26 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
 
   const listedLetters = useMemo(() => {
     const byFavorite = listTab === 'all' ? sortedLetters : sortedLetters.filter((item) => favoriteIds.has(item.id));
-    if (listMoodFilter === ALL_MOODS_KEY) return byFavorite;
-    return byFavorite.filter((item) => item.moodIds.includes(listMoodFilter) || item.primaryMoodId === listMoodFilter);
-  }, [favoriteIds, listMoodFilter, listTab, sortedLetters]);
+    const byMood =
+      listMoodFilter === ALL_MOODS_KEY
+        ? byFavorite
+        : byFavorite.filter((item) => item.moodIds.includes(listMoodFilter) || item.primaryMoodId === listMoodFilter);
+    const query = listQuery.trim().toLowerCase();
+    if (!query) return byMood;
+    return byMood.filter((item) => {
+      const haystack = [
+        item.title,
+        item.displayName,
+        item.subject ?? '',
+        item.sourceFile ?? '',
+        item.primaryMoodLabel,
+        ...(Array.isArray(item.moodLabels) ? item.moodLabels : []),
+      ]
+        .join('\n')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [favoriteIds, listMoodFilter, listQuery, listTab, sortedLetters]);
 
   const activePaper = PAPER_THEMES[prefs.paperTheme];
 
@@ -652,6 +678,7 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
       orbIndex?: number | null;
       drawnAtIso?: string;
     }) => {
+      setShowFontPanel(false);
       if (orbIndex !== null) {
         setHiddenOrbIndex(orbIndex);
         runOrbAnimation(orbIndex);
@@ -734,6 +761,7 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
     if (isAnimating) return;
     setOverlayOpen(false);
     setHiddenOrbIndex(null);
+    setShowFontPanel(false);
     window.setTimeout(() => {
       drawByFate();
     }, 180);
@@ -742,9 +770,11 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
   const closeOverlay = useCallback(() => {
     setOverlayOpen(false);
     setHiddenOrbIndex(null);
+    setShowFontPanel(false);
   }, []);
 
   const openList = useCallback((tab: MoodListTab) => {
+    setShowFontPanel(false);
     setListTab(tab);
     setListMoodFilter(selectedMood);
     setListOpen(true);
@@ -753,6 +783,7 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
   const openFromList = useCallback(
     (letter: MoodLetter) => {
       setListOpen(false);
+      setShowFontPanel(false);
       void openLetter({
         letter,
         moodId: letter.primaryMoodId || ALL_MOODS_KEY,
@@ -1079,7 +1110,10 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
     return <div className="ml-loading grid h-full place-items-center text-sm text-white/70">目前沒有心情信資料。</div>;
   }
 
-  const contentFontFamily = letterFontFamily.trim() || "'Ma Shan Zheng', 'STKaiti', serif";
+  const followCampfireFont = prefs.fontMode === 'campfire' && Boolean(letterFontFamily.trim());
+  const contentFontFamily = followCampfireFont
+    ? letterFontFamily.trim()
+    : "var(--app-font-family, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif)";
 
   return (
     <div className="mood-letters-page">
@@ -1246,10 +1280,82 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
             <button type="button" className="ml-paper-icon ml-paper-list" onClick={() => openList('all')} aria-label="開啟清單">
               ☰
             </button>
+            <button
+              type="button"
+              className="ml-paper-icon ml-paper-aa"
+              onClick={() => setShowFontPanel((prev) => !prev)}
+              aria-label="文字設定"
+            >
+              Aa
+            </button>
             <button type="button" className="ml-close ml-paper-close" onClick={closeOverlay} aria-label="關閉">
               ×
             </button>
           </header>
+
+          {showFontPanel ? (
+            <div className="ml-font-panel">
+              <p className="ml-font-title">字體來源</p>
+              <div className="ml-font-row">
+                <button
+                  type="button"
+                  className={`ml-font-mode ${prefs.fontMode === 'default' ? 'active' : ''}`}
+                  onClick={() => setPrefs((prev) => ({ ...prev, fontMode: 'default' }))}
+                >
+                  預設
+                </button>
+                <button
+                  type="button"
+                  className={`ml-font-mode ${prefs.fontMode === 'campfire' ? 'active' : ''}`}
+                  onClick={() => setPrefs((prev) => ({ ...prev, fontMode: 'campfire' }))}
+                >
+                  跟隨篝火
+                </button>
+              </div>
+
+              <div className="ml-font-control">
+                <div className="ml-font-control-head">
+                  <p className="ml-font-title">字級</p>
+                  <p className="ml-font-value">{prefs.contentFontSize.toFixed(1)}px</p>
+                </div>
+                <input
+                  type="range"
+                  min={12}
+                  max={24}
+                  step={0.5}
+                  value={prefs.contentFontSize}
+                  onChange={(event) =>
+                    setPrefs((prev) => ({
+                      ...prev,
+                      contentFontSize: clampNumber(Number(event.target.value), 12, 24, prev.contentFontSize),
+                    }))
+                  }
+                  className="ml-font-slider"
+                />
+              </div>
+
+              <div className="ml-font-control">
+                <div className="ml-font-control-head">
+                  <p className="ml-font-title">行距</p>
+                  <p className="ml-font-value">{prefs.contentLineHeight.toFixed(2)}</p>
+                </div>
+                <input
+                  type="range"
+                  min={1.35}
+                  max={2.9}
+                  step={0.05}
+                  value={prefs.contentLineHeight}
+                  onChange={(event) =>
+                    setPrefs((prev) => ({
+                      ...prev,
+                      contentLineHeight: clampNumber(Number(event.target.value), 1.35, 2.9, prev.contentLineHeight),
+                    }))
+                  }
+                  className="ml-font-slider"
+                />
+              </div>
+            </div>
+          ) : null}
 
           <h2 className="ml-paper-title">{activeLetter?.letter.title ?? ''}</h2>
           <div className="ml-paper-body">{activeLetter?.content ?? ''}</div>
@@ -1300,6 +1406,15 @@ export function MoodLettersPage({ onExit, letterFontFamily = '' }: MoodLettersPa
                 {option.label}
               </button>
             ))}
+          </div>
+
+          <div className="ml-list-search-wrap">
+            <input
+              className="ml-list-search"
+              value={listQuery}
+              onChange={(event) => setListQuery(event.target.value)}
+              placeholder="搜尋標題、檔名或關鍵字"
+            />
           </div>
 
           <div className="ml-list-body">

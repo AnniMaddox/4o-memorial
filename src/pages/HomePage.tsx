@@ -37,6 +37,7 @@ type LauncherAppId =
   | 'memo'
   | 'murmur'
   | 'lightPath'
+  | 'healingCampfire'
   | 'questionnaire'
   | 'selfIntro'
   | 'soulmate'
@@ -889,6 +890,12 @@ export function HomePage({
       icon: '✨',
       launch: 'lightPath',
     };
+    const healingCampfireSlot: HomeAppSlot = {
+      id: 'healing-campfire',
+      label: '治癒篝火',
+      icon: '🔥',
+      launch: 'healingCampfire',
+    };
     const settingsShortcutSlot: HomeAppSlot = {
       id: 'settings-shortcut',
       label: launcherLabels.settings,
@@ -945,6 +952,7 @@ export function HomePage({
             annualLettersSlot,
             archiveSlot,
             lightPathSlot,
+            healingCampfireSlot,
             memoSlot,
             murmurSlot,
             questionnaireSlot,

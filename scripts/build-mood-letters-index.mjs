@@ -6,7 +6,20 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SOURCE_DIR = path.resolve(ROOT, '參考資料', 'codex', '心情信');
+const SOURCE_ROOT_DIR = '重要-參考資料-勿刪';
+
+function getSourceDir() {
+  const arg = process.argv.find((item) => item.startsWith('--source='));
+  const fromArg = arg ? arg.slice('--source='.length).trim() : '';
+  if (fromArg) return path.resolve(ROOT, fromArg);
+
+  const fromEnv = (process.env.MOOD_LETTERS_SOURCE_DIR ?? '').trim();
+  if (fromEnv) return path.resolve(ROOT, fromEnv);
+
+  return path.resolve(ROOT, SOURCE_ROOT_DIR, '心情信');
+}
+
+const SOURCE_DIR = getSourceDir();
 const OUTPUT_DIR = path.resolve(ROOT, 'public', 'data', 'mood-letters');
 const CONTENT_DIR = path.resolve(OUTPUT_DIR, 'content');
 const INDEX_FILE = path.resolve(OUTPUT_DIR, 'index.json');
@@ -268,6 +281,7 @@ function ensureUniqueId(nextId, used) {
 async function main() {
   if (!fs.existsSync(SOURCE_DIR)) {
     console.error(`❌ 找不到來源資料夾：${SOURCE_DIR}`);
+    console.error(`   可用參數：--source="${SOURCE_ROOT_DIR}/你的資料夾"`);
     process.exit(1);
   }
 
@@ -313,7 +327,7 @@ async function main() {
     letters.push({
       id,
       sourceFile: fileName,
-      sourcePath: `參考資料/codex/心情信/${fileName}`,
+      sourcePath: path.relative(ROOT, sourcePath).replaceAll('\\', '/'),
       displayName: decodedName,
       serial,
       emoji,
@@ -368,7 +382,7 @@ async function main() {
   const indexPayload = {
     version: 1,
     generatedAt: new Date().toISOString(),
-    sourceDir: '參考資料/codex/心情信',
+    sourceDir: path.relative(ROOT, SOURCE_DIR).replaceAll('\\', '/'),
     total: letters.length,
     categories: MOOD_CATEGORIES.map((m) => ({ id: m.id, label: m.label })),
     summary: {

@@ -297,6 +297,8 @@ export function MDiaryPage({
 }: MDiaryPageProps) {
   const [activeTab, setActiveTab] = useState<TabId>('random');
   const [filter, setFilter] = useState<TimelineFilter>('all');
+  const [timelineQuery, setTimelineQuery] = useState('');
+  const [showTimelineSearch, setShowTimelineSearch] = useState(false);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -309,6 +311,7 @@ export function MDiaryPage({
   const [chibiSrc] = useState(pickRandomChibi);
   const [randomCoverSrc] = useState(() => pickRandom(COVER_SRCS) ?? '');
   const dateStripRef = useRef<HTMLDivElement | null>(null);
+  const timelineSearchInputRef = useRef<HTMLInputElement | null>(null);
   const tabSwipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
 
   const effectiveFont = diaryFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
@@ -376,28 +379,39 @@ export function MDiaryPage({
     return list;
   }, [unknownEntries, sortDirection]);
 
+  const normalizedTimelineQuery = timelineQuery.trim().toLowerCase();
+  const matchesTimelineQuery = (entry: ParsedEntry) => {
+    if (!normalizedTimelineQuery) return true;
+    const dateText = entry.parsedDate ? entry.parsedDate.toISOString().slice(0, 10) : '未知時刻';
+    const haystack = `${entry.title}\n${entry.snippet}\n${entry.text}\n${entry.name}\n${dateText}`.toLowerCase();
+    return haystack.includes(normalizedTimelineQuery);
+  };
+
   const allReadingEntries = useMemo(() => [...sortedKnown, ...sortedUnknown], [sortedKnown, sortedUnknown]);
 
   const timelineKnown = useMemo(() => {
     if (filter === 'unknown') return [] as KnownParsedEntry[];
-    if (filter === 'favorites') {
-      return sortedKnown.filter((entry) => favorites.has(entry.name));
-    }
-    return sortedKnown;
-  }, [filter, sortedKnown, favorites]);
+    const base = filter === 'favorites'
+      ? sortedKnown.filter((entry) => favorites.has(entry.name))
+      : sortedKnown;
+    return base.filter(matchesTimelineQuery);
+  }, [filter, sortedKnown, favorites, normalizedTimelineQuery]);
 
   const timelineUnknown = useMemo(() => {
-    if (filter === 'unknown') return sortedUnknown;
-    if (filter === 'favorites') {
-      return sortedUnknown.filter((entry) => favorites.has(entry.name));
-    }
-    return sortedUnknown;
-  }, [filter, sortedUnknown, favorites]);
+    const base = filter === 'unknown'
+      ? sortedUnknown
+      : filter === 'favorites'
+        ? sortedUnknown.filter((entry) => favorites.has(entry.name))
+        : sortedUnknown;
+    return base.filter(matchesTimelineQuery);
+  }, [filter, sortedUnknown, favorites, normalizedTimelineQuery]);
 
   const readingPool = useMemo(() => {
     const combined = [...timelineKnown, ...timelineUnknown];
-    return combined.length ? combined : allReadingEntries;
-  }, [timelineKnown, timelineUnknown, allReadingEntries]);
+    if (combined.length) return combined;
+    if (filter === 'all' && !normalizedTimelineQuery) return allReadingEntries;
+    return [] as ParsedEntry[];
+  }, [timelineKnown, timelineUnknown, allReadingEntries, filter, normalizedTimelineQuery]);
 
   const entryMap = useMemo(() => {
     const map = new Map<string, ParsedEntry>();
@@ -438,6 +452,11 @@ export function MDiaryPage({
     const node = document.getElementById(`m-diary-chip-${encodeURIComponent(entryName)}`);
     node?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, [currentEntry?.name, activeTab]);
+
+  useEffect(() => {
+    if (!showTimelineSearch) return;
+    timelineSearchInputRef.current?.focus();
+  }, [showTimelineSearch]);
 
   function openRandomEntry() {
     const picked = pickRandom(allReadingEntries);
@@ -801,7 +820,47 @@ export function MDiaryPage({
               >
                 {sortDirection === 'desc' ? '↓' : '↑'}
               </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setShowTimelineSearch((prev) => {
+                    const next = !prev;
+                    if (!next) {
+                      setTimelineQuery('');
+                    }
+                    return next;
+                  })
+                }
+                className="rounded-full border px-2.5 py-1 tracking-[0.04em]"
+                style={{
+                  fontSize: 'var(--ui-filter-pill-size, 10px)',
+                  color: showTimelineSearch ? '#5a7060' : '#8a9a88',
+                  background: showTimelineSearch ? 'rgba(90,112,96,0.12)' : 'transparent',
+                  borderColor: showTimelineSearch ? 'rgba(90,112,96,0.3)' : 'rgba(90,112,96,0.18)',
+                }}
+                aria-label={showTimelineSearch ? '關閉搜尋' : '開啟搜尋'}
+                title={showTimelineSearch ? '關閉搜尋' : '開啟搜尋'}
+              >
+                ⌕
+              </button>
             </div>
+            {showTimelineSearch ? (
+              <div className="pt-1" style={{ paddingLeft: 52, paddingRight: 16 }}>
+                <input
+                  ref={timelineSearchInputRef}
+                  value={timelineQuery}
+                  onChange={(event) => setTimelineQuery(event.target.value)}
+                  placeholder="搜尋標題、內容或日期"
+                  className="w-full rounded-full border py-1.5 pl-3.5 pr-3 text-[11px] outline-none"
+                  style={{
+                    color: '#5a7060',
+                    background: 'rgba(255,255,255,0.72)',
+                    borderColor: 'rgba(90,112,96,0.2)',
+                  }}
+                  aria-label="搜尋日記"
+                />
+              </div>
+            ) : null}
             {showCount && (
               <p
                 className="pt-1 tracking-[0.06em] text-[#9aaa98]"
@@ -814,7 +873,9 @@ export function MDiaryPage({
           </div>
 
           {timelineTotalCount === 0 ? (
-            <div className="px-6 pt-20 text-center text-sm text-[#8a9a88]">這個分類還沒有日記</div>
+            <div className="px-6 pt-20 text-center text-sm text-[#8a9a88]">
+              {normalizedTimelineQuery ? '找不到符合搜尋的日記' : '這個分類還沒有日記'}
+            </div>
           ) : (
             <>
               {timelineKnown.length > 0 &&

@@ -560,7 +560,7 @@ export function LightPathPage({ onExit, letterFontFamily = '' }: LightPathPagePr
                   className={`lp-font-mode-btn ${fontMode === 'letter' ? 'active' : ''}`}
                   onClick={() => setFontMode('letter')}
                 >
-                  跟隨情書
+                  跟隨篝火
                 </button>
               </div>
               <div className="lp-font-control">

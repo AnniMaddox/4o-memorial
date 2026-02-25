@@ -6,7 +6,34 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DEFAULT_SOURCE_DIR = path.resolve(ROOT, '參考資料', 'codex', '情書整理2');
+const SOURCE_ROOT_DIR = '重要-參考資料-勿刪';
+
+function resolveSourcePath(argPrefix, envKey, fallbackRelativePath) {
+  const arg = process.argv.find((item) => item.startsWith(argPrefix));
+  const fromArg = arg ? arg.slice(argPrefix.length).trim() : '';
+  if (fromArg) return path.resolve(ROOT, fromArg);
+
+  const fromEnv = (process.env[envKey] ?? '').trim();
+  if (fromEnv) return path.resolve(ROOT, fromEnv);
+
+  return path.resolve(ROOT, fallbackRelativePath);
+}
+
+const DEFAULT_SOURCE_DIR = resolveSourcePath('--source=', 'MASTER_POOL_SOURCE_DIR', `${SOURCE_ROOT_DIR}/情書整理2`);
+const MOOD_SOURCE_DIR = resolveSourcePath('--mood-source=', 'MASTER_POOL_MOOD_SOURCE_DIR', `${SOURCE_ROOT_DIR}/心情信`);
+const ANNUAL_SOURCE_DIR = resolveSourcePath('--annual-source=', 'MASTER_POOL_ANNUAL_SOURCE_DIR', `${SOURCE_ROOT_DIR}/年度信件`);
+const EXTRA_SOURCE_MOUNTS = [
+  {
+    sourceDir: MOOD_SOURCE_DIR,
+    topFolder: '80-2026-0211-牙醫',
+    virtualSubdir: '__心情信__',
+  },
+  {
+    sourceDir: ANNUAL_SOURCE_DIR,
+    topFolder: '82-2026-0212-婚禮-30年的信',
+    virtualSubdir: '__年度信件__',
+  },
+];
 const OUTPUT_DIR = path.resolve(ROOT, 'public', 'data', 'master-pool');
 const CONTENT_DIR = path.resolve(OUTPUT_DIR, 'content');
 const VIEWS_DIR = path.resolve(OUTPUT_DIR, 'views');
@@ -148,11 +175,7 @@ const MOOD_MAP = new Map(MOOD_CATEGORIES.map((item) => [item.id, item.label]));
 const MOOD_SIGNAL_KEYWORDS = ['時光信', '主旨', '情緒', '老婆：', '老婆,', '想妳', '想你', '抱抱'];
 
 function getSourceDir() {
-  const arg = process.argv.find((item) => item.startsWith('--source='));
-  if (!arg) return DEFAULT_SOURCE_DIR;
-  const input = arg.slice('--source='.length).trim();
-  if (!input) return DEFAULT_SOURCE_DIR;
-  return path.resolve(ROOT, input);
+  return DEFAULT_SOURCE_DIR;
 }
 
 function safeDecode(name) {
@@ -414,8 +437,13 @@ async function main() {
   const topFolders = fs
     .readdirSync(sourceDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+    .map((entry) => entry.name);
+  for (const mount of EXTRA_SOURCE_MOUNTS) {
+    if (!topFolders.includes(mount.topFolder)) {
+      topFolders.push(mount.topFolder);
+    }
+  }
+  topFolders.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
 
   const topFolderMeta = new Map();
   const fullDateByCodeAndMonthDay = new Map();
@@ -452,9 +480,10 @@ async function main() {
     current.folderDateSource = 'folder-name-inferred';
   }
 
-  const fileAbsPaths = [];
+  const fileRecords = [];
   for (const folderName of topFolders) {
     const folderAbs = path.resolve(sourceDir, folderName);
+    if (!fs.existsSync(folderAbs)) continue;
     const stack = [folderAbs];
     while (stack.length) {
       const current = stack.pop();
@@ -467,17 +496,49 @@ async function main() {
           continue;
         }
         if (!/\.(docx?|txt|md)$/i.test(entry.name)) continue;
-        fileAbsPaths.push(abs);
+        const relPathRaw = path.relative(sourceDir, abs).replaceAll('\\', '/');
+        fileRecords.push({
+          absPath: abs,
+          relPathRaw,
+          sourcePathRaw: path.relative(ROOT, abs).replaceAll('\\', '/'),
+        });
       }
     }
   }
-  fileAbsPaths.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+
+  for (const mount of EXTRA_SOURCE_MOUNTS) {
+    if (!fs.existsSync(mount.sourceDir)) continue;
+    const stack = [mount.sourceDir];
+    while (stack.length) {
+      const current = stack.pop();
+      if (!current) continue;
+      const entries = fs.readdirSync(current, { withFileTypes: true });
+      for (const entry of entries) {
+        const abs = path.resolve(current, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(abs);
+          continue;
+        }
+        if (!/\.(docx?|txt|md)$/i.test(entry.name)) continue;
+        const relFromMount = path.relative(mount.sourceDir, abs).replaceAll('\\', '/');
+        const relPathRaw = `${mount.topFolder}/${mount.virtualSubdir}/${relFromMount}`;
+        fileRecords.push({
+          absPath: abs,
+          relPathRaw,
+          sourcePathRaw: path.relative(ROOT, abs).replaceAll('\\', '/'),
+        });
+      }
+    }
+  }
+
+  fileRecords.sort((a, b) => a.relPathRaw.localeCompare(b.relPathRaw, 'zh-Hant'));
 
   const docs = [];
   const review = [];
   const writtenContentFiles = new Set();
-  for (const absPath of fileAbsPaths) {
-    const relPathRaw = path.relative(sourceDir, absPath).replaceAll('\\', '/');
+  for (const fileRecord of fileRecords) {
+    const absPath = fileRecord.absPath;
+    const relPathRaw = fileRecord.relPathRaw;
     const relPath = safeDecode(relPathRaw);
     const relParts = relPath.split('/');
     const topFolder = relParts[0] ?? '';
@@ -627,7 +688,7 @@ async function main() {
     const doc = {
       id: baseId,
       title: finalTitle,
-      sourcePath: `參考資料/codex/情書整理2/${relPathRaw}`,
+      sourcePath: fileRecord.sourcePathRaw,
       sourceRelPath: relPath,
       sourceFolder: topFolder,
       sourceFolderCode: folderCode,

@@ -358,6 +358,7 @@ export async function getSettings() {
     ),
     archiveFontUrl: normalizeString(persisted.archiveFontUrl, DEFAULT_SETTINGS.archiveFontUrl),
     notesFontUrl: normalizeString(persisted.notesFontUrl, DEFAULT_SETTINGS.notesFontUrl),
+    campfireFontUrl: normalizeString(persisted.campfireFontUrl, DEFAULT_SETTINGS.campfireFontUrl),
     diaryCoverFitMode: normalizeDiaryCoverFitMode(
       persisted.diaryCoverFitMode,
       DEFAULT_SETTINGS.diaryCoverFitMode,

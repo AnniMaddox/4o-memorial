@@ -228,16 +228,12 @@
 }
 
 .light-path-page .lp-font-panel {
-  position: absolute;
-  top: 42px;
-  right: 14px;
-  z-index: 20;
-  border: 1px solid rgb(255 255 255 / 0.18);
-  background: rgb(4 12 9 / 0.86);
-  border-radius: 12px;
-  padding: 10px 10px 12px;
-  min-width: 224px;
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.35);
+  margin: 8px 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  background: rgb(0 0 0 / 0.24);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: left;
 }
 
 .light-path-page .lp-font-title {
@@ -270,7 +266,7 @@
 }
 
 .light-path-page .lp-font-control {
-  padding-top: 8px;
+  padding-top: 0;
 }
 
 .light-path-page .lp-font-control + .lp-font-control {

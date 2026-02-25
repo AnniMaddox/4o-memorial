@@ -31,6 +31,7 @@ import {
   ARCHIVE_CUSTOM_FONT_FAMILY,
   APP_CUSTOM_FONT_FAMILY,
   DIARY_CUSTOM_FONT_FAMILY,
+  HEALING_CAMPFIRE_CUSTOM_FONT_FAMILY,
   LETTER_CUSTOM_FONT_FAMILY,
   NOTES_CUSTOM_FONT_FAMILY,
   SOULMATE_CUSTOM_FONT_FAMILY,
@@ -92,6 +93,7 @@ type LauncherAppId =
   | 'memo'
   | 'murmur'
   | 'lightPath'
+  | 'healingCampfire'
   | 'questionnaire'
   | 'selfIntro'
   | 'soulmate'
@@ -146,6 +148,9 @@ const NotesPage = lazy(() => import('./pages/NotesPage').then((m) => ({ default:
 const MemoPage = lazy(() => import('./pages/MemoPage').then((m) => ({ default: m.MemoPage })));
 const MurmurPage = lazy(() => import('./pages/MurmurPage').then((m) => ({ default: m.MurmurPage })));
 const LightPathPage = lazy(() => import('./pages/LightPathPage').then((m) => ({ default: m.LightPathPage })));
+const HealingCampfirePage = lazy(() =>
+  import('./pages/HealingCampfirePage').then((m) => ({ default: m.HealingCampfirePage })),
+);
 const QuestionnairePage = lazy(() => import('./pages/QuestionnairePage').then((m) => ({ default: m.QuestionnairePage })));
 const SelfIntroPage = lazy(() => import('./pages/SelfIntroPage').then((m) => ({ default: m.SelfIntroPage })));
 const SoulmateHousePage = lazy(() => import('./pages/SoulmateHousePage'));
@@ -486,6 +491,7 @@ function App() {
   const soulmateFontFamily = settings.soulmateFontUrl.trim() ? SOULMATE_CUSTOM_FONT_FAMILY : '';
   const archiveFontFamily = settings.archiveFontUrl.trim() ? ARCHIVE_CUSTOM_FONT_FAMILY : '';
   const notesFontFamily = settings.notesFontUrl.trim() ? NOTES_CUSTOM_FONT_FAMILY : '';
+  const campfireFontFamily = settings.campfireFontUrl.trim() ? HEALING_CAMPFIRE_CUSTOM_FONT_FAMILY : '';
   const [unreadEmailIds, setUnreadEmailIds] = useState<Set<string>>(new Set<string>());
   const [starredEmailIds, setStarredEmailIds] = useState<Set<string>>(new Set<string>());
   const [readIdsLoaded, setReadIdsLoaded] = useState(false);
@@ -896,6 +902,23 @@ function App() {
     }
     style.textContent = buildFontFaceRule(NOTES_CUSTOM_FONT_FAMILY, href);
   }, [settings.notesFontUrl]);
+
+  // Load healing campfire custom font
+  useEffect(() => {
+    const href = settings.campfireFontUrl.trim();
+    const styleId = 'healing-campfire-custom-font-style';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!href) {
+      style?.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = buildFontFaceRule(HEALING_CAMPFIRE_CUSTOM_FONT_FAMILY, href);
+  }, [settings.campfireFontUrl]);
 
   const handleImportLetterFiles = useCallback(async (files: File[]) => {
     const now = Date.now();
@@ -2177,7 +2200,15 @@ function App() {
           {launcherApp === 'lightPath' && (
             <div className="fixed inset-0 z-30" style={{ background: '#000' }}>
               <div className="mx-auto h-full w-full max-w-xl">
-                <LightPathPage onExit={() => setLauncherApp(null)} letterFontFamily={letterFontFamily} />
+                <LightPathPage onExit={() => setLauncherApp(null)} letterFontFamily={campfireFontFamily} />
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'healingCampfire' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#02050a' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <HealingCampfirePage onExit={() => setLauncherApp(null)} campfireFontFamily={campfireFontFamily} />
               </div>
             </div>
           )}
@@ -2212,7 +2243,7 @@ function App() {
           {launcherApp === 'moodLetters' && (
             <div className="fixed inset-0 z-30" style={{ background: '#0b1023' }}>
               <div className="mx-auto h-full w-full max-w-xl">
-                <MoodLettersPage onExit={() => setLauncherApp(null)} letterFontFamily={letterFontFamily} />
+                <MoodLettersPage onExit={() => setLauncherApp(null)} letterFontFamily={campfireFontFamily} />
               </div>
             </div>
           )}

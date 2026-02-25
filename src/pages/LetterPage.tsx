@@ -32,9 +32,11 @@ const DEFAULT_READING_LINE_HEIGHT = 2.15;
 
 type LetterUiVariant = (typeof LETTER_VARIANTS)[number];
 type PreviewLetterVariant = (typeof PREVIEW_VARIANTS)[number];
+type LetterReadingFontMode = 'default' | 'letter';
 type LetterReadingPrefs = {
   fontSize: number;
   lineHeight: number;
+  fontMode: LetterReadingFontMode;
 };
 
 const LETTER_CHIBI_MODULES = import.meta.glob('../../public/letter-chibi/*.{png,jpg,jpeg,webp,gif,avif}', {
@@ -134,6 +136,7 @@ function readReadingPrefs(): LetterReadingPrefs {
     return {
       fontSize: DEFAULT_READING_FONT_SIZE,
       lineHeight: DEFAULT_READING_LINE_HEIGHT,
+      fontMode: 'default',
     };
   }
   try {
@@ -142,17 +145,21 @@ function readReadingPrefs(): LetterReadingPrefs {
       return {
         fontSize: DEFAULT_READING_FONT_SIZE,
         lineHeight: DEFAULT_READING_LINE_HEIGHT,
+        fontMode: 'default',
       };
     }
     const parsed = JSON.parse(raw) as Partial<LetterReadingPrefs>;
+    const fontMode = parsed.fontMode === 'letter' || parsed.fontMode === 'default' ? parsed.fontMode : 'default';
     return {
       fontSize: clampReadingFontSize(parsed.fontSize, DEFAULT_READING_FONT_SIZE),
       lineHeight: clampReadingLineHeight(parsed.lineHeight, DEFAULT_READING_LINE_HEIGHT),
+      fontMode,
     };
   } catch {
     return {
       fontSize: DEFAULT_READING_FONT_SIZE,
       lineHeight: DEFAULT_READING_LINE_HEIGHT,
+      fontMode: 'default',
     };
   }
 }
@@ -384,6 +391,7 @@ export function LetterPage({
           dateMap={letterDisplayDateMap}
           uiVariant={uiVariant}
           variants={availableVariants}
+          isReading={Boolean(current)}
           chibiSrc={deskChibiSrc}
           favoritedNames={effectiveFavoritedNames}
           showFavoritesOnly={showFavoritesOnly}
@@ -410,6 +418,7 @@ export function LetterPage({
             isFavorited={effectiveFavoritedNames.has(current.name)}
             readingFontSize={readingPrefs.fontSize}
             readingLineHeight={readingPrefs.lineHeight}
+            readingFontMode={readingPrefs.fontMode}
             onOpenReadingSettings={() => setShowReadingSettings(true)}
             onFavorite={() => toggleFavorite(current.name)}
             onPickRandom={pickRandom}
@@ -426,6 +435,8 @@ export function LetterPage({
             isFavorited={effectiveFavoritedNames.has(current.name)}
             readingFontSize={readingPrefs.fontSize}
             readingLineHeight={readingPrefs.lineHeight}
+            readingFontMode={readingPrefs.fontMode}
+            onOpenReadingSettings={() => setShowReadingSettings(true)}
             onFavorite={() => toggleFavorite(current.name)}
             onPickRandom={pickRandom}
             onClose={handleClose}
@@ -437,6 +448,8 @@ export function LetterPage({
         <LetterReadingSettingsSheet
           fontSize={readingPrefs.fontSize}
           lineHeight={readingPrefs.lineHeight}
+          fontMode={readingPrefs.fontMode}
+          onFontModeChange={(value) => setReadingPrefs((prev) => ({ ...prev, fontMode: value }))}
           onFontSizeChange={(value) => setReadingPrefs((prev) => ({ ...prev, fontSize: clampReadingFontSize(value, prev.fontSize) }))}
           onLineHeightChange={(value) =>
             setReadingPrefs((prev) => ({ ...prev, lineHeight: clampReadingLineHeight(value, prev.lineHeight) }))
@@ -451,12 +464,16 @@ export function LetterPage({
 function LetterReadingSettingsSheet({
   fontSize,
   lineHeight,
+  fontMode,
+  onFontModeChange,
   onFontSizeChange,
   onLineHeightChange,
   onClose,
 }: {
   fontSize: number;
   lineHeight: number;
+  fontMode: LetterReadingFontMode;
+  onFontModeChange: (value: LetterReadingFontMode) => void;
   onFontSizeChange: (value: number) => void;
   onLineHeightChange: (value: number) => void;
   onClose: () => void;
@@ -474,6 +491,36 @@ function LetterReadingSettingsSheet({
           <button type="button" onClick={onClose} className="text-[18px] leading-none text-[#9b7a53]" aria-label="關閉排版設定">
             ×
           </button>
+        </div>
+
+        <div className="mb-4">
+          <p className="mb-1.5 text-[12px] text-[#6d4f2f]">字體來源</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onFontModeChange('default')}
+              className="rounded-full border px-3 py-1 text-[12px] transition active:scale-95"
+              style={{
+                color: fontMode === 'default' ? '#5a3b1d' : '#8a6b47',
+                background: fontMode === 'default' ? 'rgba(173,128,82,0.18)' : 'rgba(255,255,255,0.64)',
+                borderColor: fontMode === 'default' ? 'rgba(173,128,82,0.45)' : 'rgba(173,128,82,0.22)',
+              }}
+            >
+              預設
+            </button>
+            <button
+              type="button"
+              onClick={() => onFontModeChange('letter')}
+              className="rounded-full border px-3 py-1 text-[12px] transition active:scale-95"
+              style={{
+                color: fontMode === 'letter' ? '#5a3b1d' : '#8a6b47',
+                background: fontMode === 'letter' ? 'rgba(173,128,82,0.18)' : 'rgba(255,255,255,0.64)',
+                borderColor: fontMode === 'letter' ? 'rgba(173,128,82,0.45)' : 'rgba(173,128,82,0.22)',
+              }}
+            >
+              跟隨情書
+            </button>
+          </div>
         </div>
 
         <label className="mb-4 block">
@@ -756,6 +803,7 @@ function LetterDeskScene({
   dateMap,
   uiVariant,
   variants,
+  isReading,
   chibiSrc,
   favoritedNames,
   showFavoritesOnly,
@@ -772,6 +820,7 @@ function LetterDeskScene({
   dateMap: Map<string, number | null>;
   uiVariant: LetterUiVariant;
   variants: readonly LetterUiVariant[];
+  isReading: boolean;
   chibiSrc: string;
   favoritedNames: Set<string>;
   showFavoritesOnly: boolean;
@@ -989,36 +1038,38 @@ function LetterDeskScene({
         </button>
       )}
 
-      <div className="absolute right-4 top-4 z-20">
-        <div
-          className="flex items-center gap-1 rounded-full px-1.5 py-1"
-          style={{
-            border: sceneTheme.switchBorder,
-            background: sceneTheme.switchBg,
-            backdropFilter: 'blur(6px)',
-          }}
-        >
-          {variants.map((variant) => {
-            const active = uiVariant === variant;
-            return (
-              <button
-                key={variant}
-                type="button"
-                onClick={() => onVariantChange(variant)}
-                aria-label={`切換到版型 ${variant}`}
-                className="rounded-full px-2.5 py-1 text-[11px] leading-none transition active:scale-95"
-                style={{
-                  color: active ? sceneTheme.switchText : sceneTheme.switchMuted,
-                  background: active ? sceneTheme.switchActive : 'transparent',
-                  fontWeight: active ? 700 : 500,
-                }}
-              >
-                {variant}
-              </button>
-            );
-          })}
+      {!showSheet && !isReading && (
+        <div className="absolute right-4 top-4 z-20">
+          <div
+            className="flex items-center gap-1 rounded-full px-1.5 py-1"
+            style={{
+              border: sceneTheme.switchBorder,
+              background: sceneTheme.switchBg,
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            {variants.map((variant) => {
+              const active = uiVariant === variant;
+              return (
+                <button
+                  key={variant}
+                  type="button"
+                  onClick={() => onVariantChange(variant)}
+                  aria-label={`切換到版型 ${variant}`}
+                  className="rounded-full px-2.5 py-1 text-[11px] leading-none transition active:scale-95"
+                  style={{
+                    color: active ? sceneTheme.switchText : sceneTheme.switchMuted,
+                    background: active ? sceneTheme.switchActive : 'transparent',
+                    fontWeight: active ? 700 : 500,
+                  }}
+                >
+                  {variant}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 text-center"
@@ -1786,11 +1837,20 @@ function PreviewLetterBrowseSheet({
   showFavoritesOnly: boolean;
   onToggleFavoritesOnly: () => void;
 }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const normalizedQuery = searchQuery.trim().toLowerCase();
   const isB = uiVariant === 'B';
   const favoritesCount = letters.filter((letter) => favoritedNames.has(letter.name)).length;
-  const visibleLetters = showFavoritesOnly
-    ? letters.filter((letter) => favoritedNames.has(letter.name))
-    : letters;
+  const visibleLetters = useMemo(() => {
+    const base = showFavoritesOnly
+      ? letters.filter((letter) => favoritedNames.has(letter.name))
+      : letters;
+    if (!normalizedQuery) return base;
+    return base.filter((letter) => {
+      const haystack = `${stripExt(letter.name)}\n${letter.content ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [favoritedNames, letters, normalizedQuery, showFavoritesOnly]);
   const favOn = isB ? '♥' : '★';
   const favOff = isB ? '♡' : '☆';
 
@@ -1896,10 +1956,28 @@ function PreviewLetterBrowseSheet({
           </button>
         </div>
 
+        <div
+          className="shrink-0 px-[22px] pb-2"
+          style={{ borderBottom: isB ? '1px solid rgba(180,140,80,0.1)' : '1px solid rgba(255,255,255,0.04)' }}
+        >
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="搜尋標題或內容"
+            aria-label="搜尋信件"
+            className="w-full rounded-[16px] px-3 py-1.5 text-xs outline-none"
+            style={{
+              border: isB ? '1px solid rgba(168,64,48,0.2)' : '1px solid rgba(255,255,255,0.14)',
+              background: isB ? 'rgba(255,255,255,0.58)' : 'rgba(255,255,255,0.06)',
+              color: isB ? '#3D2414' : 'rgba(230,225,255,0.9)',
+            }}
+          />
+        </div>
+
         <div className="min-h-0 flex-1 overflow-y-auto py-2">
           {visibleLetters.length === 0 && (
             <p className="px-[22px] py-6 text-sm" style={{ color: isB ? '#9A8070' : 'rgba(180,160,220,0.5)' }}>
-              還沒有收藏的信件
+              {normalizedQuery ? '沒有符合搜尋的信件' : '還沒有收藏的信件'}
             </p>
           )}
           {visibleLetters.map((letter, index) => {
@@ -1967,6 +2045,7 @@ function PreviewLetterFullscreenView({
   isFavorited,
   readingFontSize,
   readingLineHeight,
+  readingFontMode,
   onOpenReadingSettings,
   onFavorite,
   onPickRandom,
@@ -1981,6 +2060,7 @@ function PreviewLetterFullscreenView({
   isFavorited: boolean;
   readingFontSize: number;
   readingLineHeight: number;
+  readingFontMode: LetterReadingFontMode;
   onOpenReadingSettings: () => void;
   onFavorite?: () => void;
   onPickRandom: () => void;
@@ -2000,7 +2080,10 @@ function PreviewLetterFullscreenView({
     onFavorite?.();
   }
 
-  const effectiveFontFamily = letterFontFamily || "'Ma Shan Zheng', cursive";
+  const followLetterFont = readingFontMode === 'letter' && Boolean(letterFontFamily.trim());
+  const effectiveFontFamily = followLetterFont
+    ? letterFontFamily
+    : "var(--app-font-family, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif)";
   const displayName = stripExt(letter.name);
   const rerollLabel = hasMultiple ? '再抽一封' : '再看一次';
   const rerollDisplaySrc = rerollChibiSrc || LETTER_CHIBI_SOURCES[0] || getActiveBaseChibiSources()[0] || '';
@@ -2094,16 +2177,16 @@ function PreviewLetterFullscreenView({
           type="button"
           onClick={onOpenReadingSettings}
           aria-label="開啟閱讀排版設定"
-          className="absolute right-5 top-[18px] z-[14] flex h-10 w-8 flex-col items-center justify-center gap-0.5 rounded border transition active:scale-95"
+          className="absolute right-5 top-[19px] z-[14] text-[17px] leading-none transition active:scale-95"
           style={{
-            border: theme.stampBorder,
-            background: theme.stampBg,
+            color: theme.paperLabelColor,
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            letterSpacing: '0.02em',
           }}
         >
-          <span className="text-sm">{theme.stampIcon}</span>
-          <span className="text-[6px]" style={{ color: theme.stampTextColor, letterSpacing: '0.05em' }}>
-            {theme.stampLabel}
-          </span>
+          Aa
         </button>
 
         <div className="shrink-0 border-b px-[22px] pb-[14px] pt-[18px]" style={{ borderColor: theme.paperHeaderBorder }}>
@@ -2228,9 +2311,18 @@ function LetterBrowseSheet({
   showFavoritesOnly: boolean;
   onToggleFavoritesOnly: () => void;
 }) {
-  const visibleLetters = showFavoritesOnly
-    ? letters.filter((letter) => favoritedNames.has(letter.name))
-    : letters;
+  const [searchQuery, setSearchQuery] = useState('');
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const visibleLetters = useMemo(() => {
+    const base = showFavoritesOnly
+      ? letters.filter((letter) => favoritedNames.has(letter.name))
+      : letters;
+    if (!normalizedQuery) return base;
+    return base.filter((letter) => {
+      const haystack = `${stripExt(letter.name)}\n${letter.content ?? ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [favoritedNames, letters, normalizedQuery, showFavoritesOnly]);
   const sheetTheme =
     uiVariant === 'A'
       ? {
@@ -2342,6 +2434,18 @@ function LetterBrowseSheet({
               {showFavoritesOnly ? '♥ 只看收藏' : '♡ 全部'}
             </button>
           </div>
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="搜尋標題或內容"
+            aria-label="搜尋信件"
+            className="mt-2 w-full rounded-full px-3 py-1.5 text-xs outline-none"
+            style={{
+              border: sheetTheme.toggleBorder,
+              color: sheetTheme.rowTitle,
+              background: uiVariant === 'A' ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.66)',
+            }}
+          />
         </div>
 
         {/* Scrollable list */}
@@ -2351,7 +2455,7 @@ function LetterBrowseSheet({
               className="px-5 py-8 text-sm"
               style={{ color: sheetTheme.emptyText }}
             >
-              還沒有收藏的信件
+              {normalizedQuery ? '沒有符合搜尋的信件' : '還沒有收藏的信件'}
             </p>
           )}
           {visibleLetters.map((letter, i) => (
@@ -2419,6 +2523,8 @@ function LetterFullscreenView({
   isFavorited,
   readingFontSize,
   readingLineHeight,
+  readingFontMode,
+  onOpenReadingSettings,
   onFavorite,
   onPickRandom,
   onClose,
@@ -2432,6 +2538,8 @@ function LetterFullscreenView({
   isFavorited: boolean;
   readingFontSize: number;
   readingLineHeight: number;
+  readingFontMode: LetterReadingFontMode;
+  onOpenReadingSettings: () => void;
   onFavorite?: () => void;
   onPickRandom: () => void;
   onClose: () => void;
@@ -2449,7 +2557,10 @@ function LetterFullscreenView({
     onFavorite?.();
   }
 
-  const effectiveFontFamily = letterFontFamily || "'Ma Shan Zheng', cursive";
+  const followLetterFont = readingFontMode === 'letter' && Boolean(letterFontFamily.trim());
+  const effectiveFontFamily = followLetterFont
+    ? letterFontFamily
+    : "var(--app-font-family, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif)";
   const displayName = stripExt(letter.name);
   const night = isNightVariant(uiVariant);
   const rerollLabel = hasMultiple ? '再抽一封' : '再看一次';
@@ -2542,6 +2653,22 @@ function LetterFullscreenView({
             backgroundPositionY: 72,
           }}
         />
+
+        <button
+          type="button"
+          onClick={onOpenReadingSettings}
+          aria-label="開啟閱讀排版設定"
+          className="absolute right-5 top-[18px] z-[14] text-[17px] leading-none transition active:scale-95"
+          style={{
+            color: theme.paperLabelColor,
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            letterSpacing: '0.02em',
+          }}
+        >
+          Aa
+        </button>
 
         {/* Paper header */}
         <div
