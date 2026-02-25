@@ -4,6 +4,7 @@ import './MurmurPage.css';
 
 const BASE = import.meta.env.BASE_URL;
 const INDEX_URL = `${BASE}data/murmur/index.json`;
+const FALLBACK_INDEX_URL = '/data/murmur/index.json';
 const AVATAR_STORAGE_KEY = 'memorial-murmur-avatar-v1';
 const FALLBACK_AVATAR = 'M';
 
@@ -24,6 +25,32 @@ type MurmurPageProps = {
   onExit: () => void;
   notesFontFamily?: string;
 };
+
+function normalizeBasePath(base: string) {
+  const trimmed = (base || '/').trim();
+  if (!trimmed) return '/';
+  const withLeading = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
+}
+
+function joinPath(base: string, path: string) {
+  const normalizedBase = normalizeBasePath(base);
+  const normalizedPath = path.replace(/^\/+/, '');
+  return `${normalizedBase}${normalizedPath}`;
+}
+
+async function fetchWithFallback(primaryUrl: string, fallbackUrl: string) {
+  const fetchInit: RequestInit = { cache: 'no-store' };
+  try {
+    const response = await fetch(primaryUrl, fetchInit);
+    if (response.ok || primaryUrl === fallbackUrl) return response;
+    const fallbackResponse = await fetch(fallbackUrl, fetchInit);
+    return fallbackResponse.ok ? fallbackResponse : response;
+  } catch {
+    if (primaryUrl === fallbackUrl) throw new Error('NETWORK_FETCH_FAILED');
+    return fetch(fallbackUrl, fetchInit);
+  }
+}
 
 function readAvatarUrl() {
   if (typeof window === 'undefined') return '';
@@ -71,7 +98,7 @@ export function MurmurPage({ onExit, notesFontFamily = '' }: MurmurPageProps) {
       setError('');
 
       try {
-        const response = await fetch(INDEX_URL, { cache: 'no-store' });
+        const response = await fetchWithFallback(INDEX_URL, FALLBACK_INDEX_URL);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = (await response.json()) as MurmurIndexPayload;
         const next = Array.isArray(payload.docs) ? payload.docs : [];
@@ -120,7 +147,9 @@ export function MurmurPage({ onExit, notesFontFamily = '' }: MurmurPageProps) {
 
     async function loadBody() {
       try {
-        const response = await fetch(`${BASE}data/murmur/${docContentPath}`, { cache: 'no-store' });
+        const primaryContentUrl = joinPath(BASE, `data/murmur/${docContentPath}`);
+        const fallbackContentUrl = joinPath('/', `data/murmur/${docContentPath}`);
+        const response = await fetchWithFallback(primaryContentUrl, fallbackContentUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const text = await response.text();
         if (!disposed) {
