@@ -153,7 +153,7 @@ function formatMDiaryDateForList(diary: StoredMDiary) {
 
 const FONT_TARGET_OPTIONS: Array<{ key: FontApplyTargetKey; label: string; hint: string }> = [
   { key: 'app', label: '整站', hint: '主標題 / 頁籤等基底字體' },
-  { key: 'letter', label: '情書', hint: '情書頁閱讀文字' },
+  { key: 'letter', label: '情書', hint: '情書頁閱讀文字（含心情星球、留光給妳的路）' },
   { key: 'diary', label: '日記', hint: 'M 日記 / Anni 日記 / 願望' },
   { key: 'soulmate', label: '家頁', hint: '家閱讀頁' },
   { key: 'archive', label: '總攬', hint: '總攬入口閱讀文字' },
@@ -2517,7 +2517,7 @@ export function SettingsPage({
         <SettingPanel
           icon="🔤"
           title="字體中心"
-          subtitle="整站／情書／日記／家 的字體集中管理"
+          subtitle="整站／情書（含心情星球、留光）／日記／家 的字體集中管理"
           isOpen={openPanel === 'fontCenter'}
           onToggle={() => togglePanel('fontCenter')}
         >
@@ -2633,7 +2633,7 @@ export function SettingsPage({
                 />
                 <span className="min-w-0">
                   <span className="block text-sm text-stone-800">全部套用</span>
-                  <span className="block text-xs text-stone-500">一次更新整站、情書、日記、家頁、總攬</span>
+                  <span className="block text-xs text-stone-500">一次更新整站、情書（含心情星球/留光）、日記、家頁、總攬、M&apos;s memo</span>
                 </span>
               </label>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -4284,7 +4284,7 @@ export function SettingsPage({
                     <h4 className="text-sm text-stone-900">字體關聯</h4>
                     <ul className="list-disc space-y-1 pl-5 text-xs text-stone-600">
                       <li>字體中心第一欄（字體預設管理）：上傳字體來源、保存成記憶 1~10。</li>
-                      <li>字體中心第二欄（字體套用範圍）：把記憶 1~10 套用到整站/情書/日記/家頁。</li>
+                      <li>字體中心第二欄（字體套用範圍）：把記憶 1~10 套用到整站/情書（含心情星球、留光）/日記/家頁。</li>
                       <li>字體中心第三欄（當前套用檢視）：純預覽目前每個範圍使用中的字體來源。</li>
                       <li>「空白（還原預設字體）」可把勾選頁面恢復為預設字體。</li>
                       <li>整站：大多數頁面的基底字體。</li>

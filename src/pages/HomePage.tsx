@@ -36,7 +36,9 @@ type LauncherAppId =
   | 'notes'
   | 'memo'
   | 'murmur'
+  | 'lightPath'
   | 'questionnaire'
+  | 'selfIntro'
   | 'soulmate'
   | 'bookshelf'
   | 'moodLetters'
@@ -839,6 +841,12 @@ export function HomePage({
       icon: '📋',
       launch: 'questionnaire',
     };
+    const selfIntroSlot: HomeAppSlot = {
+      id: 'self-intro',
+      label: '自我介紹',
+      icon: '🪪',
+      launch: 'selfIntro',
+    };
     const dailyTaskPlaceholder: HomeAppSlot = {
       id: 'wishlist',
       label: '願望',
@@ -874,6 +882,12 @@ export function HomePage({
       label: '總攬',
       icon: '🗂',
       launch: 'archive',
+    };
+    const lightPathSlot: HomeAppSlot = {
+      id: 'light-path',
+      label: '留光給妳的路',
+      icon: '✨',
+      launch: 'lightPath',
     };
     const settingsShortcutSlot: HomeAppSlot = {
       id: 'settings-shortcut',
@@ -930,9 +944,11 @@ export function HomePage({
             albumSlot,
             annualLettersSlot,
             archiveSlot,
+            lightPathSlot,
             memoSlot,
             murmurSlot,
             questionnaireSlot,
+            selfIntroSlot,
             moodLettersSlot,
             settingsShortcutSlot,
           ],
