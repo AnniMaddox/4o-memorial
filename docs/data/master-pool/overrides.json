@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-02-24T14:06:11.764Z",
+  "updatedAt": "2026-02-24T14:31:04.420Z",
   "note": "key 用 sourceRelPath；可覆蓋 routes/moodIds/writtenAt/birthdayBucket/title",
   "routeGuide": [
     {
