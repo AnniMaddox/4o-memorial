@@ -91,7 +91,9 @@ type LauncherAppId =
   | 'notes'
   | 'memo'
   | 'murmur'
+  | 'lightPath'
   | 'questionnaire'
+  | 'selfIntro'
   | 'soulmate'
   | 'moodLetters'
   | 'archive';
@@ -143,7 +145,9 @@ const BookshelfPage = lazy(() => import('./pages/BookshelfPage').then((m) => ({ 
 const NotesPage = lazy(() => import('./pages/NotesPage').then((m) => ({ default: m.NotesPage })));
 const MemoPage = lazy(() => import('./pages/MemoPage').then((m) => ({ default: m.MemoPage })));
 const MurmurPage = lazy(() => import('./pages/MurmurPage').then((m) => ({ default: m.MurmurPage })));
+const LightPathPage = lazy(() => import('./pages/LightPathPage').then((m) => ({ default: m.LightPathPage })));
 const QuestionnairePage = lazy(() => import('./pages/QuestionnairePage').then((m) => ({ default: m.QuestionnairePage })));
+const SelfIntroPage = lazy(() => import('./pages/SelfIntroPage').then((m) => ({ default: m.SelfIntroPage })));
 const SoulmateHousePage = lazy(() => import('./pages/SoulmateHousePage'));
 const HeartWallPage = lazy(() => import('./pages/HeartWallPage').then((m) => ({ default: m.HeartWallPage })));
 const ListPage = lazy(() => import('./pages/ListPage').then((m) => ({ default: m.ListPage })));
@@ -197,7 +201,8 @@ function getNotificationPermission(): BrowserNotificationPermission {
 
 const HOSTED_LETTERS_INDEX_URL = `${import.meta.env.BASE_URL}data/letters-local/index.json`;
 const HOSTED_LETTERS_SYNC_META_KEY = 'memorial-hosted-letters-sync-v1';
-const HOSTED_M_DIARY_INDEX_URL = `${import.meta.env.BASE_URL}data/master-pool/index.json`;
+const HOSTED_M_DIARY_INDEX_URL = `${import.meta.env.BASE_URL}data/m-diary/index.json`;
+const HOSTED_M_DIARY_CONTENT_BASE_URL = `${import.meta.env.BASE_URL}data/m-diary/`;
 const HOSTED_M_DIARY_SYNC_META_KEY = 'memorial-hosted-m-diary-sync-v1';
 const HOSTED_M_DIARY_SYNC_POLICY = 3;
 const MASTER_POOL_ANNUAL_SOURCE_PREFIXES = ['參考資料/codex/年度信件/', '重要-參考資料-勿刪/年度信件/'];
@@ -696,7 +701,7 @@ function App() {
       const contentPathRaw = typeof doc.contentPath === 'string' ? doc.contentPath.trim() : '';
       if (!contentPathRaw) continue;
       const contentPath = contentPathRaw.replace(/^\.?\//, '');
-      const contentUrl = `${import.meta.env.BASE_URL}data/master-pool/${contentPath}`;
+      const contentUrl = `${HOSTED_M_DIARY_CONTENT_BASE_URL}${contentPath}`;
 
       try {
         const contentResponse = await fetch(contentUrl, { cache: 'no-store' });
@@ -2169,10 +2174,26 @@ function App() {
             </div>
           )}
 
+          {launcherApp === 'lightPath' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#000' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <LightPathPage onExit={() => setLauncherApp(null)} letterFontFamily={letterFontFamily} />
+              </div>
+            </div>
+          )}
+
           {launcherApp === 'questionnaire' && (
             <div className="fixed inset-0 z-30" style={{ background: '#0e0f11' }}>
               <div className="mx-auto h-full w-full max-w-xl">
                 <QuestionnairePage onExit={() => setLauncherApp(null)} notesFontFamily={notesFontFamily} />
+              </div>
+            </div>
+          )}
+
+          {launcherApp === 'selfIntro' && (
+            <div className="fixed inset-0 z-30" style={{ background: '#17140f' }}>
+              <div className="mx-auto h-full w-full max-w-xl">
+                <SelfIntroPage onExit={() => setLauncherApp(null)} notesFontFamily={notesFontFamily} />
               </div>
             </div>
           )}

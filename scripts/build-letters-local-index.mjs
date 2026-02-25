@@ -6,7 +6,8 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DEFAULT_SOURCE_DIR = path.resolve(ROOT, '參考資料', 'codex', '心情信');
+const SOURCE_ROOT_DIR = '重要-參考資料-勿刪';
+const DEFAULT_SOURCE_DIR = path.resolve(ROOT, SOURCE_ROOT_DIR, '情書來源');
 const OUTPUT_DIR = path.resolve(ROOT, 'public', 'data', 'letters-local');
 const CONTENT_DIR = path.resolve(OUTPUT_DIR, 'content');
 const INDEX_FILE = path.resolve(OUTPUT_DIR, 'index.json');
@@ -151,7 +152,7 @@ async function main() {
   const sourceDir = getSourceDir();
   if (!fs.existsSync(sourceDir)) {
     console.error(`❌ 找不到來源資料夾：${sourceDir}`);
-    console.error('   可用參數：--source="參考資料/codex/你的資料夾"');
+    console.error(`   可用參數：--source="${SOURCE_ROOT_DIR}/你的資料夾"`);
     process.exit(1);
   }
 

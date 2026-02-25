@@ -11,8 +11,11 @@
     "build:letters-local": "node scripts/build-letters-local-index.mjs",
     "build:master-pool": "node scripts/build-master-pool-index.mjs",
     "build:memo": "node scripts/build-memo-index.mjs",
+    "build:m-diary": "node scripts/build-m-diary-index.mjs",
     "build:murmur": "node scripts/build-murmur-index.mjs",
+    "build:light-path": "node scripts/build-light-path-index.mjs",
     "build:questionnaire": "node scripts/build-questionnaire-index.mjs",
+    "build:self-intro": "node scripts/build-self-intro-index.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "preview:host": "vite preview --host --port 4173"
