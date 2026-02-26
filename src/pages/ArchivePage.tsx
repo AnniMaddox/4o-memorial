@@ -447,7 +447,6 @@ export function ArchivePage({
   const [folderSortOrder, setFolderSortOrder] = useState<FolderSortOrder>('desc');
   const [folderSearchOpen, setFolderSearchOpen] = useState(false);
   const [folderSearchQuery, setFolderSearchQuery] = useState('');
-  const [tlSearchMode, setTlSearchMode] = useState<'folder' | 'doc'>('folder');
   const [folderPanelOpen, setFolderPanelOpen] = useState(false);
   const [readingOpen, setReadingOpen] = useState(false);
   const [readingFontPanelOpen, setReadingFontPanelOpen] = useState(false);
@@ -613,20 +612,6 @@ export function ArchivePage({
         folders: list.sort(folderSortOrder === 'asc' ? compareFolderDatesAsc : compareFolderDates),
       }));
   }, [folderSortOrder, visibleFolders]);
-
-  const visibleDocs = useMemo(() => {
-    if (tlSearchMode !== 'doc' || !normalizedFolderSearchQuery) return [] as Array<{ doc: ArchiveDoc; folder: ArchiveFolder }>;
-    const results: Array<{ doc: ArchiveDoc; folder: ArchiveFolder }> = [];
-    for (const folder of folders) {
-      for (const doc of folder.docs) {
-        const haystack = [doc.title, folder.label, folder.short, ...doc.tags].join('\n').toLowerCase();
-        if (haystack.includes(normalizedFolderSearchQuery)) {
-          results.push({ doc, folder });
-        }
-      }
-    }
-    return results;
-  }, [folders, normalizedFolderSearchQuery, tlSearchMode]);
 
   const allDocRefs = useMemo(() => {
     const refs: CrystalReveal[] = [];
@@ -958,7 +943,7 @@ export function ArchivePage({
                 onClick={() =>
                   setFolderSearchOpen((prev) => {
                     const next = !prev;
-                    if (!next) { setFolderSearchQuery(''); setTlSearchMode('folder'); }
+                    if (!next) setFolderSearchQuery('');
                     return next;
                   })
                 }
@@ -969,68 +954,24 @@ export function ArchivePage({
               </button>
             </div>
             {folderSearchOpen ? (
-              <>
-                <div className="tl-search-row">
-                  <input
-                    ref={folderSearchInputRef}
-                    className="tl-search-input"
-                    value={folderSearchQuery}
-                    onChange={(event) => setFolderSearchQuery(event.target.value)}
-                    placeholder="搜尋資料夾、標籤或檔案標題"
-                    aria-label="搜尋總攬資料夾"
-                  />
-                </div>
-                <div className="tl-mode-row">
-                  <button
-                    type="button"
-                    className={`tl-mode-btn ${tlSearchMode === 'folder' ? 'active' : ''}`}
-                    onClick={() => setTlSearchMode('folder')}
-                  >
-                    資料夾
-                  </button>
-                  <button
-                    type="button"
-                    className={`tl-mode-btn ${tlSearchMode === 'doc' ? 'active' : ''}`}
-                    onClick={() => setTlSearchMode('doc')}
-                  >
-                    直接列檔案
-                  </button>
-                </div>
-              </>
+              <div className="tl-search-row">
+                <input
+                  ref={folderSearchInputRef}
+                  className="tl-search-input"
+                  value={folderSearchQuery}
+                  onChange={(event) => setFolderSearchQuery(event.target.value)}
+                  placeholder="搜尋資料夾、標籤或檔案標題"
+                  aria-label="搜尋總攬資料夾"
+                />
+              </div>
             ) : null}
             {indexError && <div className="empty-state">無法載入資料：{indexError}</div>}
             {!indexPayload && !indexError && <div className="empty-state">載入中⋯</div>}
+            {indexPayload && !timelineGroups.length && (
+              <div className="empty-state">{normalizedFolderSearchQuery ? '找不到符合搜尋的資料夾' : '目前沒有可顯示的資料夾'}</div>
+            )}
 
-            {folderSearchOpen && tlSearchMode === 'doc' && normalizedFolderSearchQuery ? (
-              <>
-                {indexPayload && !visibleDocs.length && (
-                  <div className="empty-state">找不到符合的文件</div>
-                )}
-                {visibleDocs.map(({ doc, folder }) => (
-                  <button
-                    key={doc.id}
-                    type="button"
-                    className="tl-doc-item"
-                    onClick={() => openReading(folder.key, doc.id)}
-                  >
-                    <div className="tl-doc-title">{doc.title}</div>
-                    <div className="tl-doc-sub">{folder.label} · {folder.short}</div>
-                    <div className="tl-doc-tags">
-                      {doc.tags.map((tag) => (
-                        <span key={`${doc.id}-${tag}`} className={`cat-tag ${TAG_CLASS[tag] ?? 'ct-other'}`}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                ))}
-              </>
-            ) : (
-              <>
-                {indexPayload && !timelineGroups.length && (
-                  <div className="empty-state">{normalizedFolderSearchQuery ? '找不到符合搜尋的資料夾' : '目前沒有可顯示的資料夾'}</div>
-                )}
-                {timelineGroups.map((group) => (
+            {timelineGroups.map((group) => (
               <div key={group.year} className="year-block">
                 <div className="year-marker">
                   <div className="year-num">{group.year}</div>
@@ -1079,8 +1020,6 @@ export function ArchivePage({
                 })}
               </div>
             ))}
-              </>
-            )}
           </div>
         </div>
 
