@@ -6,6 +6,18 @@ import type { StoredMDiary } from '../lib/mDiaryDB';
 import type { AppSettings } from '../types/settings';
 
 const FAVORITES_STORAGE_KEY = 'memorial-m-diary-favorites-v1';
+const READING_FONT_MODE_KEY = 'memorial-m-diary-reading-font-mode-v1';
+
+type ReadingFontMode = 'default' | 'diary';
+
+function loadReadingFontMode(): ReadingFontMode {
+  if (typeof window === 'undefined') return 'default';
+  try {
+    return window.localStorage.getItem(READING_FONT_MODE_KEY) === 'diary' ? 'diary' : 'default';
+  } catch {
+    return 'default';
+  }
+}
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const COVER_MODULES = import.meta.glob(
@@ -310,11 +322,15 @@ export function MDiaryPage({
   const [favorites, setFavorites] = useState<Set<string>>(() => readFavoriteSet());
   const [chibiSrc] = useState(pickRandomChibi);
   const [randomCoverSrc] = useState(() => pickRandom(COVER_SRCS) ?? '');
+  const [showReadingFontPanel, setShowReadingFontPanel] = useState(false);
+  const [readingFontMode, setReadingFontMode] = useState<ReadingFontMode>(loadReadingFontMode);
   const dateStripRef = useRef<HTMLDivElement | null>(null);
   const timelineSearchInputRef = useRef<HTMLInputElement | null>(null);
   const tabSwipeStartRef = useRef<{ x: number; y: number; ignore: boolean } | null>(null);
 
-  const effectiveFont = diaryFontFamily || "'Ma Shan Zheng', 'STKaiti', serif";
+  const defaultReadingFont = "var(--app-font-family, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif)";
+  const effectiveFont = diaryFontFamily || defaultReadingFont;
+  const readingContentFontFamily = readingFontMode === 'diary' ? effectiveFont : defaultReadingFont;
   const lineHeight = clampLineHeight(mDiaryLineHeight);
   const contentFontSize = clampContentFontSize(mDiaryContentFontSize);
   const showCount = Boolean(mDiaryShowCount);
@@ -517,6 +533,12 @@ export function MDiaryPage({
     const dx = clientX - start.x;
     const dy = clientY - start.y;
     if (Math.abs(dx) < 54 || Math.abs(dx) <= Math.abs(dy)) return;
+
+    // In reading tab: swipe left/right goes to next/prev entry
+    if (activeTab === 'reading') {
+      shiftEntry(dx > 0 ? -1 : 1);
+      return;
+    }
 
     const tabIndex = TAB_ORDER.indexOf(activeTab);
     if (tabIndex === -1) return;
@@ -1047,10 +1069,24 @@ export function MDiaryPage({
                     type="button"
                     onClick={() => toggleFavorite(currentEntry.name)}
                     className="ml-auto px-1 text-[17px] leading-none"
-                    style={{ color: favorites.has(currentEntry.name) ? '#a04040' : 'rgba(90,112,96,0.28)' }}
+                    style={{ color: favorites.has(currentEntry.name) ? '#a04040' : 'rgba(90,112,96,0.32)' }}
                     aria-label="切換收藏"
                   >
-                    ♥
+                    {favorites.has(currentEntry.name) ? '♥' : '♡'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowReadingFontPanel((prev) => !prev)}
+                    className="rounded-md px-1.5 py-0.5 text-[11px] font-semibold tracking-tight transition"
+                    style={{
+                      color: showReadingFontPanel ? '#5a7060' : 'rgba(90,112,96,0.45)',
+                      background: showReadingFontPanel ? 'rgba(90,112,96,0.1)' : 'transparent',
+                      border: showReadingFontPanel ? '1px solid rgba(90,112,96,0.22)' : '1px solid transparent',
+                    }}
+                    aria-label="字型設定"
+                  >
+                    Aa
                   </button>
 
                   {showCount && (
@@ -1063,6 +1099,70 @@ export function MDiaryPage({
                 <h2 className="text-[17px] leading-[1.35] text-[#2a2818]" style={{ fontFamily: effectiveFont }}>
                   {currentEntry.title}
                 </h2>
+
+                {showReadingFontPanel && (
+                  <div
+                    className="mt-3 space-y-3 rounded-xl border p-3"
+                    style={{ background: 'rgba(255,255,255,0.82)', borderColor: 'rgba(80,100,70,0.14)' }}
+                    data-mdiary-no-tab-swipe="true"
+                  >
+                    <div>
+                      <p className="mb-1.5 text-[12px] text-[#5a7060]">字體來源</p>
+                      <div className="flex gap-2">
+                        {(['default', 'diary'] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => {
+                              setReadingFontMode(mode);
+                              if (typeof window !== 'undefined') {
+                                window.localStorage.setItem(READING_FONT_MODE_KEY, mode);
+                              }
+                            }}
+                            className="flex-1 rounded-md border py-1 text-[11px] transition"
+                            style={{
+                              color: readingFontMode === mode ? '#5a7060' : '#8a9a88',
+                              background: readingFontMode === mode ? 'rgba(90,112,96,0.1)' : 'transparent',
+                              borderColor: readingFontMode === mode ? 'rgba(90,112,96,0.3)' : 'rgba(90,112,96,0.15)',
+                            }}
+                          >
+                            {mode === 'default' ? '預設' : '跟隨M日記'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[12px] text-[#5a7060]">字級</p>
+                        <p className="text-[11px] text-[#8a9a88]">{contentFontSize.toFixed(1)}px</p>
+                      </div>
+                      <input
+                        type="range"
+                        min={12}
+                        max={22}
+                        step={0.5}
+                        value={contentFontSize}
+                        onChange={(event) => updateMSettings({ mDiaryContentFontSize: Number(event.target.value) })}
+                        className="mt-1.5 w-full accent-[#5a7060]"
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[12px] text-[#5a7060]">行距</p>
+                        <p className="text-[11px] text-[#8a9a88]">{lineHeight.toFixed(2)}</p>
+                      </div>
+                      <input
+                        type="range"
+                        min={1.5}
+                        max={2.8}
+                        step={0.02}
+                        value={lineHeight}
+                        onChange={(event) => updateMSettings({ mDiaryLineHeight: Number(event.target.value) })}
+                        className="mt-1.5 w-full accent-[#5a7060]"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="relative z-[2] min-h-0 flex-1 overflow-y-auto px-[18px] pb-2 pt-3" style={{ paddingLeft: 60 }}>
@@ -1072,7 +1172,7 @@ export function MDiaryPage({
                     style={{
                       fontSize: contentFontSize,
                       lineHeight,
-                      fontFamily: effectiveFont,
+                      fontFamily: readingContentFontFamily,
                       whiteSpace: 'normal',
                     }}
                     dangerouslySetInnerHTML={{ __html: currentEntry.htmlContent }}
@@ -1080,7 +1180,7 @@ export function MDiaryPage({
                 ) : (
                   <p
                     className="whitespace-pre-wrap text-[#3a3828]"
-                    style={{ fontSize: contentFontSize, lineHeight, fontFamily: effectiveFont }}
+                    style={{ fontSize: contentFontSize, lineHeight, fontFamily: readingContentFontFamily }}
                   >
                     {currentEntry.text || '（空白內容）'}
                   </p>

@@ -335,6 +335,8 @@ export function QuestionnairePage({ onExit, notesFontFamily = '' }: Questionnair
     data: false,
   });
   const [chibiSrc] = useState(() => pickRandomQuestionnaireChibi());
+  const [showHeroSearch, setShowHeroSearch] = useState(false);
+  const [heroQuery, setHeroQuery] = useState('');
   const readBodyRef = useRef<HTMLDivElement | null>(null);
   const swipeStartXRef = useRef<number | null>(null);
   const swipeStartYRef = useRef<number | null>(null);
@@ -463,6 +465,15 @@ export function QuestionnairePage({ onExit, notesFontFamily = '' }: Questionnair
     ? notesFontFamily
     : "var(--app-font-family, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif)";
 
+  const normalizedHeroQuery = heroQuery.trim().toLowerCase();
+  const displayDocs = useMemo(() => {
+    if (!normalizedHeroQuery) return docs;
+    return docs.filter((doc) =>
+      doc.searchText.toLowerCase().includes(normalizedHeroQuery) ||
+      doc.title.toLowerCase().includes(normalizedHeroQuery),
+    );
+  }, [docs, normalizedHeroQuery]);
+
   const activeQa = activeDoc ? qaById[activeDoc.id] ?? [] : [];
   const activeRaw = activeDoc ? contentById[activeDoc.id] ?? '' : '';
   const fallbackAnswer =
@@ -501,32 +512,60 @@ export function QuestionnairePage({ onExit, notesFontFamily = '' }: Questionnair
         </div>
 
         <div className="q-hero">
-          <div className="q-hero-line">
-            <span />
-            <span />
-            <span />
-          </div>
+          <button
+            type="button"
+            className="q-hero-search-btn"
+            onClick={() => {
+              setShowHeroSearch((prev) => !prev);
+              if (showHeroSearch) setHeroQuery('');
+            }}
+            aria-label={showHeroSearch ? '關閉搜尋' : '搜尋問卷'}
+          >
+            <span className="q-hero-search-bar" />
+            <span className="q-hero-search-bar" />
+            <span className="q-hero-search-bar" />
+          </button>
           <div className="q-hero-tag">Classified</div>
           <div className="q-hero-name">
             M 的<em>人格側寫</em>
           </div>
           <div className="q-hero-desc">80 份問卷，我留下的答案，是我留下自己的方式。</div>
+          {showHeroSearch && (
+            <div className="q-hero-search-row">
+              <input
+                className="q-hero-search-input"
+                type="text"
+                placeholder="搜尋問卷標題或內容…"
+                value={heroQuery}
+                onChange={(event) => setHeroQuery(event.target.value)}
+                autoFocus
+              />
+              {heroQuery && (
+                <button type="button" className="q-hero-search-clear" onClick={() => setHeroQuery('')} aria-label="清除搜尋">
+                  ×
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="q-filter-bar">
           <span className="q-filter-label">all records</span>
-          <span className="q-filter-count">{docs.length} entries found</span>
+          <span className="q-filter-count">{normalizedHeroQuery ? `${displayDocs.length} / ${docs.length}` : `${docs.length}`} entries found</span>
         </div>
 
         <div className="q-entries">
           {loading ? <div className="q-empty">讀取中…</div> : null}
           {!loading && error ? <div className="q-empty">讀取失敗：{error}</div> : null}
           {!loading && !error && !docs.length ? <div className="q-empty">目前沒有問卷資料</div> : null}
+          {!loading && !error && normalizedHeroQuery && displayDocs.length === 0
+            ? <div className="q-empty">找不到符合「{heroQuery}」的問卷</div>
+            : null}
           {!loading && !error
-            ? docs.map((doc, index) => (
+            ? displayDocs.map((doc) => (
                 <button key={doc.id} type="button" className="q-entry-card" onClick={() => openDoc(doc.id)}>
                   <div className="q-card-header">
-                    <span className="q-card-id">{caseLabel(index)}</span>
+                    <span className="q-card-id">{caseLabel(docs.indexOf(doc))}</span>
                     <span className="q-card-date">{doc.dateLabel}</span>
                   </div>
                   <div className="q-card-title">{doc.title}</div>

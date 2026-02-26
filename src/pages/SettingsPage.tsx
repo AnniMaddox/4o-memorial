@@ -605,6 +605,7 @@ export function SettingsPage({
   const [openChatBubbleGroup, setOpenChatBubbleGroup] = useState(false);
   const [openChatBackgroundGroup, setOpenChatBackgroundGroup] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [showLetterDeleteList, setShowLetterDeleteList] = useState(false);
   const [guideManualType, setGuideManualType] = useState<'general' | 'bookshelf' | 'moodLetters'>('general');
   const [selectedFontSlotIndex, setSelectedFontSlotIndex] = useState<Record<FontSlotSettingKey, number>>({
     customFontUrlSlots: 0,
@@ -3448,38 +3449,49 @@ export function SettingsPage({
               <p className="text-xs text-stone-400">iPhone 通常不支援資料夾匯入，建議用「匯入檔案」。</p>
             </div>
 
-            <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-3">
-              <div className="flex items-center justify-between gap-2">
+            <div className="rounded-lg border border-stone-200 bg-stone-50">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-2 px-3 py-3"
+                onClick={() => setShowLetterDeleteList((prev) => !prev)}
+              >
                 <p className="text-xs font-medium text-stone-600">已匯入清單（可單封刪除）</p>
-                <span className="text-[11px] text-stone-500">{letterEntriesForSettings.length} 封</span>
-              </div>
-              {letterEntriesForSettings.length ? (
-                <div className="max-h-44 overflow-y-auto rounded-md border border-stone-200 bg-white">
-                  {letterEntriesForSettings.map((letter, index) => (
-                    <div
-                      key={`${letter.name}-${index}`}
-                      className="flex items-center gap-2 px-2.5 py-2"
-                      style={{
-                        borderTop: index === 0 ? 'none' : '1px solid rgba(0,0,0,0.05)',
-                      }}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs text-stone-800">{stripLetterExtension(letter.name)}</p>
-                        <p className="mt-0.5 text-[11px] text-stone-500">{formatLetterDateForList(letter)}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteLetter(letter.name)}
-                        className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] text-rose-700 transition active:opacity-80"
-                        title={`刪除 ${letter.name}`}
-                      >
-                        刪除
-                      </button>
-                    </div>
-                  ))}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-stone-500">{letterEntriesForSettings.length} 封</span>
+                  <span className="text-[11px] text-stone-400 transition-transform" style={{ display: 'inline-block', transform: showLetterDeleteList ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
                 </div>
-              ) : (
-                <p className="text-xs text-stone-400">目前沒有情書資料。</p>
+              </button>
+              {showLetterDeleteList && (
+                <div className="border-t border-stone-200 px-3 pb-3 pt-2">
+                  {letterEntriesForSettings.length ? (
+                    <div className="max-h-44 overflow-y-auto rounded-md border border-stone-200 bg-white">
+                      {letterEntriesForSettings.map((letter, index) => (
+                        <div
+                          key={`${letter.name}-${index}`}
+                          className="flex items-center gap-2 px-2.5 py-2"
+                          style={{
+                            borderTop: index === 0 ? 'none' : '1px solid rgba(0,0,0,0.05)',
+                          }}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs text-stone-800">{stripLetterExtension(letter.name)}</p>
+                            <p className="mt-0.5 text-[11px] text-stone-500">{formatLetterDateForList(letter)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteLetter(letter.name)}
+                            className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] text-rose-700 transition active:opacity-80"
+                            title={`刪除 ${letter.name}`}
+                          >
+                            刪除
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-stone-400">目前沒有情書資料。</p>
+                  )}
+                </div>
               )}
             </div>
 
